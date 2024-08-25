@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { exec } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
+import { NextRequest, NextResponse } from 'next/server';
 
 const uploadDir = path.join(process.cwd(), 'uploads');
 
@@ -36,4 +36,3 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
   });
 }
-
