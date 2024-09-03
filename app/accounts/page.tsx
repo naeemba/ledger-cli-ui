@@ -32,6 +32,13 @@ const renderTree = (node: Record<string, unknown>, parentPath = '') => {
             <Link href={`/accounts/${encodeURIComponent(currentPath)}`}>
               {key}
             </Link>
+            &nbsp;|&nbsp;
+            <Link
+              className="text-blue-300"
+              href={`/registers/monthly/${encodeURIComponent(currentPath)}`}
+            >
+              Monthly Report
+            </Link>
             {Object.keys(node[key] as Record<string, unknown>).length > 0 &&
               renderTree(
                 node[key] as Record<string, unknown>,
