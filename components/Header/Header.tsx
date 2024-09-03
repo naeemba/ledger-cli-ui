@@ -17,6 +17,16 @@ const Header = () => {
                   Accounts
                 </a>
               </Typography>
+              <Typography
+                as="li"
+                variant="small"
+                color="blue-gray"
+                className="p-1 font-normal"
+              >
+                <a href="/balance" className="flex items-center">
+                  Balance
+                </a>
+              </Typography>
             </ul>
           </div>
         </div>
