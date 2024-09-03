@@ -46,14 +46,16 @@ const renderTree = (node: Record<string, unknown>, parentPath = '') => {
 
 const Report = async () => {
   try {
-    const { stdout } = await execPromise('ledger accounts');
+    const { stdout } = await execPromise(`ledger accounts`);
     const accounts = stdout
       .split('\n')
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b));
     const tree = buildTree(accounts);
     return renderTree(tree);
-  } catch {}
+  } catch (e) {
+    console.error(e);
+  }
 
   return <div>Report</div>;
 };
