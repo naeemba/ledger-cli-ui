@@ -34,7 +34,7 @@ const renderTree = (node: Record<string, unknown>, parentPath = '') => {
             </Link>
             &nbsp;|&nbsp;
             <Link
-              className="text-blue-300"
+              className="text-blue-700 hover:text-blue-900"
               href={`/registers/monthly/${encodeURIComponent(currentPath)}`}
             >
               Monthly Report

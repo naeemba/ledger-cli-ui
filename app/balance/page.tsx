@@ -19,7 +19,7 @@ const Balance = async () => {
       </div>
       <table className="w-full mt-8">
         <thead>
-          <tr className="h-10">
+          <tr>
             <td>Account</td>
             <td>Balance</td>
           </tr>
@@ -28,10 +28,7 @@ const Balance = async () => {
           {result.map((item, index) => {
             const columns = item.split('|');
             return (
-              <tr
-                key={index}
-                className="h-10 even:bg-[#020617] odd:bg-[#0f172a]"
-              >
+              <tr key={index}>
                 <td>{columns[0]}</td>
                 <td>{columns[1]}</td>
               </tr>

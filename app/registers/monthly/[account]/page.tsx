@@ -26,7 +26,7 @@ const Monthly = async ({ params }: { params: { account: string } }) => {
       </div>
       <table className="w-full mt-8">
         <thead>
-          <tr className="h-10">
+          <tr>
             <td>Account</td>
             <td className="text-right">Balance ({defaultCurrency})</td>
           </tr>

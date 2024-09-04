@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { Navbar, Typography, Button } from '@components/Material';
 
 const Header = () => {
@@ -25,6 +26,19 @@ const Header = () => {
               >
                 <a href="/balance" className="flex items-center">
                   Balance
+                </a>
+              </Typography>
+              <Typography
+                as="li"
+                variant="small"
+                color="blue-gray"
+                className="p-1 font-normal"
+              >
+                <a
+                  href={`/balance/${dayjs().startOf('month').format('YYYY-MM-DD')}/${dayjs().endOf('month').format('YYYY-MM-DD')}`}
+                  className="flex items-center"
+                >
+                  Periodic Balance
                 </a>
               </Typography>
             </ul>

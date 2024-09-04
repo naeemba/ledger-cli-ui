@@ -22,7 +22,7 @@ const Account = async ({ params }: { params: { account: string } }) => {
       </div>
       <table className="w-full mt-8">
         <thead>
-          <tr className="h-10">
+          <tr>
             <th>Date</th>
             <th>Payee</th>
             <th>Amount</th>
@@ -33,7 +33,7 @@ const Account = async ({ params }: { params: { account: string } }) => {
           {results.map((result, idx) => {
             const columns = result.split('|').map((each) => each.trim());
             return (
-              <tr key={idx} className="h-10 even:bg-[#020617] odd:bg-[#0f172a]">
+              <tr key={idx}>
                 <td className="text-center">{columns[0]}</td>
                 <td className="text-center">{columns[2]}</td>
                 <td className="text-right">{columns[7]}</td>

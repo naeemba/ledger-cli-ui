@@ -17,3 +17,15 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+table tr td {
+  @apply px-4;
+}
+
+table thead tr {
+  @apply h-10;
+}
+
+table tbody tr {
+  @apply h-10 even:bg-gray-100 odd:bg-gray-200;
+}

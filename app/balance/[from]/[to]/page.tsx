@@ -34,7 +34,7 @@ const PeriodBalance = async ({
       />
       <table className="w-full mt-8">
         <thead>
-          <tr className="h-10">
+          <tr>
             <td>Account</td>
             <td className="text-right">Spend ({defaultCurrency})</td>
           </tr>
