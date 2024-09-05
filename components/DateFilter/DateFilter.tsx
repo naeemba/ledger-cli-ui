@@ -15,6 +15,24 @@ type Props = {
   from?: string;
   to?: string;
 };
+const colors = [
+  'blue-gray',
+  'gray',
+  'brown',
+  'deep-orange',
+  'orange',
+  'light-green',
+  'green',
+  'teal',
+  'cyan',
+  'light-blue',
+  'blue',
+  'indigo',
+  'deep-purple',
+  'purple',
+  'pink',
+  'red',
+];
 
 const DateFilter = (props: Props) => {
   const { urlPattern, from: fromProp, to: toProp } = props;
@@ -59,21 +77,15 @@ const DateFilter = (props: Props) => {
         Monthly <hr className="ml-4 my-auto flex-1" />
       </div>
       <div className="flex flex-wrap">
-        {dayjs.months().map((month) => (
+        {dayjs.months().map((month, idx) => (
           <Button
-            color="green"
+            color={colors[idx]}
             className="my-4 mx-4"
             key={month}
             onClick={() =>
               pushNewURL(
-                dayjs()
-                  .month(dayjs.months().indexOf(month))
-                  .startOf('month')
-                  .format('YYYY-MM-DD'),
-                dayjs()
-                  .month(dayjs.months().indexOf(month))
-                  .endOf('month')
-                  .format('YYYY-MM-DD')
+                dayjs().month(idx).startOf('month').format('YYYY-MM-DD'),
+                dayjs().month(idx).endOf('month').format('YYYY-MM-DD')
               )
             }
           >
