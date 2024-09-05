@@ -17,12 +17,18 @@ const PeriodBalance = async ({
   const to = dayjs(params.to);
   const defaultCurrency = getDefaultCurrency();
   const { stdout } = await execPromise(
-    `ledger bal Expenses -b "${from.format('YYYY-MM-DD')}" -e "${to.format('YYYY-MM-DD')}" -X ${defaultCurrency} --format "NNN%A|%t\n"`
+    `ledger bal Expenses -b "${from.format('YYYY-MM-DD')}" -e "${to.format('YYYY-MM-DD')}" -X ${defaultCurrency} --format "NNN%A|%t|%T\n"`
   );
   const results = stdout
     .split('NNN')
     .filter(Boolean)
     .filter((each) => each.split('|')[1].split('\n')[0] !== '0');
+  const total = stdout
+    .split('NNN')
+    .filter(Boolean)
+    .find((each) => each.split('|')[1] === '0')
+    ?.split('|')[2];
+
   const colors = results.map(() => getRandomColor(0.8, 1));
 
   return (
@@ -32,6 +38,10 @@ const PeriodBalance = async ({
         from={params.from}
         to={params.to}
       />
+      <div className="flex mt-8">
+        <h1 className="text-3xl font-bold">Total Expenses</h1>
+        <h1 className="text-3xl font-bold ml-auto">{total}</h1>
+      </div>
       <table className="w-full mt-8">
         <thead>
           <tr>

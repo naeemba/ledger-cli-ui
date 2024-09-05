@@ -3,10 +3,12 @@
 import { Button } from '@material-tailwind/react';
 import { useState } from 'react';
 import dayjs from 'dayjs';
+import localeData from 'dayjs/plugin/localeData';
 import quarterOfYear from 'dayjs/plugin/quarterOfYear';
 import { useRouter } from 'next/navigation';
 
 dayjs.extend(quarterOfYear);
+dayjs.extend(localeData);
 
 type Props = {
   urlPattern: string;
@@ -33,6 +35,7 @@ const DateFilter = (props: Props) => {
   const handleSubmit = () => {
     pushNewURL(from, to);
   };
+
   return (
     <div className="border p-4">
       <div className="flex">
@@ -52,54 +55,125 @@ const DateFilter = (props: Props) => {
           Apply
         </Button>
       </div>
-      <hr className="my-4" />
-      <div className="space-x-4">
-        <Button
-          color="red"
-          onClick={() =>
-            pushNewURL(
-              dayjs().startOf('month').format('YYYY-MM-DD'),
-              dayjs().endOf('month').format('YYYY-MM-DD')
-            )
-          }
-        >
-          Current Month
-        </Button>
-        <Button
-          color="green"
-          onClick={() =>
-            pushNewURL(
-              dayjs().add(-1, 'month').startOf('month').format('YYYY-MM-DD'),
-              dayjs().add(-1, 'month').endOf('month').format('YYYY-MM-DD')
-            )
-          }
-        >
-          Previous Month
-        </Button>
+      <div className="flex my-4">
+        Monthly <hr className="ml-4 my-auto flex-1" />
+      </div>
+      <div className="flex flex-wrap">
+        {dayjs.months().map((month) => (
+          <Button
+            color="green"
+            className="my-4 mx-4"
+            key={month}
+            onClick={() =>
+              pushNewURL(
+                dayjs()
+                  .month(dayjs.months().indexOf(month))
+                  .startOf('month')
+                  .format('YYYY-MM-DD'),
+                dayjs()
+                  .month(dayjs.months().indexOf(month))
+                  .endOf('month')
+                  .format('YYYY-MM-DD')
+              )
+            }
+          >
+            {month}
+          </Button>
+        ))}
+      </div>
+      <div className="flex my-4">
+        Quarterly <hr className="ml-4 my-auto flex-1" />
+      </div>
+
+      <div className="flex flex-wrap">
         <Button
           color="blue"
+          className="my-4 mx-4"
           onClick={() =>
             pushNewURL(
-              dayjs().startOf('quarter').format('YYYY-MM-DD'),
-              dayjs().endOf('quarter').format('YYYY-MM-DD')
+              dayjs().month(0).startOf('quarter').format('YYYY-MM-DD'),
+              dayjs().month(0).endOf('quarter').format('YYYY-MM-DD')
             )
           }
         >
-          Current Quarter
+          Q1
         </Button>
         <Button
           color="teal"
+          className="my-4 mx-4"
           onClick={() =>
             pushNewURL(
-              dayjs()
-                .add(-1, 'quarter')
-                .startOf('quarter')
-                .format('YYYY-MM-DD'),
-              dayjs().add(-1, 'quarter').endOf('quarter').format('YYYY-MM-DD')
+              dayjs().month(4).startOf('quarter').format('YYYY-MM-DD'),
+              dayjs().month(4).endOf('quarter').format('YYYY-MM-DD')
             )
           }
         >
-          Previous Quarter
+          Q2
+        </Button>
+        <Button
+          color="brown"
+          className="my-4 mx-4"
+          onClick={() =>
+            pushNewURL(
+              dayjs().month(7).startOf('quarter').format('YYYY-MM-DD'),
+              dayjs().month(7).endOf('quarter').format('YYYY-MM-DD')
+            )
+          }
+        >
+          Q3
+        </Button>
+        <Button
+          color="red"
+          className="my-4 mx-4"
+          onClick={() =>
+            pushNewURL(
+              dayjs().month(10).startOf('quarter').format('YYYY-MM-DD'),
+              dayjs().month(10).endOf('quarter').format('YYYY-MM-DD')
+            )
+          }
+        >
+          Q4
+        </Button>
+      </div>
+      <div className="flex my-4">
+        Yearly <hr className="ml-4 my-auto flex-1" />
+      </div>
+      <div className="flex flex-wrap">
+        <Button
+          color="pink"
+          className="my-4 mx-4"
+          onClick={() =>
+            pushNewURL(
+              dayjs().year(2024).startOf('year').format('YYYY-MM-DD'),
+              dayjs().year(2024).endOf('year').format('YYYY-MM-DD')
+            )
+          }
+        >
+          2024
+        </Button>
+        <Button
+          color="gray"
+          className="my-4 mx-4"
+          onClick={() =>
+            pushNewURL(
+              dayjs().year(2023).startOf('year').format('YYYY-MM-DD'),
+              dayjs().year(2023).endOf('quarter').format('YYYY-MM-DD')
+            )
+          }
+        >
+          2023
+        </Button>
+        <Button
+          color="blue-gray"
+          className="my-4 mx-4"
+          onClick={() =>
+            pushNewURL(
+              dayjs().year(2022).startOf('year').format('YYYY-MM-DD'),
+              dayjs().year(2022).endOf('year').format('YYYY-MM-DD')
+            )
+          }
+        >
+          2022
         </Button>
       </div>
     </div>
