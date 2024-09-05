@@ -1,13 +1,14 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
+import getLedgerCommand from '@/utils/getLedgerCommand';
 
 const execPromise = promisify(exec);
 
 const Balance = async () => {
   const defaultCurrency = getDefaultCurrency();
   const { stdout } = await execPromise(
-    `ledger balance Assets Liabilities -X ${defaultCurrency} --format='%A|%T\n'`
+    `${getLedgerCommand()} balance Assets Liabilities -X ${defaultCurrency} --format='%A|%T\n'`
   );
   const result = stdout.split('\n').filter(Boolean);
   const total = [...result].reverse()[0].split('|')[1];

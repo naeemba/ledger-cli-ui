@@ -1,17 +1,19 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
+import getLedgerCommand from '@/utils/getLedgerCommand';
 
 const execPromise = promisify(exec);
 
 const Account = async ({ params }: { params: { account: string } }) => {
   const defaultCurrency = getDefaultCurrency();
   const account = decodeURIComponent(params.account);
+  const ledgerCommand = getLedgerCommand();
   const { stdout } = await execPromise(
-    `ledger register ${account} --format 'NNN%D|%A|%P|%N|%X|%B|%C|%t|%T'`
+    `${ledgerCommand} register ${account} --format 'NNN%D|%A|%P|%N|%X|%B|%C|%t|%T'`
   );
   const { stdout: balance } = await execPromise(
-    `ledger balance ${account} -X ${defaultCurrency} --format '%T'`
+    `${ledgerCommand} balance ${account} -X ${defaultCurrency} --format '%T'`
   );
   const results = stdout.split('NNN').filter(Boolean);
   return (

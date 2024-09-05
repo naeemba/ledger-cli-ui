@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
+import getLedgerCommand from '@/utils/getLedgerCommand';
 import getRandomColor from '@/utils/getRandomColor';
 
 const execPromise = promisify(exec);
@@ -17,7 +18,7 @@ const PeriodBalance = async ({
   const to = dayjs(params.to);
   const defaultCurrency = getDefaultCurrency();
   const { stdout } = await execPromise(
-    `ledger bal Expenses -b "${from.format('YYYY-MM-DD')}" -e "${to.format('YYYY-MM-DD')}" -X ${defaultCurrency} --format "NNN%A|%t|%T\n"`
+    `${getLedgerCommand()} bal Expenses -b "${from.format('YYYY-MM-DD')}" -e "${to.format('YYYY-MM-DD')}" -X ${defaultCurrency} --format "NNN%A|%t|%T\n"`
   );
   const results = stdout
     .split('NNN')

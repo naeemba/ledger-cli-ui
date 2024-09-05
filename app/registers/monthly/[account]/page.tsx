@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { promisify } from 'util';
 import Chart from '@/components/Chart';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
+import getLedgerCommand from '@/utils/getLedgerCommand';
 import getRandomColor from '@/utils/getRandomColor';
 
 const execPromise = promisify(exec);
@@ -10,11 +11,12 @@ const execPromise = promisify(exec);
 const Monthly = async ({ params }: { params: { account: string } }) => {
   const defaultCurrency = getDefaultCurrency();
   const account = decodeURIComponent(params.account);
+  const ledgerCommand = getLedgerCommand();
   const { stdout } = await execPromise(
-    `ledger register ${account} --format 'NNN%D|%t' -M`
+    `${ledgerCommand} register ${account} --format 'NNN%D|%t' -M`
   );
   const { stdout: balance } = await execPromise(
-    `ledger balance ${account} -X ${defaultCurrency} --format '%T'`
+    `${ledgerCommand} balance ${account} -X ${defaultCurrency} --format '%T'`
   );
   const results = stdout.split('NNN').filter(Boolean);
   const colors = results.map(() => getRandomColor(0.8, 1));

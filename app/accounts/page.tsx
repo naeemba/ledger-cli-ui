@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import getLedgerCommand from '@/utils/getLedgerCommand';
 import Link from 'next/link';
 
 const execPromise = promisify(exec);
@@ -53,7 +54,7 @@ const renderTree = (node: Record<string, unknown>, parentPath = '') => {
 
 const Report = async () => {
   try {
-    const { stdout } = await execPromise(`ledger accounts`);
+    const { stdout } = await execPromise(`${getLedgerCommand()} accounts`);
     const accounts = stdout
       .split('\n')
       .filter(Boolean)
