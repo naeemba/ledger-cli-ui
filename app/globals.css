@@ -18,7 +18,7 @@ body {
     rgb(var(--background-start-rgb));
 }
 
-table tr td {
+table tr td, table tr th {
   @apply px-4;
 }
 
