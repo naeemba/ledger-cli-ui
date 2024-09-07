@@ -25,11 +25,12 @@ const PeriodBalance = async ({
     .split('NNN')
     .filter(Boolean)
     .filter((each) => each.split('|')[1].split('\n')[0] !== '0');
-  const total = stdout
-    .split('NNN')
-    .filter(Boolean)
-    .find((each) => each.split('|')[1] === '0')
-    ?.split('|')[2];
+  const total =
+    stdout
+      .split('NNN')
+      .filter(Boolean)
+      .find((each) => each.split('|')[1] === '0')
+      ?.split('|')[2] ?? '';
 
   const colors = results.map(() => getRandomColor(0.8, 1));
 
@@ -42,7 +43,9 @@ const PeriodBalance = async ({
       />
       <div className="flex mt-8">
         <h1 className="text-3xl font-bold">Total Expenses</h1>
-        <h1 className="text-3xl font-bold ml-auto">{total}</h1>
+        <h1 className="text-3xl font-bold ml-auto">
+          {formatAmount(total, true)}
+        </h1>
       </div>
       <table className="w-full mt-8">
         <thead>

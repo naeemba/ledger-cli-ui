@@ -21,7 +21,9 @@ const Account = async ({ params }: { params: { account: string } }) => {
     <div>
       <div className="flex">
         <h1 className="text-3xl font-bold">{account}</h1>
-        <h1 className="text-3xl font-bold ml-auto">{balance}</h1>
+        <h1 className="text-3xl font-bold ml-auto">
+          {formatAmount(balance, true)}
+        </h1>
       </div>
       <table className="w-full mt-8">
         <thead>

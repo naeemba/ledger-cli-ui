@@ -17,7 +17,9 @@ const Balance = async () => {
     <div>
       <div className="flex">
         <h1 className="text-3xl font-bold">Total</h1>
-        <h1 className="text-3xl font-bold ml-auto">{total}</h1>
+        <h1 className="text-3xl font-bold ml-auto">
+          {formatAmount(total, true)}
+        </h1>
       </div>
       <table className="w-full mt-8">
         <thead>

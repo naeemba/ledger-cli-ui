@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@material-tailwind/react';
+import { color } from '@material-tailwind/react/types/components/button';
 import { useState } from 'react';
 import dayjs from 'dayjs';
 import localeData from 'dayjs/plugin/localeData';
@@ -79,7 +80,7 @@ const DateFilter = (props: Props) => {
       <div className="flex flex-wrap">
         {dayjs.months().map((month, idx) => (
           <Button
-            color={colors[idx]}
+            color={colors[idx] as color}
             className="my-4 mx-4"
             key={month}
             onClick={() =>
@@ -169,7 +170,7 @@ const DateFilter = (props: Props) => {
           onClick={() =>
             pushNewURL(
               dayjs().year(2023).startOf('year').format('YYYY-MM-DD'),
-              dayjs().year(2023).endOf('quarter').format('YYYY-MM-DD')
+              dayjs().year(2023).endOf('year').format('YYYY-MM-DD')
             )
           }
         >
