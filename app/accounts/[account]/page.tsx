@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import formatAmount from '@/utils/formatAmount';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import getLedgerCommand from '@/utils/getLedgerCommand';
 
@@ -38,13 +39,15 @@ const Account = async ({ params }: { params: { account: string } }) => {
               <tr key={idx}>
                 <td className="text-center">{columns[0]}</td>
                 <td className="text-center">{columns[2]}</td>
-                <td className="text-right">{columns[7]}</td>
-                <td
-                  className="text-right pr-2 py-2"
-                  dangerouslySetInnerHTML={{
-                    __html: columns[8].replaceAll('\n', '<br />'),
-                  }}
-                />
+                <td className="text-right">{formatAmount(columns[7], true)}</td>
+                <td className="text-right pr-2 py-2">
+                  {columns[8].split('\n').map((each) => (
+                    <span key={each}>
+                      {formatAmount(each, true)}
+                      <br />
+                    </span>
+                  ))}
+                </td>
               </tr>
             );
           })}

@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { promisify } from 'util';
 import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
+import formatAmount from '@/utils/formatAmount';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import getLedgerCommand from '@/utils/getLedgerCommand';
 import getRandomColor from '@/utils/getRandomColor';
@@ -47,7 +48,9 @@ const PeriodBalance = async ({
         <thead>
           <tr>
             <td>Account</td>
-            <td className="text-right">Spend ({defaultCurrency})</td>
+            <td className="text-right">
+              Spend ({defaultCurrency?.toUpperCase()})
+            </td>
           </tr>
         </thead>
         <tbody>
@@ -56,7 +59,9 @@ const PeriodBalance = async ({
             return (
               <tr key={index}>
                 <td>{columns[0]}</td>
-                <td className="text-right">{columns[1].split(' ')[1]}</td>
+                <td className="text-right">
+                  {formatAmount(columns[1], false)}
+                </td>
               </tr>
             );
           })}

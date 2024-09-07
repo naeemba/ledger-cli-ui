@@ -1,13 +1,15 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import formatAmount from '@/utils/formatAmount';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import getLedgerCommand from '@/utils/getLedgerCommand';
 
 const execPromise = promisify(exec);
 
 const Debts = async () => {
+  const defaultCurrency = getDefaultCurrency();
   const { stdout } = await execPromise(
-    `${getLedgerCommand()} balance -X ${getDefaultCurrency()} Assets:Credited --format  'NNN%A|%T'`
+    `${getLedgerCommand()} balance -X ${defaultCurrency} Assets:Credited --format  'NNN%A|%T'`
   );
   let debts = stdout.split('NNN').filter((each) => each?.length);
   const total = debts[debts.length - 1];
@@ -23,7 +25,9 @@ const Debts = async () => {
         <thead>
           <tr>
             <th>Payee</th>
-            <th className="text-right">Amount</th>
+            <th className="text-right">
+              Amount&nbsp;({defaultCurrency?.toUpperCase()})
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -32,7 +36,9 @@ const Debts = async () => {
             return (
               <tr key={idx}>
                 <td className="text-center">{columns[0]}</td>
-                <td className="text-right">{columns[1].split(' ')[1]}</td>
+                <td className="text-right">
+                  {formatAmount(columns[1], false)}
+                </td>
               </tr>
             );
           })}

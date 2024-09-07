@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import formatAmount from '@/utils/formatAmount';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import getLedgerCommand from '@/utils/getLedgerCommand';
 
@@ -22,7 +23,7 @@ const Balance = async () => {
         <thead>
           <tr>
             <td>Account</td>
-            <td>Balance</td>
+            <td>Balance&nbsp;({defaultCurrency?.toUpperCase()})</td>
           </tr>
         </thead>
         <tbody>
@@ -31,7 +32,7 @@ const Balance = async () => {
             return (
               <tr key={index}>
                 <td>{columns[0]}</td>
-                <td>{columns[1]}</td>
+                <td>{formatAmount(columns[1], false)}</td>
               </tr>
             );
           })}

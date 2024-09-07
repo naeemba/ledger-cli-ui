@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import dayjs from 'dayjs';
 import { promisify } from 'util';
 import Chart from '@/components/Chart';
+import formatAmount from '@/utils/formatAmount';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import getLedgerCommand from '@/utils/getLedgerCommand';
 import getRandomColor from '@/utils/getRandomColor';
@@ -40,7 +41,9 @@ const Monthly = async ({ params }: { params: { account: string } }) => {
             return (
               <tr key={index}>
                 <td>{date.format('MMM YYYY')}</td>
-                <td className="text-right">{columns[1].split(' ')[1]}</td>
+                <td className="text-right">
+                  {formatAmount(columns[1], false)}
+                </td>
               </tr>
             );
           })}
