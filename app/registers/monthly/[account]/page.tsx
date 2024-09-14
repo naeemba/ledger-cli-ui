@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { promisify } from 'util';
 import Chart from '@/components/Chart';
 import formatAmount from '@/utils/formatAmount';
+import formatDate, { Format } from '@/utils/formatDate';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import getLedgerCommand from '@/utils/getLedgerCommand';
 import getRandomColor from '@/utils/getRandomColor';
@@ -39,10 +40,9 @@ const Monthly = async ({ params }: { params: { account: string } }) => {
         <tbody>
           {results.map((item, index) => {
             const columns = item.split('|');
-            const date = dayjs(columns[0]);
             return (
               <tr key={index}>
-                <td>{date.format('MMM YYYY')}</td>
+                <td>{formatDate(columns[0], Format.MONTH_YEAR)}</td>
                 <td className="text-right">
                   {formatAmount(columns[1], false)}
                 </td>

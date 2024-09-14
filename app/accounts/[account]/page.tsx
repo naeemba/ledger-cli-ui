@@ -1,6 +1,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import formatAmount from '@/utils/formatAmount';
+import formatDate, { Format } from '@/utils/formatDate';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import getLedgerCommand from '@/utils/getLedgerCommand';
 
@@ -39,7 +40,9 @@ const Account = async ({ params }: { params: { account: string } }) => {
             const columns = result.split('|').map((each) => each.trim());
             return (
               <tr key={idx}>
-                <td className="text-center">{columns[0]}</td>
+                <td className="text-center">
+                  {formatDate(columns[0], Format.DATE)}
+                </td>
                 <td className="text-center">{columns[2]}</td>
                 <td className="text-right">{formatAmount(columns[7], true)}</td>
                 <td className="text-right pr-2 py-2">

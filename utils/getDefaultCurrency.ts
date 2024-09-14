@@ -1,5 +1,7 @@
+import getEnv from './getEnv';
+
 const getDefaultCurrency = () => {
-  return process.env.DEFAULT_CURRENCY;
+  return getEnv().DEFAULT_CURRENCY;
 };
 
 export default getDefaultCurrency;
