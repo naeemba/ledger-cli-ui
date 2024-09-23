@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import formatAmount from '@/utils/formatAmount';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import getLedgerCommand from '@/utils/getLedgerCommand';
+import Link from 'next/link';
 
 const execPromise = promisify(exec);
 
@@ -37,7 +38,14 @@ const Debts = async () => {
             const columns = debt.split('|').map((each) => each.trim());
             return (
               <tr key={idx}>
-                <td className="text-center">{columns[0]}</td>
+                <td className="text-center">
+                  <Link
+                    className="py-3 px-6 block"
+                    href={`/accounts/${encodeURIComponent(columns[0])}`}
+                  >
+                    {columns[0]}
+                  </Link>
+                </td>
                 <td className="text-right">
                   {formatAmount(columns[1], false)}
                 </td>
