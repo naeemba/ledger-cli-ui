@@ -19,7 +19,7 @@ const Tree = ({
             {Object.keys(tree[key] as Record<string, unknown>).length > 0 && (
               <Tree
                 tree={tree[key] as Record<string, unknown>}
-                parentPath={currentPath}
+                parentPath={`${currentPath}:`}
               />
             )}
           </li>
