@@ -1,9 +1,25 @@
 import getEnv from './getEnv';
 
-const getLedgerCommand = () => {
+type Props = {
+  sortByDate?: boolean;
+};
+
+const getLedgerCommand = (props?: Props) => {
   const LedgerFile = getEnv().LEDGER_FILE;
   const PriceDBFile = getEnv().LEDGER_PRICE_DB;
-  return `ledger --file ${LedgerFile} --price-db ${PriceDBFile} --sort -date`;
+  let ledgerCommand = 'ledger';
+  if (LedgerFile?.length) {
+    ledgerCommand += ` --file ${LedgerFile}`;
+  }
+  if (PriceDBFile?.length) {
+    ledgerCommand += ` --price-db ${PriceDBFile}`;
+  }
+  if (typeof props?.sortByDate === 'undefined' || props?.sortByDate) {
+    ledgerCommand += ' --sort -date';
+  }
+
+  console.log({ ledgerCommand }, props);
+  return ledgerCommand;
 };
 
 export default getLedgerCommand;

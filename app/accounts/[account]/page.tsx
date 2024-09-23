@@ -10,7 +10,7 @@ const execPromise = promisify(exec);
 const Account = async ({ params }: { params: { account: string } }) => {
   const defaultCurrency = getDefaultCurrency();
   const account = decodeURIComponent(params.account);
-  const ledgerCommand = getLedgerCommand();
+  const ledgerCommand = getLedgerCommand({ sortByDate: false });
   const { stdout } = await execPromise(
     `${ledgerCommand} register ${account} --format 'NNN%D|%A|%P|%N|%X|%B|%C|%t|%T'`
   );
@@ -36,7 +36,7 @@ const Account = async ({ params }: { params: { account: string } }) => {
           </tr>
         </thead>
         <tbody>
-          {results.map((result, idx) => {
+          {results.reverse().map((result, idx) => {
             const columns = result.split('|').map((each) => each.trim());
             return (
               <tr key={idx}>
