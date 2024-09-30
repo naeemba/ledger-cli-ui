@@ -18,7 +18,6 @@ const getLedgerCommand = (props?: Props) => {
     ledgerCommand += ' --sort -date';
   }
 
-  console.log({ ledgerCommand }, props);
   return ledgerCommand;
 };
 

@@ -15,7 +15,6 @@ const Debts = async () => {
   let debts = stdout.split('NNN').filter((each) => each?.length);
   const total = debts[debts.length - 1];
   debts = debts.slice(1, debts.length - 1);
-  console.log({ debts, total });
   return (
     <div>
       <div className="flex">
