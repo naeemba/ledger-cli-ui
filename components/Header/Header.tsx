@@ -29,7 +29,7 @@ const menus = [
   },
   {
     id: 6,
-    title: 'Monthly',
+    title: 'Monthly Comparison',
     href: '/monthly',
   },
 ];
