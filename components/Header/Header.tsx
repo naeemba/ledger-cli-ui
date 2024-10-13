@@ -27,6 +27,11 @@ const menus = [
     title: 'Debts',
     href: '/debts',
   },
+  {
+    id: 6,
+    title: 'Monthly',
+    href: '/monthly',
+  },
 ];
 
 const Header = () => {
