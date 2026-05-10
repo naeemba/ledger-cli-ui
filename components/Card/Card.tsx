@@ -1,14 +1,5 @@
-'use client';
-
-import {
-  Card,
-  CardBody,
-  Typography,
-  CardFooter,
-  Button,
-} from '@material-tailwind/react';
 import { twMerge } from 'tailwind-merge';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 type Props = {
   title?: React.ReactNode;
@@ -20,24 +11,23 @@ type Props = {
   className?: string;
 };
 
-const CardComponent = (props: Props) => {
-  const { title, body, action, className } = props;
-  const router = useRouter();
+const Card = ({ title, body, action, className }: Props) => {
   return (
-    <Card className={twMerge('mt-6 w-96', className)}>
-      <CardBody>
-        <Typography variant="h5" color="blue-gray" className="mb-2">
-          {title}
-        </Typography>
-        <Typography>{body}</Typography>
-      </CardBody>
+    <div
+      className={twMerge(
+        'mt-6 w-96 rounded-xl border border-slate-100 bg-white shadow-md',
+        className
+      )}
+    >
+      <div className="p-6">
+        <h5 className="mb-2 text-xl font-semibold text-slate-900">{title}</h5>
+        <div className="text-base text-gray-700">{body}</div>
+      </div>
       {action && (
-        <CardFooter className="pt-0">
-          <Button
-            onClick={() => router.push(action.href)}
-            variant="text"
-            className="flex items-center gap-2"
-            size="sm"
+        <div className="px-6 pb-6 pt-0">
+          <Link
+            href={action.href}
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold uppercase text-slate-900 hover:bg-slate-50"
           >
             {action.title}
             <svg
@@ -54,11 +44,11 @@ const CardComponent = (props: Props) => {
                 d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
               />
             </svg>
-          </Button>
-        </CardFooter>
+          </Link>
+        </div>
       )}
-    </Card>
+    </div>
   );
 };
 
-export default CardComponent;
+export default Card;

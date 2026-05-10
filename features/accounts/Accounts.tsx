@@ -7,18 +7,21 @@ import getLedgerCommand from '@/utils/getLedgerCommand';
 const execPromise = promisify(exec);
 
 const Accounts = async () => {
+  let accounts: string[];
   try {
     const { stdout } = await execPromise(`${getLedgerCommand()} accounts`);
-    const accounts = stdout
+    accounts = stdout
       .split('\n')
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b));
-    const tree = buildTree(accounts);
-    return <Tree tree={tree} />;
   } catch (e) {
     console.error(e);
+    return (
+      <div className="text-red-700">Failed to load accounts from ledger.</div>
+    );
   }
-  return <div>asldfjk</div>;
+  const tree = buildTree(accounts);
+  return <Tree tree={tree} />;
 };
 
 export default Accounts;

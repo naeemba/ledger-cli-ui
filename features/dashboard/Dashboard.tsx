@@ -20,6 +20,9 @@ const Dashboard = async () => {
     `${ledgerCommand} reg ^Expenses --period 'this month' --monthly -X Kirt  --format "%A|%t\n"`
   );
   const highestExpenseThisMonth = getHighestExpense(expensesMonthly);
+  const [highestAccount, highestAmount] = highestExpenseThisMonth
+    ? highestExpenseThisMonth.split('|')
+    : [null, null];
   return (
     <div className="grid lg:grid-cols-3 gap-8">
       <Card
@@ -44,10 +47,13 @@ const Dashboard = async () => {
         className="w-full mt-0"
         body="Highest Expense This Month"
         title={
-          <span>
-            {highestExpenseThisMonth.split('|')[0]}&nbsp;
-            {formatAmount(highestExpenseThisMonth.split('|')[1], true)}
-          </span>
+          highestAccount ? (
+            <span>
+              {highestAccount}&nbsp;{formatAmount(highestAmount, true)}
+            </span>
+          ) : (
+            <span className="text-gray-400">No expenses this month</span>
+          )
         }
         action={{
           title: 'More Details',

@@ -7,9 +7,14 @@ import getLedgerCommand from '@/utils/getLedgerCommand';
 
 const execPromise = promisify(exec);
 
-const Account = async ({ params }: { params: { account: string } }) => {
+const Account = async ({
+  params,
+}: {
+  params: Promise<{ account: string }>;
+}) => {
   const defaultCurrency = getDefaultCurrency();
-  const account = decodeURIComponent(params.account);
+  const { account: accountParam } = await params;
+  const account = decodeURIComponent(accountParam);
   const ledgerCommand = getLedgerCommand({ sortByDate: false });
   const { stdout } = await execPromise(
     `${ledgerCommand} register ${account} --format 'NNN%D|%A|%P|%N|%X|%B|%C|%t|%T'`

@@ -10,9 +10,14 @@ import getRandomColor from '@/utils/getRandomColor';
 
 const execPromise = promisify(exec);
 
-const Monthly = async ({ params }: { params: { account: string } }) => {
+const Monthly = async ({
+  params,
+}: {
+  params: Promise<{ account: string }>;
+}) => {
   const defaultCurrency = getDefaultCurrency();
-  const account = decodeURIComponent(params.account);
+  const { account: accountParam } = await params;
+  const account = decodeURIComponent(accountParam);
   const ledgerCommand = getLedgerCommand();
   const { stdout } = await execPromise(
     `${ledgerCommand} register ${account} --format 'NNN%D|%t' -M`

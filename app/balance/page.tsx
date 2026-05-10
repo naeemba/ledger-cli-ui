@@ -13,7 +13,7 @@ const Balance = async () => {
     `${getLedgerCommand()} balance Assets Liabilities -X ${defaultCurrency} --format='%A|%T\n'`
   );
   const result = stdout.split('\n').filter(Boolean);
-  const total = [...result].reverse()[0].split('|')[1];
+  const total = [...result].reverse()[0]?.split('|')[1] ?? '';
   return (
     <div>
       <div className="flex">

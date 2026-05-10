@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
 :root {
   --foreground-rgb: 0, 0, 0;
@@ -18,7 +16,8 @@ body {
     rgb(var(--background-start-rgb));
 }
 
-table tr td, table tr th {
+table tr td,
+table tr th {
   @apply px-4;
 }
 
@@ -27,5 +26,5 @@ table thead tr {
 }
 
 table tbody tr {
-  @apply h-10 even:bg-gray-100 odd:bg-gray-200;
+  @apply h-10 odd:bg-gray-200 even:bg-gray-100;
 }

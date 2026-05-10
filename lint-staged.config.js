@@ -1,9 +1,9 @@
 const path = require('node:path');
 
 const buildEslintCommand = (filenames) =>
-  `next lint --fix --file ${filenames
+  `eslint --fix ${filenames
     .map((f) => path.relative(process.cwd(), f))
-    .join(' --file ')}`;
+    .join(' ')}`;
 
 const typescriptTypeCheckCommand = (filenames) =>
   `tsc --noEmit --project ${path.relative(

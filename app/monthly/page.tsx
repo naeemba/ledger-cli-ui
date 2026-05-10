@@ -1,7 +1,6 @@
 import MonthlyComparison from '@feature/monthlyComparison';
 
-const Monthly = async () => {
-  // @ts-ignore
+const Monthly = () => {
   return <MonthlyComparison />;
 };
 

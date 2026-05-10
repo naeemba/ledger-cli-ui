@@ -1,7 +1,6 @@
 import Accounts from '@feature/accounts';
 
-const Report = async () => {
-  // @ts-ignore
+const Report = () => {
   return <Accounts />;
 };
 

@@ -19,7 +19,10 @@ const formatAmountWithoutUnit = (str: string, unit?: string) => {
   }
 };
 
-const formatAmount = (str: string, withUnit: boolean) => {
+const formatAmount = (str: string | undefined | null, withUnit: boolean) => {
+  if (!str || !str.trim()) {
+    return <span className="text-gray-400">—</span>;
+  }
   const splitted = str.split(' ');
   // there is unit within amount
   if (splitted.length < 2) {

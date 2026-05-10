@@ -14,10 +14,11 @@ const execPromise = promisify(exec);
 const PeriodBalance = async ({
   params,
 }: {
-  params: { from: string; to: string };
+  params: Promise<{ from: string; to: string }>;
 }) => {
-  const from = dayjs(params.from);
-  const to = dayjs(params.to);
+  const { from: fromParam, to: toParam } = await params;
+  const from = dayjs(fromParam);
+  const to = dayjs(toParam);
   const defaultCurrency = getDefaultCurrency();
   const { stdout } = await execPromise(
     `${getLedgerCommand()} bal Expenses -b "${from.format('YYYY-MM-DD')}" -e "${to.format('YYYY-MM-DD')}" -X ${defaultCurrency} --format "NNN%A|%t|%T\n"`
@@ -39,8 +40,8 @@ const PeriodBalance = async ({
     <div>
       <DateFilter
         urlPattern="/balance/{from}/{to}"
-        from={params.from}
-        to={params.to}
+        from={fromParam}
+        to={toParam}
       />
       <div className="flex mt-8">
         <h1 className="text-3xl font-bold">Total Expenses</h1>

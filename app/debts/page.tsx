@@ -12,15 +12,15 @@ const Debts = async () => {
   const { stdout } = await execPromise(
     `${getLedgerCommand()} balance -X ${defaultCurrency} Assets:Credited --format  'NNN%A|%T'`
   );
-  let debts = stdout.split('NNN').filter((each) => each?.length);
-  const total = debts[debts.length - 1];
-  debts = debts.slice(1, debts.length - 1);
+  const allDebts = stdout.split('NNN').filter((each) => each?.length);
+  const total = allDebts[allDebts.length - 1] ?? '';
+  const debts = allDebts.slice(1, allDebts.length - 1);
   return (
     <div>
       <div className="flex">
         <h1 className="text-3xl font-bold">Total</h1>
         <h1 className="text-3xl font-bold ml-auto">
-          {formatAmount(total.split('|')[1], true)}
+          {formatAmount(total.split('|')[1] ?? '', true)}
         </h1>
       </div>
       <table className="w-full mt-8">
