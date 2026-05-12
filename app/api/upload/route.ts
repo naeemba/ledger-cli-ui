@@ -1,38 +1,47 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { promisify } from 'util';
 import { NextRequest, NextResponse } from 'next/server';
 
+const execFilePromise = promisify(execFile);
+
 const uploadDir = path.join(process.cwd(), 'uploads');
+const ALLOWED_EXTENSIONS = new Set(['.ledger', '.dat', '.journal', '.txt']);
+const MAX_BYTES = 10 * 1024 * 1024;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const data = await req.formData();
-  const file = data.get('file') as File;
+  const file = data.get('file');
 
-  if (!file) {
+  if (!file || typeof file === 'string') {
     return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
   }
 
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  if (file.size > MAX_BYTES) {
+    return NextResponse.json({ error: 'File too large' }, { status: 413 });
+  }
 
-  // Ensure the uploads directory exists
+  const safeName = path.basename(file.name);
+  const ext = path.extname(safeName).toLowerCase();
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    return NextResponse.json(
+      { error: 'Unsupported file type' },
+      { status: 415 }
+    );
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
   await fs.mkdir(uploadDir, { recursive: true });
-
-  // Write the uploaded file to the uploads directory
-  const filePath = path.join(uploadDir, file.name);
+  const filePath = path.join(uploadDir, safeName);
   await fs.writeFile(filePath, buffer);
 
-  // Parse the file using Ledger CLI
-  return new Promise((resolve) => {
-    exec(`ledger -f ${filePath} bal`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error: ${stderr}`);
-        resolve(NextResponse.json({ error: stderr }, { status: 500 }));
-        return;
-      }
-
-      resolve(NextResponse.json({ data: stdout }));
-    });
-  });
+  try {
+    const { stdout } = await execFilePromise('ledger', ['-f', filePath, 'bal']);
+    return NextResponse.json({ data: stdout });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'ledger failed';
+    console.error(e);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

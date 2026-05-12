@@ -1,65 +1,105 @@
-import { exec } from 'child_process';
 import dayjs from 'dayjs';
-import { promisify } from 'util';
 import { getHighestExpense } from './Dashboard.utils';
+import Card from '@/components/Card';
 import formatAmount from '@/utils/formatAmount';
-import getLedgerCommand from '@/utils/getLedgerCommand';
-import Card from '@components/Card';
+import getDefaultCurrency from '@/utils/getDefaultCurrency';
+import runLedger from '@/utils/runLedger';
 
-const execPromise = promisify(exec);
+const lastNonEmptyLine = (stdout: string): string =>
+  stdout.split('\n').filter(Boolean).slice(-1)[0] ?? '';
 
 const Dashboard = async () => {
-  const ledgerCommand = getLedgerCommand();
-  const { stdout: currentMonthBalance } = await execPromise(
-    `${ledgerCommand} reg ^Expenses --period 'this month' --monthly -X Kirt  --format "%T\n"  | tail -n 1`
+  const currency = getDefaultCurrency() ?? 'USD';
+  const currentMonthBalance = lastNonEmptyLine(
+    await runLedger([
+      'reg',
+      '^Expenses',
+      '--period',
+      'this month',
+      '--monthly',
+      '-X',
+      currency,
+      '--format',
+      '%T\n',
+    ])
   );
-  const { stdout: currentYearBalance } = await execPromise(
-    `${ledgerCommand} reg ^Expenses --period 'this year' --yearly -X Kirt  --format "%T\n"  | tail -n 1`
+  const currentYearBalance = lastNonEmptyLine(
+    await runLedger([
+      'reg',
+      '^Expenses',
+      '--period',
+      'this year',
+      '--yearly',
+      '-X',
+      currency,
+      '--format',
+      '%T\n',
+    ])
   );
-  const { stdout: expensesMonthly } = await execPromise(
-    `${ledgerCommand} reg ^Expenses --period 'this month' --monthly -X Kirt  --format "%A|%t\n"`
-  );
+  const expensesMonthly = await runLedger([
+    'reg',
+    '^Expenses',
+    '--period',
+    'this month',
+    '--monthly',
+    '-X',
+    currency,
+    '--format',
+    '%A|%t\n',
+  ]);
   const highestExpenseThisMonth = getHighestExpense(expensesMonthly);
   const [highestAccount, highestAmount] = highestExpenseThisMonth
     ? highestExpenseThisMonth.split('|')
     : [null, null];
+
   return (
-    <div className="grid lg:grid-cols-3 gap-8">
-      <Card
-        className="w-full mt-0"
-        body="Current Month Balance"
-        title={formatAmount(currentMonthBalance.split('\n')[0], true)}
-        action={{
-          title: 'More Details',
-          href: `/balance/${dayjs().startOf('month').format('YYYY-MM-DD')}/${dayjs().endOf('month').format('YYYY-MM-DD')}`,
-        }}
-      />
-      <Card
-        className="w-full mt-0"
-        body="Current Year Balance"
-        title={formatAmount(currentYearBalance.split('\n')[0], true)}
-        action={{
-          title: 'More Details',
-          href: `/balance/${dayjs().startOf('year').format('YYYY-MM-DD')}/${dayjs().endOf('year').format('YYYY-MM-DD')}`,
-        }}
-      />
-      <Card
-        className="w-full mt-0"
-        body="Highest Expense This Month"
-        title={
-          highestAccount ? (
-            <span>
-              {highestAccount}&nbsp;{formatAmount(highestAmount, true)}
-            </span>
-          ) : (
-            <span className="text-gray-400">No expenses this month</span>
-          )
-        }
-        action={{
-          title: 'More Details',
-          href: `/balance/${dayjs().startOf('month').format('YYYY-MM-DD')}/${dayjs().endOf('month').format('YYYY-MM-DD')}`,
-        }}
-      />
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted">
+          {dayjs().format('MMMM YYYY')} overview
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card
+          label="Current Month Balance"
+          value={formatAmount(currentMonthBalance, true)}
+          action={{
+            title: 'More details',
+            href: `/balance/${dayjs().startOf('month').format('YYYY-MM-DD')}/${dayjs().endOf('month').format('YYYY-MM-DD')}`,
+          }}
+        />
+        <Card
+          label="Current Year Balance"
+          value={formatAmount(currentYearBalance, true)}
+          action={{
+            title: 'More details',
+            href: `/balance/${dayjs().startOf('year').format('YYYY-MM-DD')}/${dayjs().endOf('year').format('YYYY-MM-DD')}`,
+          }}
+        />
+        <Card
+          label="Highest Expense This Month"
+          value={
+            highestAccount ? (
+              <span className="flex flex-col gap-1">
+                <span className="text-base font-medium text-muted">
+                  {highestAccount}
+                </span>
+                <span>{formatAmount(highestAmount, true)}</span>
+              </span>
+            ) : (
+              <span className="text-base font-normal text-muted">
+                No expenses this month
+              </span>
+            )
+          }
+          action={{
+            title: 'More details',
+            href: `/balance/${dayjs().startOf('month').format('YYYY-MM-DD')}/${dayjs().endOf('month').format('YYYY-MM-DD')}`,
+          }}
+        />
+      </div>
     </div>
   );
 };

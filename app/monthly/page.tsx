@@ -1,4 +1,4 @@
-import MonthlyComparison from '@feature/monthlyComparison';
+import MonthlyComparison from '@/features/monthlyComparison';
 
 const Monthly = () => {
   return <MonthlyComparison />;

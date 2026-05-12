@@ -1,30 +1,103 @@
 @import 'tailwindcss';
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-card-fg: var(--card-fg);
+  --color-border: var(--border);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+}
+
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --bg: oklch(98.5% 0.004 95);
+  --fg: oklch(22% 0.015 250);
+  --muted: oklch(54% 0.02 250);
+  --card: oklch(100% 0 0);
+  --card-fg: oklch(22% 0.015 250);
+  --border: oklch(92% 0.008 250);
+  --subtle: oklch(96% 0.006 250);
+  --accent: oklch(58% 0.13 165);
+  --accent-fg: oklch(100% 0 0);
+  --positive: oklch(50% 0.13 165);
+  --negative: oklch(54% 0.18 25);
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: oklch(17% 0.015 250);
+    --fg: oklch(94% 0.01 250);
+    --muted: oklch(66% 0.018 250);
+    --card: oklch(22% 0.018 250);
+    --card-fg: oklch(94% 0.01 250);
+    --border: oklch(29% 0.015 250);
+    --subtle: oklch(25% 0.015 250);
+    --accent: oklch(72% 0.14 165);
+    --accent-fg: oklch(20% 0.05 165);
+    --positive: oklch(74% 0.14 165);
+    --negative: oklch(72% 0.16 25);
+  }
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-table tr td,
-table tr th {
-  @apply px-4;
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 table thead tr {
-  @apply h-10;
+  text-align: left;
+}
+
+table thead th,
+table thead td {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+table tbody td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 table tbody tr {
-  @apply h-10 odd:bg-gray-200 even:bg-gray-100;
+  transition: background-color 120ms ease;
+}
+
+table tbody tr:hover {
+  background: var(--subtle);
+}
+
+::selection {
+  background: color-mix(in oklch, var(--accent) 30%, transparent);
 }

@@ -1,17 +1,22 @@
-import { exec } from 'child_process';
 import dayjs, { Dayjs } from 'dayjs';
-import { promisify } from 'util';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
-import getLedgerCommand from '@/utils/getLedgerCommand';
-
-const execPromise = promisify(exec);
+import runLedger from '@/utils/runLedger';
 
 const getMonthlyBalance = async (from: Dayjs, to: Dayjs) => {
-  const defaultCurrency = getDefaultCurrency();
+  const defaultCurrency = getDefaultCurrency() ?? 'USD';
 
-  const { stdout } = await execPromise(
-    `${getLedgerCommand()} bal Expenses -b "${from.format('YYYY-MM-DD')}" -e "${to.format('YYYY-MM-DD')}" -X ${defaultCurrency} --format "NNN%A|%t|%T\n"`
-  );
+  const stdout = await runLedger([
+    'bal',
+    'Expenses',
+    '-b',
+    from.format('YYYY-MM-DD'),
+    '-e',
+    to.format('YYYY-MM-DD'),
+    '-X',
+    defaultCurrency,
+    '--format',
+    'NNN%A|%t|%T\n',
+  ]);
 
   const total =
     stdout
@@ -19,34 +24,27 @@ const getMonthlyBalance = async (from: Dayjs, to: Dayjs) => {
       .filter(Boolean)
       .find((each) => each.split('|')[1] === '0')
       ?.split('|')[2] ?? '';
-  console.log({ total });
 
   return total;
 };
 
-export const getMonthsTotals = async () => {
-  const months = [
-    '01',
-    '02',
-    '03',
-    '04',
-    '05',
-    '06',
-    '07',
-    '08',
-    '09',
-    '10',
-    '11',
-    '12',
-  ].reverse();
+const YEARS_BACK = 3;
 
-  const years = [2024, 2023];
+export const getMonthsTotals = async () => {
+  const currentYear = dayjs().year();
+  const years = Array.from(
+    { length: YEARS_BACK + 1 },
+    (_, i) => currentYear - i
+  );
+  const months = Array.from({ length: 12 }, (_, i) =>
+    String(12 - i).padStart(2, '0')
+  );
+
   const monthsTotals: { date: Dayjs; total: string }[] = [];
-  for (let i = 0; i < years.length; i++) {
-    const year = years[i];
-    for (let j = 0; j < months.length; j++) {
-      const month = months[j];
+  for (const year of years) {
+    for (const month of months) {
       const date = dayjs(`${year}-${month}-1`);
+      if (date.isAfter(dayjs())) continue;
       const total = await getMonthlyBalance(
         date.startOf('month'),
         date.endOf('month')

@@ -1,7 +1,10 @@
+import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { twMerge } from 'tailwind-merge';
 import Link from 'next/link';
 
 type Props = {
+  label?: React.ReactNode;
+  value?: React.ReactNode;
   title?: React.ReactNode;
   body?: React.ReactNode;
   action?: {
@@ -11,42 +14,38 @@ type Props = {
   className?: string;
 };
 
-const Card = ({ title, body, action, className }: Props) => {
+const Card = ({ label, value, title, body, action, className }: Props) => {
+  const cardLabel = label ?? body;
+  const cardValue = value ?? title;
+
   return (
     <div
       className={twMerge(
-        'mt-6 w-96 rounded-xl border border-slate-100 bg-white shadow-md',
+        'flex flex-col rounded-2xl border border-border bg-card text-card-fg shadow-sm transition-shadow hover:shadow-md',
         className
       )}
     >
-      <div className="p-6">
-        <h5 className="mb-2 text-xl font-semibold text-slate-900">{title}</h5>
-        <div className="text-base text-gray-700">{body}</div>
-      </div>
-      {action && (
-        <div className="px-6 pb-6 pt-0">
+      <div className="flex flex-1 flex-col gap-3 p-6">
+        {cardLabel && (
+          <div className="text-xs font-medium uppercase tracking-wider text-muted">
+            {cardLabel}
+          </div>
+        )}
+        {cardValue && (
+          <div className="text-2xl font-semibold tracking-tight">
+            {cardValue}
+          </div>
+        )}
+        {action && (
           <Link
             href={action.href}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold uppercase text-slate-900 hover:bg-slate-50"
+            className="mt-auto inline-flex w-fit items-center gap-1.5 pt-2 text-sm font-medium text-accent transition-colors hover:underline"
           >
             {action.title}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="h-4 w-4"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
-              />
-            </svg>
+            <ArrowRightIcon className="h-4 w-4" />
           </Link>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

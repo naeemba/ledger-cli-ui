@@ -1,15 +1,11 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { buildTree } from './Accounts.utils';
 import Tree from './Tree';
-import getLedgerCommand from '@/utils/getLedgerCommand';
-
-const execPromise = promisify(exec);
+import runLedger from '@/utils/runLedger';
 
 const Accounts = async () => {
   let accounts: string[];
   try {
-    const { stdout } = await execPromise(`${getLedgerCommand()} accounts`);
+    const stdout = await runLedger(['accounts']);
     accounts = stdout
       .split('\n')
       .filter(Boolean)
@@ -17,11 +13,25 @@ const Accounts = async () => {
   } catch (e) {
     console.error(e);
     return (
-      <div className="text-red-700">Failed to load accounts from ledger.</div>
+      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-negative shadow-sm">
+        Failed to load accounts from ledger.
+      </div>
     );
   }
   const tree = buildTree(accounts);
-  return <Tree tree={tree} />;
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
+        <p className="mt-1 text-sm text-muted">
+          Browse every account in your journal
+        </p>
+      </div>
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <Tree tree={tree} />
+      </div>
+    </div>
+  );
 };
 
 export default Accounts;

@@ -1,4 +1,4 @@
-import Accounts from '@feature/accounts';
+import Accounts from '@/features/accounts';
 
 const Report = () => {
   return <Accounts />;

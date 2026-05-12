@@ -2,7 +2,7 @@ const formatAmountWithoutUnit = (str: string, unit?: string) => {
   const fixedStr = str.replaceAll(',', '');
   if (Number(fixedStr) < 0) {
     return (
-      <span className="text-red-900">
+      <span className="font-medium text-negative tabular-nums">
         {unit}&nbsp;(
         {Math.abs(Number(fixedStr))
           .toFixed(3)
@@ -12,7 +12,7 @@ const formatAmountWithoutUnit = (str: string, unit?: string) => {
     );
   } else {
     return (
-      <span className="text-green-900">
+      <span className="font-medium text-positive tabular-nums">
         {unit}&nbsp;{str}
       </span>
     );
@@ -21,10 +21,9 @@ const formatAmountWithoutUnit = (str: string, unit?: string) => {
 
 const formatAmount = (str: string | undefined | null, withUnit: boolean) => {
   if (!str || !str.trim()) {
-    return <span className="text-gray-400">—</span>;
+    return <span className="text-muted">—</span>;
   }
   const splitted = str.split(' ');
-  // there is unit within amount
   if (splitted.length < 2) {
     return formatAmountWithoutUnit(str);
   } else if (withUnit) {

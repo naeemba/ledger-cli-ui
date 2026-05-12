@@ -1,15 +1,12 @@
-import { exec } from 'child_process';
 import dayjs from 'dayjs';
-import { promisify } from 'util';
 import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
 import formatAmount from '@/utils/formatAmount';
+import formatDate, { Format } from '@/utils/formatDate';
+import getColor from '@/utils/getColor';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
-import getLedgerCommand from '@/utils/getLedgerCommand';
-import getRandomColor from '@/utils/getRandomColor';
+import runLedger from '@/utils/runLedger';
 import Link from 'next/link';
-
-const execPromise = promisify(exec);
 
 const PeriodBalance = async ({
   params,
@@ -19,10 +16,19 @@ const PeriodBalance = async ({
   const { from: fromParam, to: toParam } = await params;
   const from = dayjs(fromParam);
   const to = dayjs(toParam);
-  const defaultCurrency = getDefaultCurrency();
-  const { stdout } = await execPromise(
-    `${getLedgerCommand()} bal Expenses -b "${from.format('YYYY-MM-DD')}" -e "${to.format('YYYY-MM-DD')}" -X ${defaultCurrency} --format "NNN%A|%t|%T\n"`
-  );
+  const defaultCurrency = getDefaultCurrency() ?? 'USD';
+  const stdout = await runLedger([
+    'bal',
+    'Expenses',
+    '-b',
+    from.format('YYYY-MM-DD'),
+    '-e',
+    to.format('YYYY-MM-DD'),
+    '-X',
+    defaultCurrency,
+    '--format',
+    'NNN%A|%t|%T\n',
+  ]);
   const results = stdout
     .split('NNN')
     .filter(Boolean)
@@ -34,69 +40,100 @@ const PeriodBalance = async ({
       .find((each) => each.split('|')[1] === '0')
       ?.split('|')[2] ?? '';
 
-  const colors = results.map(() => getRandomColor(0.8, 1));
+  const colors = results.map((each) =>
+    getColor(each.split('|')[0] ?? '', 0.8, 1)
+  );
 
   return (
-    <div>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Periodic Balance
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          {formatDate(from.toISOString(), Format.DATE)} –{' '}
+          {formatDate(to.toISOString(), Format.DATE)}
+        </p>
+      </div>
+
       <DateFilter
         urlPattern="/balance/{from}/{to}"
         from={fromParam}
         to={toParam}
       />
-      <div className="flex mt-8">
-        <h1 className="text-3xl font-bold">Total Expenses</h1>
-        <h1 className="text-3xl font-bold ml-auto">
-          {formatAmount(total, true)}
-        </h1>
+
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h2 className="text-lg font-medium text-fg">Total Expenses</h2>
+        <div className="text-right">
+          <div className="text-xs font-medium uppercase tracking-wider text-muted">
+            Total
+          </div>
+          <div className="text-2xl font-semibold tracking-tight">
+            {formatAmount(total, true)}
+          </div>
+        </div>
       </div>
-      <table className="w-full mt-8">
-        <thead>
-          <tr>
-            <td>Account</td>
-            <td className="text-right">
-              Spend ({defaultCurrency?.toUpperCase()})
-            </td>
-          </tr>
-        </thead>
-        <tbody>
-          {results.map((item, index) => {
-            const columns = item.split('|');
-            return (
-              <tr key={index}>
-                <td>
-                  <Link
-                    className="py-3 px-6 block"
-                    href={`/accounts/${encodeURIComponent(columns[0])}`}
-                  >
-                    {columns[0]}
-                  </Link>
-                </td>
-                <td className="text-right">
-                  {formatAmount(columns[1], false)}
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <table>
+          <thead>
+            <tr>
+              <th>Account</th>
+              <th className="text-right">
+                Spend ({defaultCurrency.toUpperCase()})
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {results.length === 0 ? (
+              <tr>
+                <td colSpan={2} className="py-6 text-center text-muted">
+                  No expenses in this period
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      <div className="mt-8">
-        <Chart
-          data={{
-            labels: results.map((each) => each.split('|')[0]),
-            datasets: [
-              {
-                label: 'Monthly',
-                data: results.map((each) =>
-                  each.split('|')[1].split(' ')[1].replaceAll(',', '')
-                ),
-                backgroundColor: colors.map((each) => each[0]),
-                borderColor: colors.map((each) => each[1]),
-              },
-            ],
-          }}
-        />
+            ) : (
+              results.map((item, index) => {
+                const columns = item.split('|');
+                return (
+                  <tr key={index}>
+                    <td>
+                      <Link
+                        className="block text-fg hover:text-accent"
+                        href={`/accounts/${encodeURIComponent(columns[0])}`}
+                      >
+                        {columns[0]}
+                      </Link>
+                    </td>
+                    <td className="text-right">
+                      {formatAmount(columns[1], false)}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {results.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <Chart
+            data={{
+              labels: results.map((each) => each.split('|')[0]),
+              datasets: [
+                {
+                  label: 'Monthly',
+                  data: results.map((each) =>
+                    each.split('|')[1].split(' ')[1].replaceAll(',', '')
+                  ),
+                  backgroundColor: colors.map((each) => each[0]),
+                  borderColor: colors.map((each) => each[1]),
+                },
+              ],
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

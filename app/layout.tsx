@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Header from '@components/Header';
+import Header from '@/components/Header';
 import { Inter } from 'next/font/google';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'Ledger CLI UI',
@@ -19,7 +19,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <Header />
-        <div className="container mx-auto mt-10 pb-20">{children}</div>
+        <main className="container mx-auto px-4 pb-20 pt-8 sm:px-6 lg:px-8">
+          {children}
+        </main>
       </body>
     </html>
   );

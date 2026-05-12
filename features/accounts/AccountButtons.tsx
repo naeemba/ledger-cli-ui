@@ -5,7 +5,7 @@ type Props = {
 };
 
 const linkClasses =
-  'block py-3 px-6 text-sm font-bold uppercase text-gray-900 border border-gray-900 hover:bg-gray-100 first:rounded-l-lg last:rounded-r-lg [&:not(:first-child)]:border-l-0';
+  'inline-flex items-center gap-1.5 border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:bg-subtle hover:text-fg first:rounded-l-md last:rounded-r-md [&:not(:first-child)]:border-l-0';
 
 const AccountButtons = ({ path }: Props) => {
   return (
@@ -14,13 +14,13 @@ const AccountButtons = ({ path }: Props) => {
         className={linkClasses}
         href={`/accounts/${encodeURIComponent(path)}`}
       >
-        All Transactions Report
+        Transactions
       </Link>
       <Link
         className={linkClasses}
         href={`/registers/monthly/${encodeURIComponent(path)}`}
       >
-        Monthly Report
+        Monthly
       </Link>
     </span>
   );

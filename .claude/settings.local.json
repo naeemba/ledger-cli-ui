@@ -72,7 +72,27 @@
       "Bash(sed -n '1,55p' /Users/sharp/workspace/personal/ledger-cli-ui/features/dashboard/Dashboard.tsx)",
       "Bash(/usr/bin/head -55)",
       "Bash(/usr/bin/grep -B 1 -A 6 \"TypeError\\\\|⨯\" /tmp/dev3.log)",
-      "Bash(/usr/bin/head -30)"
+      "Bash(/usr/bin/head -30)",
+      "Bash(/usr/bin/grep -rn \"getLedgerCommand\\\\|@/utils/getLedgerCommand\" /Users/sharp/workspace/personal/ledger-cli-ui --include=\"*.ts\" --include=\"*.tsx\")",
+      "Bash(/usr/bin/grep -v node_modules)",
+      "Bash(/usr/bin/grep -rn \"getRandomColor\" /Users/sharp/workspace/personal/ledger-cli-ui --include=\"*.ts\" --include=\"*.tsx\")",
+      "Bash(/usr/bin/grep -rn \"@components/\\\\|@feature/\" /Users/sharp/workspace/personal/ledger-cli-ui --include=\"*.ts\" --include=\"*.tsx\")",
+      "Bash(/usr/bin/pkill -f \"next dev\")",
+      "Bash(/usr/bin/pgrep -af \"next dev\")",
+      "Bash(kill 55999)",
+      "Bash(gh pr *)",
+      "Bash(gh auth)",
+      "Bash(gh api *)",
+      "Bash(timeout 30 pnpm dev)",
+      "Bash(curl -s -o /tmp/home.html -w 'HTTP %{http_code}\\\\n' http://localhost:3000/)",
+      "Bash(grep -oE \"TypeError[^\\\\\"]{0,120}|ReferenceError[^\\\\\"]{0,120}|Error:[^\\\\\"]{0,120}|Failed to compile\" /tmp/dev.log)",
+      "Bash(ps -p 44777 62102 99170 99174 -o pid,command)",
+      "Bash(/bin/ps -p 44777,62102,99170,99174 -o pid=,command=)",
+      "Bash(curl -s -o /tmp/ledger-home.html -w 'HTTP %{http_code}\\\\n' http://localhost:3001/)",
+      "Bash(grep -oE \"TypeError[^\\\\\"]{0,160}|ReferenceError[^\\\\\"]{0,160}|next-error-h1|Application error\" /tmp/ledger-home.html)",
+      "Bash(grep -oE \"<h1[^>]*>[^<]+</h1>|<h2[^>]*>[^<]+</h2>|<p[^>]*>[^<]{5,200}</p>\" /tmp/ledger-home.html)",
+      "Bash(grep -oE \"next-error-h1[^\\\\\"]{0,200}\" /tmp/ledger-home.html)",
+      "Bash(grep -oE \"class=\\\\\"[^\\\\\"]{0,80}next-error[^\\\\\"]*\\\\\"\" /tmp/ledger-home.html)"
     ]
   }
 }

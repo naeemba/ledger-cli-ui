@@ -1,53 +1,78 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import formatAmount from '@/utils/formatAmount';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
-import getLedgerCommand from '@/utils/getLedgerCommand';
+import runLedger from '@/utils/runLedger';
 import Link from 'next/link';
 
-const execPromise = promisify(exec);
-
 const Balance = async () => {
-  const defaultCurrency = getDefaultCurrency();
-  const { stdout } = await execPromise(
-    `${getLedgerCommand()} balance Assets Liabilities -X ${defaultCurrency} --format='%A|%T\n'`
-  );
+  const defaultCurrency = getDefaultCurrency() ?? 'USD';
+  const stdout = await runLedger([
+    'balance',
+    'Assets',
+    'Liabilities',
+    '-X',
+    defaultCurrency,
+    '--format',
+    '%A|%T\n',
+  ]);
   const result = stdout.split('\n').filter(Boolean);
   const total = [...result].reverse()[0]?.split('|')[1] ?? '';
   return (
-    <div>
-      <div className="flex">
-        <h1 className="text-3xl font-bold">Total</h1>
-        <h1 className="text-3xl font-bold ml-auto">
-          {formatAmount(total, true)}
-        </h1>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Balance</h1>
+          <p className="mt-1 text-sm text-muted">Assets & liabilities</p>
+        </div>
+        <div className="text-right">
+          <div className="text-xs font-medium uppercase tracking-wider text-muted">
+            Total
+          </div>
+          <div className="text-2xl font-semibold tracking-tight">
+            {formatAmount(total, true)}
+          </div>
+        </div>
       </div>
-      <table className="w-full mt-8">
-        <thead>
-          <tr>
-            <td>Account</td>
-            <td>Balance&nbsp;({defaultCurrency?.toUpperCase()})</td>
-          </tr>
-        </thead>
-        <tbody>
-          {result.map((item, index) => {
-            const columns = item.split('|');
-            return (
-              <tr key={index}>
-                <td>
-                  <Link
-                    className="py-3 px-6 block"
-                    href={`/accounts/${encodeURIComponent(columns[0])}`}
-                  >
-                    {columns[0]}
-                  </Link>
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <table>
+          <thead>
+            <tr>
+              <th>Account</th>
+              <th className="text-right">
+                Balance ({defaultCurrency.toUpperCase()})
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.length === 0 ? (
+              <tr>
+                <td colSpan={2} className="py-6 text-center text-muted">
+                  No data
                 </td>
-                <td>{formatAmount(columns[1], false)}</td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            ) : (
+              result.map((item, index) => {
+                const columns = item.split('|');
+                return (
+                  <tr key={index}>
+                    <td>
+                      <Link
+                        className="block text-fg hover:text-accent"
+                        href={`/accounts/${encodeURIComponent(columns[0])}`}
+                      >
+                        {columns[0]}
+                      </Link>
+                    </td>
+                    <td className="text-right">
+                      {formatAmount(columns[1], false)}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
