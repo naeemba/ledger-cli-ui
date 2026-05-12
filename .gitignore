@@ -32,6 +32,9 @@ yarn-error.log*
 # claude code
 .claude/
 
+# local app data (sqlite + user journals)
+/data/
+
 # vercel
 .vercel
 

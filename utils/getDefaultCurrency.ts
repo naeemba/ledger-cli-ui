@@ -1,7 +1,5 @@
-import getEnv from './getEnv';
+import { env } from '@/lib/env';
 
-const getDefaultCurrency = () => {
-  return getEnv().DEFAULT_CURRENCY;
-};
+const getDefaultCurrency = () => env.DEFAULT_CURRENCY;
 
 export default getDefaultCurrency;

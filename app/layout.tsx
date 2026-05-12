@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Header from '@/components/Header';
+import { APP_NAME } from '@/lib/app';
 import { Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'Ledger CLI UI',
+  title: APP_NAME,
   description: 'NextJS reporting tool for ledger-cli journals',
 };
 

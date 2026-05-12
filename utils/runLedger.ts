@@ -2,7 +2,7 @@ import { execFile } from 'child_process';
 import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
-import getEnv from './getEnv';
+import { env } from '@/lib/env';
 import { unstable_cache } from 'next/cache';
 import { connection } from 'next/server';
 
@@ -31,7 +31,6 @@ type Options = {
 };
 
 const buildBaseArgs = (options?: Options): string[] => {
-  const env = getEnv();
   const ledgerFile = options?.ledgerFile ?? env.LEDGER_FILE;
   const args: string[] = [];
   if (ledgerFile) args.push('--file', expandHome(ledgerFile));

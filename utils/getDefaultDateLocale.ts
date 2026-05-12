@@ -1,7 +1,5 @@
-import getEnv from './getEnv';
+import { env } from '@/lib/env';
 
-const getDefaultDateLocale = () => {
-  return getEnv().DATE_LOCALE ?? 'en-US';
-};
+const getDefaultDateLocale = () => env.DATE_LOCALE;
 
 export default getDefaultDateLocale;
