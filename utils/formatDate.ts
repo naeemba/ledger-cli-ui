@@ -3,6 +3,7 @@ import getDefaultDateLocale from './getDefaultDateLocale';
 export enum Format {
   DATE,
   MONTH_YEAR,
+  SHORT_MONTH_YEAR,
 }
 
 const formatOptions: Record<Format, Intl.DateTimeFormatOptions> = {
@@ -14,6 +15,10 @@ const formatOptions: Record<Format, Intl.DateTimeFormatOptions> = {
   [Format.MONTH_YEAR]: {
     year: 'numeric',
     month: 'long',
+  },
+  [Format.SHORT_MONTH_YEAR]: {
+    year: 'numeric',
+    month: 'short',
   },
 };
 

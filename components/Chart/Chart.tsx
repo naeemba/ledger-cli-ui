@@ -20,10 +20,17 @@ const Bar = dynamic(() => import('react-chartjs-2').then((mod) => mod.Bar), {
   ssr: false,
 });
 
-type Props = {
-  data: ChartData<'bar', unknown, unknown>;
+const Line = dynamic(() => import('react-chartjs-2').then((mod) => mod.Line), {
+  ssr: false,
+});
+
+type Props =
+  | { type?: 'bar'; data: ChartData<'bar', unknown, unknown> }
+  | { type: 'line'; data: ChartData<'line', unknown, unknown> };
+
+const Chart = (props: Props) => {
+  if (props.type === 'line') return <Line data={props.data} />;
+  return <Bar data={props.data} />;
 };
 
-const LineChart = ({ data }: Props) => <Bar data={data} />;
-
-export default LineChart;
+export default Chart;

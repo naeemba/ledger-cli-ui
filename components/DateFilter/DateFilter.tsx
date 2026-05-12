@@ -1,13 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import dayjs from 'dayjs';
-import localeData from 'dayjs/plugin/localeData';
-import quarterOfYear from 'dayjs/plugin/quarterOfYear';
+import {
+  endOfMonth,
+  endOfQuarter,
+  endOfYear,
+  longMonthNames,
+  startOfMonth,
+  startOfQuarter,
+  startOfYear,
+  toISODate,
+} from '@/utils/date';
 import { useRouter } from 'next/navigation';
-
-dayjs.extend(quarterOfYear);
-dayjs.extend(localeData);
 
 type Props = {
   urlPattern: string;
@@ -44,12 +48,8 @@ const Section = ({
 
 const DateFilter = (props: Props) => {
   const { urlPattern, from: fromProp, to: toProp } = props;
-  const [from, setFrom] = useState(
-    fromProp ?? dayjs().startOf('month').format('YYYY-MM-DD')
-  );
-  const [to, setTo] = useState(
-    toProp ?? dayjs().endOf('month').format('YYYY-MM-DD')
-  );
+  const [from, setFrom] = useState(fromProp ?? toISODate(startOfMonth()));
+  const [to, setTo] = useState(toProp ?? toISODate(endOfMonth()));
 
   const router = useRouter();
 
@@ -62,7 +62,7 @@ const DateFilter = (props: Props) => {
     pushNewURL(from, to);
   };
 
-  const currentYear = dayjs().year();
+  const currentYear = new Date().getFullYear();
   const years = Array.from(
     { length: YEAR_BUTTONS_BACK + 1 },
     (_, i) => currentYear - i
@@ -72,6 +72,9 @@ const DateFilter = (props: Props) => {
     label: `Q${idx + 1}`,
     startMonth,
   }));
+
+  const months = longMonthNames();
+  const refDate = new Date();
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -104,60 +107,67 @@ const DateFilter = (props: Props) => {
 
       <div className="mt-5 space-y-4">
         <Section title="Monthly">
-          {dayjs.months().map((month, idx) => (
-            <button
-              className={chipClasses}
-              key={month}
-              onClick={() =>
-                pushNewURL(
-                  dayjs().month(idx).startOf('month').format('YYYY-MM-DD'),
-                  dayjs().month(idx).endOf('month').format('YYYY-MM-DD')
-                )
-              }
-            >
-              {month}
-            </button>
-          ))}
+          {months.map((month, idx) => {
+            const monthDate = new Date(refDate.getFullYear(), idx, 1);
+            return (
+              <button
+                className={chipClasses}
+                key={month}
+                onClick={() =>
+                  pushNewURL(
+                    toISODate(startOfMonth(monthDate)),
+                    toISODate(endOfMonth(monthDate))
+                  )
+                }
+              >
+                {month}
+              </button>
+            );
+          })}
         </Section>
 
         <Section title="Quarterly">
-          {quarters.map((q) => (
-            <button
-              key={q.label}
-              className={chipClasses}
-              onClick={() =>
-                pushNewURL(
-                  dayjs()
-                    .month(q.startMonth)
-                    .startOf('quarter')
-                    .format('YYYY-MM-DD'),
-                  dayjs()
-                    .month(q.startMonth)
-                    .endOf('quarter')
-                    .format('YYYY-MM-DD')
-                )
-              }
-            >
-              {q.label}
-            </button>
-          ))}
+          {quarters.map((q) => {
+            const quarterDate = new Date(
+              refDate.getFullYear(),
+              q.startMonth,
+              1
+            );
+            return (
+              <button
+                key={q.label}
+                className={chipClasses}
+                onClick={() =>
+                  pushNewURL(
+                    toISODate(startOfQuarter(quarterDate)),
+                    toISODate(endOfQuarter(quarterDate))
+                  )
+                }
+              >
+                {q.label}
+              </button>
+            );
+          })}
         </Section>
 
         <Section title="Yearly">
-          {years.map((year) => (
-            <button
-              key={year}
-              className={chipClasses}
-              onClick={() =>
-                pushNewURL(
-                  dayjs().year(year).startOf('year').format('YYYY-MM-DD'),
-                  dayjs().year(year).endOf('year').format('YYYY-MM-DD')
-                )
-              }
-            >
-              {year}
-            </button>
-          ))}
+          {years.map((year) => {
+            const yearDate = new Date(year, 0, 1);
+            return (
+              <button
+                key={year}
+                className={chipClasses}
+                onClick={() =>
+                  pushNewURL(
+                    toISODate(startOfYear(yearDate)),
+                    toISODate(endOfYear(yearDate))
+                  )
+                }
+              >
+                {year}
+              </button>
+            );
+          })}
         </Section>
       </div>
     </div>

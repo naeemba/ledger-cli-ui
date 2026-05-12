@@ -1,5 +1,5 @@
-import { buildTree } from './Accounts.utils';
-import Tree from './Tree';
+import AccountsView from './AccountsView';
+import Help from '@/components/Help';
 import runLedger from '@/utils/runLedger';
 
 const Accounts = async () => {
@@ -18,18 +18,23 @@ const Accounts = async () => {
       </div>
     );
   }
-  const tree = buildTree(accounts);
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
+          <Help label="About accounts">
+            Every account referenced in your journal, organised as a tree by the
+            colon-separated naming convention (e.g.{' '}
+            <code>Assets:Bank:Checking</code>). Use the buttons next to a name
+            to view its full transaction history or a monthly summary.
+          </Help>
+        </div>
         <p className="mt-1 text-sm text-muted">
-          Browse every account in your journal
+          {accounts.length} account{accounts.length === 1 ? '' : 's'}
         </p>
       </div>
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <Tree tree={tree} />
-      </div>
+      <AccountsView accounts={accounts} />
     </div>
   );
 };

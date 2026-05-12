@@ -1,6 +1,7 @@
-import dayjs from 'dayjs';
 import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
+import Help from '@/components/Help';
+import { parseISODate, toISODate } from '@/utils/date';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
 import getColor from '@/utils/getColor';
@@ -14,16 +15,16 @@ const PeriodBalance = async ({
   params: Promise<{ from: string; to: string }>;
 }) => {
   const { from: fromParam, to: toParam } = await params;
-  const from = dayjs(fromParam);
-  const to = dayjs(toParam);
+  const from = parseISODate(fromParam);
+  const to = parseISODate(toParam);
   const defaultCurrency = getDefaultCurrency() ?? 'USD';
   const stdout = await runLedger([
     'bal',
     'Expenses',
     '-b',
-    from.format('YYYY-MM-DD'),
+    toISODate(from),
     '-e',
-    to.format('YYYY-MM-DD'),
+    toISODate(to),
     '-X',
     defaultCurrency,
     '--format',
@@ -47,9 +48,15 @@ const PeriodBalance = async ({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Periodic Balance
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Periodic Balance
+          </h1>
+          <Help label="About periodic balance">
+            Expenses by category within the chosen date range. Use the date
+            filter below to pick a month, quarter, year, or custom span.
+          </Help>
+        </div>
         <p className="mt-1 text-sm text-muted">
           {formatDate(from.toISOString(), Format.DATE)} –{' '}
           {formatDate(to.toISOString(), Format.DATE)}

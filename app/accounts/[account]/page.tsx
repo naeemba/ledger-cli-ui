@@ -1,3 +1,4 @@
+import Help from '@/components/Help';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
@@ -28,8 +29,15 @@ const Account = async ({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-xs font-medium uppercase tracking-wider text-muted">
-            Account
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted">
+              Account
+            </div>
+            <Help label="About this account view">
+              Every transaction that touched this account, most recent first.
+              The Amount column is the change applied here; the Total column is
+              the running balance after each transaction.
+            </Help>
           </div>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight break-all">
             {account}

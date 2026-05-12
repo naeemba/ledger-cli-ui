@@ -1,3 +1,4 @@
+import Help from '@/components/Help';
 import formatAmount from '@/utils/formatAmount';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
@@ -20,7 +21,14 @@ const Debts = async () => {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Debts</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Debts</h1>
+            <Help label="About debts">
+              Outstanding amounts tracked under
+              <code> Assets:Credited</code>. A positive balance means someone
+              owes you, a negative balance means you owe them.
+            </Help>
+          </div>
           <p className="mt-1 text-sm text-muted">Outstanding credit by payee</p>
         </div>
         <div className="text-right">

@@ -1,58 +1,47 @@
-import dayjs, { Dayjs } from 'dayjs';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 
-const getMonthlyBalance = async (from: Dayjs, to: Dayjs) => {
-  const defaultCurrency = getDefaultCurrency() ?? 'USD';
+const MONTHS_BACK = 36;
 
-  const stdout = await runLedger([
-    'bal',
-    'Expenses',
-    '-b',
-    from.format('YYYY-MM-DD'),
-    '-e',
-    to.format('YYYY-MM-DD'),
-    '-X',
-    defaultCurrency,
-    '--format',
-    'NNN%A|%t|%T\n',
-  ]);
-
-  const total =
-    stdout
-      .split('NNN')
-      .filter(Boolean)
-      .find((each) => each.split('|')[1] === '0')
-      ?.split('|')[2] ?? '';
-
-  return total;
+const parseAmount = (raw: string): number => {
+  if (!raw) return 0;
+  const parts = raw.trim().split(/\s+/);
+  const numericPart = parts.length > 1 ? parts[1] : parts[0];
+  return Number(numericPart.replaceAll(',', '')) || 0;
 };
 
-const YEARS_BACK = 3;
-
-export const getMonthsTotals = async () => {
-  const currentYear = dayjs().year();
-  const years = Array.from(
-    { length: YEARS_BACK + 1 },
-    (_, i) => currentYear - i
+const fetchMonthly = async (query: string): Promise<Map<string, number>> => {
+  const currency = getDefaultCurrency() ?? 'USD';
+  const stdout = await runLedger(
+    ['reg', query, '--monthly', '-X', currency, '--format', 'NNN%D|%t\n'],
+    { sortByDate: false }
   );
-  const months = Array.from({ length: 12 }, (_, i) =>
-    String(12 - i).padStart(2, '0')
-  );
-
-  const monthsTotals: { date: Dayjs; total: string }[] = [];
-  for (const year of years) {
-    for (const month of months) {
-      const date = dayjs(`${year}-${month}-1`);
-      if (date.isAfter(dayjs())) continue;
-      const total = await getMonthlyBalance(
-        date.startOf('month'),
-        date.endOf('month')
-      );
-      if (total.length) {
-        monthsTotals.push({ date, total });
-      }
-    }
+  const map = new Map<string, number>();
+  for (const line of stdout.split('NNN')) {
+    const [date, amount] = line.split('|').map((s) => s.trim());
+    if (date && amount) map.set(date, parseAmount(amount));
   }
-  return monthsTotals;
+  return map;
+};
+
+export type CashFlowRow = {
+  date: Date;
+  income: number;
+  expenses: number;
+};
+
+export const getCashFlow = async (): Promise<CashFlowRow[]> => {
+  const [expensesMap, incomeMap] = await Promise.all([
+    fetchMonthly('^Expenses'),
+    fetchMonthly('^Income'),
+  ]);
+  const allDates = new Set([...expensesMap.keys(), ...incomeMap.keys()]);
+  return Array.from(allDates)
+    .map((date) => ({
+      date: new Date(date),
+      expenses: expensesMap.get(date) ?? 0,
+      income: -(incomeMap.get(date) ?? 0),
+    }))
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .slice(-MONTHS_BACK);
 };

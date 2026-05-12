@@ -3,9 +3,21 @@ import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
 import getEnv from './getEnv';
+import { unstable_cache } from 'next/cache';
 import { connection } from 'next/server';
 
 const execFilePromise = promisify(execFile);
+
+const LEDGER_CACHE_TTL_SECONDS = 60;
+
+const execLedger = unstable_cache(
+  async (allArgs: string[]): Promise<string> => {
+    const { stdout } = await execFilePromise('ledger', allArgs);
+    return stdout;
+  },
+  ['ledger-cli-exec'],
+  { revalidate: LEDGER_CACHE_TTL_SECONDS }
+);
 
 const expandHome = (p: string): string => {
   if (p === '~') return os.homedir();
@@ -35,8 +47,7 @@ const runLedger = async (
 ): Promise<string> => {
   await connection();
   const allArgs = [...buildBaseArgs(options), ...args];
-  const { stdout } = await execFilePromise('ledger', allArgs);
-  return stdout;
+  return execLedger(allArgs);
 };
 
 export default runLedger;

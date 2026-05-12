@@ -1,3 +1,4 @@
+import Help from '@/components/Help';
 import formatAmount from '@/utils/formatAmount';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
@@ -20,7 +21,14 @@ const Balance = async () => {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Balance</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Balance</h1>
+            <Help label="About the balance report">
+              Current point-in-time balance for every Assets and Liabilities
+              account, converted to your default currency. Click an account to
+              drill into its transactions.
+            </Help>
+          </div>
           <p className="mt-1 text-sm text-muted">Assets & liabilities</p>
         </div>
         <div className="text-right">

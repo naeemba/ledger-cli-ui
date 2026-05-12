@@ -1,14 +1,14 @@
 'use client';
 
-import dayjs from 'dayjs';
 import { twMerge } from 'tailwind-merge';
+import { endOfMonth, startOfMonth, toISODate } from '@/utils/date';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const Header = () => {
   const pathname = usePathname();
-  const monthStart = dayjs().startOf('month').format('YYYY-MM-DD');
-  const monthEnd = dayjs().endOf('month').format('YYYY-MM-DD');
+  const monthStart = toISODate(startOfMonth());
+  const monthEnd = toISODate(endOfMonth());
 
   const menus = [
     { id: 'dashboard', title: 'Dashboard', href: '/', match: 'exact' as const },
@@ -19,6 +19,7 @@ const Header = () => {
       href: '/balance',
       match: 'exact' as const,
     },
+    { id: 'net-worth', title: 'Net Worth', href: '/net-worth' },
     {
       id: 'periodic',
       title: 'Periodic Balance',
@@ -27,7 +28,9 @@ const Header = () => {
       activePrefix: '/balance/',
     },
     { id: 'debts', title: 'Debts', href: '/debts' },
-    { id: 'monthly', title: 'Monthly', href: '/monthly' },
+    { id: 'monthly', title: 'Cash Flow', href: '/monthly' },
+    { id: 'payees', title: 'Payees', href: '/payees' },
+    { id: 'reconcile', title: 'Reconcile', href: '/reconcile' },
   ];
 
   const isActive = (menu: (typeof menus)[number]) => {

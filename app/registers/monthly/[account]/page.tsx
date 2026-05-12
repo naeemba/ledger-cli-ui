@@ -1,5 +1,5 @@
-import dayjs from 'dayjs';
 import Chart from '@/components/Chart';
+import Help from '@/components/Help';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
 import getColor from '@/utils/getColor';
@@ -41,8 +41,14 @@ const Monthly = async ({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-xs font-medium uppercase tracking-wider text-muted">
-            Monthly report
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted">
+              Monthly report
+            </div>
+            <Help label="About monthly report">
+              Aggregated balance for this account, grouped by month. Useful for
+              spotting trends or seasonality on a single account.
+            </Help>
           </div>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight break-all">
             {account}
@@ -95,7 +101,7 @@ const Monthly = async ({
           <Chart
             data={{
               labels: results.map((each) =>
-                dayjs(each.split('|')[0]).format('MMM YYYY')
+                formatDate(each.split('|')[0], Format.SHORT_MONTH_YEAR)
               ),
               datasets: [
                 {
