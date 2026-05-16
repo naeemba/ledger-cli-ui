@@ -34,6 +34,14 @@ const Header = () => {
     { id: 'monthly', title: 'Cash Flow', href: '/monthly' },
     { id: 'payees', title: 'Payees', href: '/payees' },
     { id: 'reconcile', title: 'Reconcile', href: '/reconcile' },
+    {
+      id: 'add',
+      title: 'Add transaction',
+      href: '/transactions/new',
+      match: 'prefix' as const,
+      activePrefix: '/transactions/',
+    },
+    { id: 'import', title: 'Import', href: '/import' },
   ];
 
   const isActive = (menu: (typeof menus)[number]) => {

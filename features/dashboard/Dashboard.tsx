@@ -137,15 +137,23 @@ const Dashboard = async () => {
       </div>
 
       <section className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Recent transactions
-          </h2>
-          <Help label="About recent transactions">
-            The {RECENT_LIMIT} most recently dated postings across your journal.
-            A single transaction typically produces multiple postings (e.g. a
-            debit and matching credit).
-          </Help>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Recent transactions
+            </h2>
+            <Help label="About recent transactions">
+              The {RECENT_LIMIT} most recently dated postings across your
+              journal. A single transaction typically produces multiple postings
+              (e.g. a debit and matching credit).
+            </Help>
+          </div>
+          <Link
+            href="/transactions/new"
+            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-fg shadow-sm transition-opacity hover:opacity-90"
+          >
+            Add transaction
+          </Link>
         </div>
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <table>

@@ -1,8 +1,7 @@
 import { execFile } from 'child_process';
-import os from 'os';
-import path from 'path';
 import { promisify } from 'util';
-import { env } from '@/lib/env';
+import { requireUser } from '@/lib/auth/require-user';
+import { ensureJournal, getJournalCacheTag } from '@/lib/journals';
 import { unstable_cache } from 'next/cache';
 import { connection } from 'next/server';
 
@@ -10,34 +9,18 @@ const execFilePromise = promisify(execFile);
 
 const LEDGER_CACHE_TTL_SECONDS = 60;
 
-const execLedger = unstable_cache(
-  async (allArgs: string[]): Promise<string> => {
-    const { stdout } = await execFilePromise('ledger', allArgs);
-    return stdout;
-  },
-  ['ledger-cli-exec'],
-  { revalidate: LEDGER_CACHE_TTL_SECONDS }
-);
-
-const expandHome = (p: string): string => {
-  if (p === '~') return os.homedir();
-  if (p.startsWith('~/')) return path.join(os.homedir(), p.slice(2));
-  return p;
-};
+const buildExecLedger = (tag: string) =>
+  unstable_cache(
+    async (allArgs: string[]): Promise<string> => {
+      const { stdout } = await execFilePromise('ledger', allArgs);
+      return stdout;
+    },
+    ['ledger-cli-exec', tag],
+    { revalidate: LEDGER_CACHE_TTL_SECONDS, tags: [tag] }
+  );
 
 type Options = {
   sortByDate?: boolean;
-  ledgerFile?: string;
-};
-
-const buildBaseArgs = (options?: Options): string[] => {
-  const ledgerFile = options?.ledgerFile ?? env.LEDGER_FILE;
-  const args: string[] = [];
-  if (ledgerFile) args.push('--file', expandHome(ledgerFile));
-  if (env.LEDGER_PRICE_DB)
-    args.push('--price-db', expandHome(env.LEDGER_PRICE_DB));
-  if (options?.sortByDate ?? true) args.push('--sort', '-date');
-  return args;
 };
 
 const runLedger = async (
@@ -45,8 +28,15 @@ const runLedger = async (
   options?: Options
 ): Promise<string> => {
   await connection();
-  const allArgs = [...buildBaseArgs(options), ...args];
-  return execLedger(allArgs);
+  const user = await requireUser();
+  const { mainPath, priceDbPath } = await ensureJournal(user.id);
+
+  const baseArgs: string[] = ['--file', mainPath];
+  if (priceDbPath) baseArgs.push('--price-db', priceDbPath);
+  if (options?.sortByDate ?? true) baseArgs.push('--sort', '-date');
+
+  const execLedger = buildExecLedger(getJournalCacheTag(user.id));
+  return execLedger([...baseArgs, ...args]);
 };
 
 export default runLedger;

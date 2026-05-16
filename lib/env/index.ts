@@ -18,7 +18,6 @@ const envSchema = clientEnvSchema.extend({
 
   // Ledger
   DEFAULT_CURRENCY: z.string().default('USD'),
-  LEDGER_FILE: z.string().optional(),
   LEDGER_PRICE_DB: z.string().optional(),
   DATE_LOCALE: z.string().default('en-US'),
 });
