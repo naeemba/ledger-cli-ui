@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/auth/client';
 import Link from 'next/link';
@@ -52,9 +53,9 @@ export default function LoginPage() {
         </Button>
 
         {error && (
-          <div className="mt-4 rounded-md border border-negative/30 bg-negative/10 p-3 text-sm text-negative">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mt-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <p className="mt-6 text-sm text-muted">

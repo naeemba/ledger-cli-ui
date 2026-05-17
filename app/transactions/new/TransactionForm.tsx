@@ -5,7 +5,11 @@ import {
   createTransactionAction,
   type TransactionActionState,
 } from './actions';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useRouter } from 'next/navigation';
 
@@ -108,12 +112,13 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
       <input type="hidden" name="draft" value={draftJson} />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Date" error={fieldError(state, 'date')}>
-          <input
+        <Field label="Date" htmlFor="tx-date" error={fieldError(state, 'date')}>
+          <Input
+            id="tx-date"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className={inputClass(!!fieldError(state, 'date'))}
+            aria-invalid={!!fieldError(state, 'date')}
             required
           />
         </Field>
@@ -135,15 +140,20 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
         </Field>
       </div>
 
-      <Field label="Payee" error={fieldError(state, 'payee')}>
-        <input
+      <Field
+        label="Payee"
+        htmlFor="tx-payee"
+        error={fieldError(state, 'payee')}
+      >
+        <Input
+          id="tx-payee"
           type="text"
           value={payee}
           onChange={(e) => setPayee(e.target.value)}
           list="payee-suggestions"
           autoComplete="off"
           required
-          className={inputClass(!!fieldError(state, 'payee'))}
+          aria-invalid={!!fieldError(state, 'payee')}
         />
         <datalist id="payee-suggestions">
           {payees.map((p) => (
@@ -152,13 +162,18 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
         </datalist>
       </Field>
 
-      <Field label="Note (optional)" error={fieldError(state, 'note')}>
-        <textarea
+      <Field
+        label="Note (optional)"
+        htmlFor="tx-note"
+        error={fieldError(state, 'note')}
+      >
+        <Textarea
+          id="tx-note"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={2}
           placeholder="Comment lines — written below the payee with a ; prefix"
-          className={inputClass(!!fieldError(state, 'note'))}
+          aria-invalid={!!fieldError(state, 'note')}
         />
       </Field>
 
@@ -216,35 +231,30 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
       </div>
 
       {state?.formError && (
-        <div className="rounded-md border border-negative/30 bg-negative/10 p-3 text-sm text-negative">
-          {state.formError}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{state.formError}</AlertDescription>
+        </Alert>
       )}
     </form>
   );
 };
 
-const inputClass = (invalid: boolean) =>
-  `w-full rounded-md border bg-bg px-3 py-2 text-sm text-fg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/40 ${
-    invalid ? 'border-negative' : 'border-border'
-  }`;
-
 const Field = ({
   label,
+  htmlFor,
   error,
   children,
 }: {
   label: string;
+  htmlFor?: string;
   error?: string;
   children: React.ReactNode;
 }) => (
-  <label className="flex flex-col gap-1">
-    <span className="text-xs font-medium uppercase tracking-wider text-muted">
-      {label}
-    </span>
+  <div className="flex flex-col gap-1.5">
+    <Label htmlFor={htmlFor}>{label}</Label>
     {children}
-    {error && <span className="text-xs text-negative">{error}</span>}
-  </label>
+    {error && <span className="text-xs text-destructive">{error}</span>}
+  </div>
 );
 
 const PostingRow = ({
@@ -259,29 +269,27 @@ const PostingRow = ({
   onRemove: () => void;
 }) => (
   <div className="grid grid-cols-[1fr_140px_90px_auto] items-center gap-2">
-    <input
+    <Input
       type="text"
       value={posting.account}
       onChange={(e) => onChange({ account: e.target.value })}
       list="account-suggestions"
       placeholder="Account (e.g. Expenses:Food)"
       autoComplete="off"
-      className={inputClass(false)}
     />
-    <input
+    <Input
       type="text"
       inputMode="decimal"
       value={posting.amount}
       onChange={(e) => onChange({ amount: e.target.value })}
       placeholder="Amount"
-      className={`${inputClass(false)} text-right tabular-nums`}
+      className="text-right tabular-nums"
     />
-    <input
+    <Input
       type="text"
       value={posting.currency}
       onChange={(e) => onChange({ currency: e.target.value })}
       placeholder="Currency"
-      className={inputClass(false)}
     />
     <Button
       type="button"

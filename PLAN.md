@@ -78,7 +78,7 @@ First mutation path: a working "add transaction" flow so the app stops being rea
 
 Each migration swaps the custom component for its shadcn equivalent. The shadcn long-form tokens (`bg-primary`, `text-muted-foreground`, etc.) and the project tokens (`bg-card`, `text-muted`, etc.) already share one merged palette, so there's no var bookkeeping to do here — just the component swap.
 
-- [~] Buttons (~30 instances). Sub-checklist by file:
+- [x] Buttons (~30 instances). Sub-checklist by file:
   - [ ] `components/Header/Header.tsx` — sign-out → `Button variant="outline" size="sm"` _(skip if 3.4 is shipped first; the rewritten header uses `DropdownMenu` for user actions)_
   - [x] `components/DateFilter/DateFilter.tsx` — 21 chip + Apply buttons → `Button variant="ghost" size="sm"` (chips) and default Button (Apply)
   - [x] `components/Card/Card.tsx` — action link → `Link` + `buttonVariants({ variant: 'link' })`
@@ -86,11 +86,11 @@ Each migration swaps the custom component for its shadcn equivalent. The shadcn 
   - [x] `app/transactions/new/TransactionForm.tsx` — submit, "+ Add posting" (link variant), remove posting (icon-sm ghost), **status toggle group → shadcn `ToggleGroup`** with `spacing={0}` outline variant
   - [x] `app/login/page.tsx` + `app/signup/page.tsx` + `app/import/page.tsx` — primary actions
   - [x] `features/dashboard/Dashboard.tsx` — quick-add `Link` + `buttonVariants({ size: 'sm' })`
-- [ ] Form inputs:
-  - [ ] `app/signup/page.tsx` — replace the inline `Field` subcomponent with `Label` + `Input` + inline error
-  - [ ] `app/transactions/new/TransactionForm.tsx` — same `Field` pattern; also wrap the note `<textarea>` in `Textarea`
-  - [ ] `app/import/page.tsx` — wrap the file `<input>` in shadcn `Input` + `Label`
-- [ ] Error / success boxes — collapse the duplicated red/green box pattern in `login`, `signup`, `import`, `TransactionForm` into shadcn `Alert` (`variant="destructive"` for errors, default for success).
+- [x] Form inputs:
+  - [x] `app/signup/page.tsx` — inline `Field` now uses `Label` + shadcn `Input` (with `aria-invalid` for error styling) + inline error
+  - [x] `app/transactions/new/TransactionForm.tsx` — `Field` rewritten around `Label`; date/payee/posting-row inputs → `Input`; note → `Textarea`; legacy `inputClass` helper deleted
+  - [x] `app/import/page.tsx` — file input wrapped in `Input` + `Label`
+- [x] Error / success boxes — collapsed the 4 red/green box patterns (`login`, `signup` `ErrorBox`, `import`, `TransactionForm` `formError`) into shadcn `Alert` with `AlertDescription`; `variant="destructive"` for errors, default for success.
 
 ### 3.3 Interactive upgrades _(real UX wins)_
 

@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import Help from '@/components/Help';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 
 type Phase = 'idle' | 'uploading' | 'done' | 'error';
@@ -76,17 +79,15 @@ export default function ImportPage() {
         onSubmit={handleSubmit}
         className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm"
       >
-        <label className="flex flex-col gap-2">
-          <span className="text-xs font-medium uppercase tracking-wider text-muted">
-            Journal file or .zip archive
-          </span>
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="import-file">Journal file or .zip archive</Label>
+          <Input
+            id="import-file"
             type="file"
             accept=".ledger,.dat,.journal,.txt,.zip"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm text-fg file:mr-4 file:rounded-md file:border file:border-border file:bg-bg file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-fg hover:file:bg-subtle"
           />
-        </label>
+        </div>
 
         <Button
           type="submit"
@@ -97,15 +98,9 @@ export default function ImportPage() {
         </Button>
 
         {message && (
-          <div
-            className={
-              phase === 'error'
-                ? 'rounded-md border border-negative/30 bg-negative/10 p-3 text-sm text-negative'
-                : 'rounded-md border border-positive/30 bg-positive/10 p-3 text-sm text-positive'
-            }
-          >
-            {message}
-          </div>
+          <Alert variant={phase === 'error' ? 'destructive' : 'default'}>
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
         )}
       </form>
 

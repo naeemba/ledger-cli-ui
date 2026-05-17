@@ -2,7 +2,10 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { signupAction, type SignupState } from './actions';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { APP_NAME } from '@/lib/app';
 import { authClient } from '@/lib/auth/client';
 import getDeviceName from '@/utils/deviceName';
@@ -119,24 +122,22 @@ const Field = ({
   autoComplete: string;
   error?: string;
 }) => (
-  <label className="flex flex-col gap-1">
-    <span className="text-xs font-medium uppercase tracking-wider text-muted">
-      {label}
-    </span>
-    <input
+  <div className="flex flex-col gap-1.5">
+    <Label htmlFor={name}>{label}</Label>
+    <Input
+      id={name}
       type={type}
       name={name}
       required
       autoComplete={autoComplete}
       aria-invalid={!!error}
-      className="rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/40 aria-[invalid=true]:border-negative"
     />
-    {error && <span className="text-xs text-negative">{error}</span>}
-  </label>
+    {error && <span className="text-xs text-destructive">{error}</span>}
+  </div>
 );
 
 const ErrorBox = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-md border border-negative/30 bg-negative/10 p-3 text-sm text-negative">
-    {children}
-  </div>
+  <Alert variant="destructive">
+    <AlertDescription>{children}</AlertDescription>
+  </Alert>
 );
