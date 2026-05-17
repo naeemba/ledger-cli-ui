@@ -60,7 +60,7 @@ First mutation path: a working "add transaction" flow so the app stops being rea
 
 **Decisions (taken 2026-05-17 during brainstorming):**
 
-- **Theme strategy: rename legacy → progressively retire.** `globals.css` has four direct collisions with shadcn vars (`--muted`, `--accent`, `--card`, `--border`); the worst is `--muted` (your code uses it as a *text color*, shadcn uses it as a *background color*). Mechanical rename to `--legacy-*` is a zero-visual-change step that removes the collision; the end state is full shadcn semantics as each component migrates.
+- **Theme strategy: one merged palette, project values win.** `globals.css` had four direct collisions with shadcn vars (`--muted`, `--accent`, `--card`, `--border`) — the worst was `--muted` (project uses it as a *text color*, shadcn uses it as a *background color*). Resolved by collapsing to a single set of vars: project palette is the source of truth, shadcn long-form names (`--background`, `--foreground`, `--card-foreground`, `--accent-foreground`) are aliases of the project vars, and the orphan `.dark` class block was removed (system pref via `@media` is the only dark trigger today).
 - **Font: keep Geist, drop Inter.** shadcn's init wired Geist via `--font-sans`; `<body>` still has `inter.className` which means Inter is actually rendering. Delete the Inter import + class to let Geist take effect.
 - **Tables: keep the global CSS.** Your `globals.css` table rules render six report pages consistently. Migrate to shadcn `Table` only if sorting/pagination ever becomes a requirement.
 - **Help (`?` tooltips): migrate to shadcn `Tooltip`** — same primitive across the site, plus the accessibility win.
@@ -69,14 +69,14 @@ First mutation path: a working "add transaction" flow so the app stops being rea
 
 ### 3.1 Foundations _(no visible change; prerequisite)_
 
-- [ ] Rename legacy CSS vars in `globals.css` to `--legacy-*` (`--muted` → `--legacy-muted`, plus `--accent`, `--card`, `--border`, `--bg`, `--fg`, `--card-fg`, `--accent-fg`, `--subtle`, `--positive`, `--negative`). Update the `@theme inline` mappings (`--color-muted: var(--legacy-muted)`, etc.) so existing Tailwind classnames (`text-muted`, `bg-card`, `bg-accent`) keep resolving to the same values until each component is migrated.
-- [ ] Drop Inter from `app/layout.tsx`: remove the import, the `inter` const, and `className={inter.className}` from `<body>`. Verify Geist renders.
-- [ ] Add `pnpm shadcn:add` npm script: `shadcn add "$@" && prettier --write "components/ui/**/*.{ts,tsx}"`. Eliminates the double-quote / no-semi formatting churn on every future component add.
-- [ ] Install baseline shadcn primitives via that script: `input`, `label`, `textarea`, `alert`, `dialog`, `alert-dialog`, `tooltip`, `popover`, `command`, `select`, `toggle-group`, `separator`, `skeleton`.
+- [x] Merge `globals.css` to a single palette: project vars (`--bg`, `--fg`, `--muted`, `--card`, `--card-fg`, `--border`, `--subtle`, `--accent`, `--accent-fg`, `--positive`, `--negative`) are the source of truth; shadcn long-form names (`--background`, `--foreground`, `--card-foreground`, `--accent-foreground`) are aliases. Orphan `.dark` class block removed — dark mode is `@media (prefers-color-scheme: dark)` only until a manual toggle ships in Phase 8.
+- [x] Drop Inter from `app/layout.tsx`: remove the import, the `inter` const, and `className={inter.className}` from `<body>`. Verify Geist renders.
+- [x] Add `pnpm shadcn:add` npm script: wrapped in a shell function so pnpm's trailing-arg passthrough reaches `$@` — `f() { shadcn add -y "$@" && prettier --write 'components/ui/**/*.{ts,tsx}'; }; f`. Eliminates the double-quote / no-semi formatting churn on every future component add.
+- [x] Install baseline shadcn primitives via that script: `input`, `label`, `textarea`, `alert`, `dialog`, `alert-dialog`, `tooltip`, `popover`, `command`, `select`, `toggle-group`, `separator`, `skeleton`. (Transitive deps `toggle` and `input-group` also landed.)
 
 ### 3.2 Primitive migration _(group by mechanical similarity)_
 
-Each migration both swaps the component **and** moves it off `--legacy-*` to shadcn semantics (`text-muted-foreground`, `bg-primary`, etc.) — that's how the legacy vars eventually get retired.
+Each migration swaps the custom component for its shadcn equivalent. The shadcn long-form tokens (`bg-primary`, `text-muted-foreground`, etc.) and the project tokens (`bg-card`, `text-muted`, etc.) already share one merged palette, so there's no var bookkeeping to do here — just the component swap.
 
 - [ ] Buttons (~30 instances). Sub-checklist by file:
   - [ ] `components/Header/Header.tsx` — sign-out → `Button variant="outline" size="sm"` _(skip if 3.4 is shipped first; the rewritten header uses `DropdownMenu` for user actions)_
