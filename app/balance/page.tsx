@@ -1,4 +1,5 @@
 import Help from '@/components/Help';
+import { Card } from '@/components/ui/card';
 import formatAmount from '@/utils/formatAmount';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
@@ -41,7 +42,7 @@ const Balance = async () => {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <Card className="gap-0 overflow-hidden p-0">
         <table>
           <thead>
             <tr>
@@ -80,7 +81,7 @@ const Balance = async () => {
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
 import Help from '@/components/Help';
+import { Card, CardContent } from '@/components/ui/card';
 import { parseISODate, toISODate } from '@/utils/date';
 import formatDate, { Format } from '@/utils/formatDate';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
@@ -92,7 +93,7 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
         to={toParam}
       />
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <Card className="gap-0 overflow-hidden p-0">
         <table>
           <thead>
             <tr>
@@ -119,24 +120,26 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {sorted.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <Chart
-            data={{
-              labels: sorted.map((r) => r.payee),
-              datasets: [
-                {
-                  label: 'Total spend',
-                  data: sorted.map((r) => r.total),
-                  backgroundColor: 'rgba(220, 38, 38, 0.7)',
-                  borderColor: 'rgb(220, 38, 38)',
-                },
-              ],
-            }}
-          />
-        </div>
+        <Card>
+          <CardContent>
+            <Chart
+              data={{
+                labels: sorted.map((r) => r.payee),
+                datasets: [
+                  {
+                    label: 'Total spend',
+                    data: sorted.map((r) => r.total),
+                    backgroundColor: 'rgba(220, 38, 38, 0.7)',
+                    borderColor: 'rgb(220, 38, 38)',
+                  },
+                ],
+              }}
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );

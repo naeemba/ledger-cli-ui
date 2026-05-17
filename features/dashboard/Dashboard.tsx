@@ -6,6 +6,7 @@ import {
 import Card from '@/components/Card';
 import Help from '@/components/Help';
 import { buttonVariants } from '@/components/ui/button';
+import { Card as ShadcnCard } from '@/components/ui/card';
 import {
   endOfMonth,
   endOfYear,
@@ -156,7 +157,7 @@ const Dashboard = async () => {
             Add transaction
           </Link>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <ShadcnCard className="gap-0 overflow-hidden p-0">
           <table>
             <thead>
               <tr>
@@ -196,7 +197,7 @@ const Dashboard = async () => {
               )}
             </tbody>
           </table>
-        </div>
+        </ShadcnCard>
       </section>
 
       <section className="flex flex-col gap-4">
@@ -210,14 +211,14 @@ const Dashboard = async () => {
             reconcile.
           </Help>
         </div>
-        <div className="grid grid-cols-2 gap-6 rounded-2xl border border-border bg-card p-6 shadow-sm sm:grid-cols-3 lg:grid-cols-6">
+        <ShadcnCard className="grid grid-cols-2 gap-6 px-6 sm:grid-cols-3 lg:grid-cols-6">
           <Stat label="Postings" value={stats.postings} />
           <Stat label="Uncleared" value={stats.uncleared} />
           <Stat label="Last 7 days" value={stats.last7} />
           <Stat label="Last 30 days" value={stats.last30} />
           <Stat label="This month" value={stats.thisMonth} />
           <Stat label="Days since last" value={stats.daysSinceLast} />
-        </div>
+        </ShadcnCard>
       </section>
     </div>
   );
