@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import {
   endOfMonth,
   endOfQuarter,
@@ -38,7 +39,7 @@ const Section = ({
   <div>
     <div className="mb-2 flex items-center gap-3">
       <span className={sectionLabel}>{title}</span>
-      <div className="h-px flex-1 bg-border" />
+      <Separator className="flex-1" />
     </div>
     <div className="flex flex-wrap gap-1.5">{children}</div>
   </div>
