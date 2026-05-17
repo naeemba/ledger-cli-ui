@@ -1,5 +1,7 @@
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { twMerge } from 'tailwind-merge';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 type Props = {
@@ -39,7 +41,10 @@ const Card = ({ label, value, title, body, action, className }: Props) => {
         {action && (
           <Link
             href={action.href}
-            className="mt-auto inline-flex w-fit items-center gap-1.5 pt-2 text-sm font-medium text-accent transition-colors hover:underline"
+            className={cn(
+              buttonVariants({ variant: 'link', size: 'sm' }),
+              'mt-auto w-fit px-0'
+            )}
           >
             {action.title}
             <ArrowRightIcon className="h-4 w-4" />

@@ -5,6 +5,8 @@ import {
   createTransactionAction,
   type TransactionActionState,
 } from './actions';
+import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useRouter } from 'next/navigation';
 
 type Status = 'cleared' | 'pending' | 'none';
@@ -117,28 +119,19 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
         </Field>
 
         <Field label="Status">
-          <div className="inline-flex rounded-md border border-border bg-bg p-0.5 text-sm">
-            {(
-              [
-                ['none', 'Unmarked'],
-                ['pending', 'Pending (!)'],
-                ['cleared', 'Cleared (*)'],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                type="button"
-                key={value}
-                onClick={() => setStatus(value)}
-                className={
-                  status === value
-                    ? 'rounded-sm bg-subtle px-3 py-1 text-fg'
-                    : 'rounded-sm px-3 py-1 text-muted hover:text-fg'
-                }
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <ToggleGroup
+            value={[status]}
+            onValueChange={(values) => {
+              if (values.length > 0) setStatus(values[0] as Status);
+            }}
+            spacing={0}
+            variant="outline"
+            size="sm"
+          >
+            <ToggleGroupItem value="none">Unmarked</ToggleGroupItem>
+            <ToggleGroupItem value="pending">Pending (!)</ToggleGroupItem>
+            <ToggleGroupItem value="cleared">Cleared (*)</ToggleGroupItem>
+          </ToggleGroup>
         </Field>
       </div>
 
@@ -196,13 +189,15 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
         </div>
 
         <div className="flex items-center justify-between">
-          <button
+          <Button
             type="button"
             onClick={addPosting}
-            className="text-sm font-medium text-accent hover:underline"
+            variant="link"
+            size="sm"
+            className="px-0"
           >
             + Add posting
-          </button>
+          </Button>
           {fieldError(state, 'postings') && (
             <span className="text-xs text-negative">
               {fieldError(state, 'postings')}
@@ -212,13 +207,9 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-fg shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={!canSubmit}>
           {isPending ? 'Saving…' : 'Save transaction'}
-        </button>
+        </Button>
         <span className="text-xs text-muted">
           Appended to your journal&apos;s main file.
         </span>
@@ -292,15 +283,16 @@ const PostingRow = ({
       placeholder="Currency"
       className={inputClass(false)}
     />
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon-sm"
       onClick={onRemove}
       disabled={!canRemove}
       title={canRemove ? 'Remove posting' : 'At least two postings required'}
-      className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-muted transition-colors hover:bg-subtle hover:text-fg disabled:opacity-30"
     >
       ×
-    </button>
+    </Button>
   </div>
 );
 

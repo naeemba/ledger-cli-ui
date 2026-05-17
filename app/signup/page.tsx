@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { signupAction, type SignupState } from './actions';
+import { Button } from '@/components/ui/button';
 import { APP_NAME } from '@/lib/app';
 import { authClient } from '@/lib/auth/client';
 import getDeviceName from '@/utils/deviceName';
@@ -84,13 +85,9 @@ export default function SignupPage() {
             error={fieldError(state, 'email')}
           />
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="mt-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-fg shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
+          <Button type="submit" disabled={busy} className="mt-2">
             {buttonLabel}
-          </button>
+          </Button>
 
           {fieldError(state, 'form') && (
             <ErrorBox>{fieldError(state, 'form')}</ErrorBox>

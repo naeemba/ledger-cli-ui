@@ -5,6 +5,7 @@ import {
 } from './Dashboard.utils';
 import Card from '@/components/Card';
 import Help from '@/components/Help';
+import { buttonVariants } from '@/components/ui/button';
 import {
   endOfMonth,
   endOfYear,
@@ -150,7 +151,7 @@ const Dashboard = async () => {
           </div>
           <Link
             href="/transactions/new"
-            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-fg shadow-sm transition-opacity hover:opacity-90"
+            className={buttonVariants({ size: 'sm' })}
           >
             Add transaction
           </Link>

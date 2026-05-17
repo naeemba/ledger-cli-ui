@@ -1,23 +1,27 @@
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 type Props = {
   path: string;
 };
 
-const linkClasses =
-  'inline-flex items-center gap-1.5 border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:bg-subtle hover:text-fg first:rounded-l-md last:rounded-r-md [&:not(:first-child)]:border-l-0';
+const groupedLink = cn(
+  buttonVariants({ variant: 'outline', size: 'xs' }),
+  'rounded-none first:rounded-l-md last:rounded-r-md [&:not(:first-child)]:-ml-px'
+);
 
 const AccountButtons = ({ path }: Props) => {
   return (
     <span className="inline-flex">
       <Link
-        className={linkClasses}
+        className={groupedLink}
         href={`/accounts/${encodeURIComponent(path)}`}
       >
         Transactions
       </Link>
       <Link
-        className={linkClasses}
+        className={groupedLink}
         href={`/registers/monthly/${encodeURIComponent(path)}`}
       >
         Monthly

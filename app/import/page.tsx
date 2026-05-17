@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Help from '@/components/Help';
+import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
 type Phase = 'idle' | 'uploading' | 'done' | 'error';
@@ -87,13 +88,13 @@ export default function ImportPage() {
           />
         </label>
 
-        <button
+        <Button
           type="submit"
           disabled={!file || phase === 'uploading'}
-          className="self-start rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-fg shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="self-start"
         >
           {phase === 'uploading' ? 'Uploading…' : 'Replace my journal'}
-        </button>
+        </Button>
 
         {message && (
           <div

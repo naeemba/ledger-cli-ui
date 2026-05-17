@@ -78,14 +78,14 @@ First mutation path: a working "add transaction" flow so the app stops being rea
 
 Each migration swaps the custom component for its shadcn equivalent. The shadcn long-form tokens (`bg-primary`, `text-muted-foreground`, etc.) and the project tokens (`bg-card`, `text-muted`, etc.) already share one merged palette, so there's no var bookkeeping to do here — just the component swap.
 
-- [ ] Buttons (~30 instances). Sub-checklist by file:
+- [~] Buttons (~30 instances). Sub-checklist by file:
   - [ ] `components/Header/Header.tsx` — sign-out → `Button variant="outline" size="sm"` _(skip if 3.4 is shipped first; the rewritten header uses `DropdownMenu` for user actions)_
-  - [ ] `components/DateFilter/DateFilter.tsx` — ~12 chip buttons → `Button variant="ghost" size="sm"`
-  - [ ] `components/Card/Card.tsx` — action link → `Link` + `buttonVariants({ variant: 'link' })`
-  - [ ] `features/accounts/AccountButtons.tsx` — link group → `Link` + `buttonVariants`
-  - [ ] `app/transactions/new/TransactionForm.tsx` — submit, "+ Add posting", remove posting, **status toggle group → shadcn `ToggleGroup`**
-  - [ ] `app/login/page.tsx` + `app/signup/page.tsx` + `app/import/page.tsx` — primary actions
-  - [ ] `features/dashboard/Dashboard.tsx` — quick-add button
+  - [x] `components/DateFilter/DateFilter.tsx` — 21 chip + Apply buttons → `Button variant="ghost" size="sm"` (chips) and default Button (Apply)
+  - [x] `components/Card/Card.tsx` — action link → `Link` + `buttonVariants({ variant: 'link' })`
+  - [x] `features/accounts/AccountButtons.tsx` — link group → `Link` + `buttonVariants({ variant: 'outline', size: 'xs' })` with grouped-rounding classes
+  - [x] `app/transactions/new/TransactionForm.tsx` — submit, "+ Add posting" (link variant), remove posting (icon-sm ghost), **status toggle group → shadcn `ToggleGroup`** with `spacing={0}` outline variant
+  - [x] `app/login/page.tsx` + `app/signup/page.tsx` + `app/import/page.tsx` — primary actions
+  - [x] `features/dashboard/Dashboard.tsx` — quick-add `Link` + `buttonVariants({ size: 'sm' })`
 - [ ] Form inputs:
   - [ ] `app/signup/page.tsx` — replace the inline `Field` subcomponent with `Label` + `Input` + inline error
   - [ ] `app/transactions/new/TransactionForm.tsx` — same `Field` pattern; also wrap the note `<textarea>` in `Textarea`

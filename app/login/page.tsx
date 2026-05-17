@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/auth/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -46,13 +47,9 @@ export default function LoginPage() {
           Authenticate with your passkey.
         </p>
 
-        <button
-          onClick={handleSignIn}
-          disabled={busy}
-          className="mt-6 w-full rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-fg shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
+        <Button onClick={handleSignIn} disabled={busy} className="mt-6 w-full">
           {busy ? 'Waiting for passkey…' : 'Sign in with passkey'}
-        </button>
+        </Button>
 
         {error && (
           <div className="mt-4 rounded-md border border-negative/30 bg-negative/10 p-3 text-sm text-negative">

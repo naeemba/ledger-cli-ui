@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   endOfMonth,
   endOfQuarter,
@@ -18,9 +19,6 @@ type Props = {
   from?: string;
   to?: string;
 };
-
-const chipClasses =
-  'rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-fg transition-colors hover:bg-subtle';
 
 const sectionLabel =
   'text-[0.65rem] font-semibold uppercase tracking-wider text-muted';
@@ -97,12 +95,9 @@ const DateFilter = (props: Props) => {
             className={`mt-1 ${inputClasses}`}
           />
         </div>
-        <button
-          onClick={handleSubmit}
-          className="ml-auto rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-accent-fg shadow-sm transition-opacity hover:opacity-90"
-        >
+        <Button onClick={handleSubmit} size="sm" className="ml-auto">
           Apply
-        </button>
+        </Button>
       </div>
 
       <div className="mt-5 space-y-4">
@@ -110,9 +105,10 @@ const DateFilter = (props: Props) => {
           {months.map((month, idx) => {
             const monthDate = new Date(refDate.getFullYear(), idx, 1);
             return (
-              <button
-                className={chipClasses}
+              <Button
                 key={month}
+                variant="ghost"
+                size="sm"
                 onClick={() =>
                   pushNewURL(
                     toISODate(startOfMonth(monthDate)),
@@ -121,7 +117,7 @@ const DateFilter = (props: Props) => {
                 }
               >
                 {month}
-              </button>
+              </Button>
             );
           })}
         </Section>
@@ -134,9 +130,10 @@ const DateFilter = (props: Props) => {
               1
             );
             return (
-              <button
+              <Button
                 key={q.label}
-                className={chipClasses}
+                variant="ghost"
+                size="sm"
                 onClick={() =>
                   pushNewURL(
                     toISODate(startOfQuarter(quarterDate)),
@@ -145,7 +142,7 @@ const DateFilter = (props: Props) => {
                 }
               >
                 {q.label}
-              </button>
+              </Button>
             );
           })}
         </Section>
@@ -154,9 +151,10 @@ const DateFilter = (props: Props) => {
           {years.map((year) => {
             const yearDate = new Date(year, 0, 1);
             return (
-              <button
+              <Button
                 key={year}
-                className={chipClasses}
+                variant="ghost"
+                size="sm"
                 onClick={() =>
                   pushNewURL(
                     toISODate(startOfYear(yearDate)),
@@ -165,7 +163,7 @@ const DateFilter = (props: Props) => {
                 }
               >
                 {year}
-              </button>
+              </Button>
             );
           })}
         </Section>
