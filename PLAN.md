@@ -78,6 +78,87 @@ Per-user journals, auth, and a way to get a journal into the app.
 
 ---
 
+## Phase 2.5 — UI library adoption (shadcn/ui)
+
+**Why:** the project just adopted shadcn/ui (`base-nova` preset over `@base-ui/react`, neutral base color). The init landed `components.json`, `lib/utils.ts`, `components/ui/button.tsx`, and merged its CSS variables into `app/globals.css`. Right now the codebase has two parallel design systems: ~30 custom buttons, custom `Field` form subcomponents, a custom Help tooltip, and a custom error-box pattern alongside an empty `components/ui/` directory. This phase unifies them.
+
+**Decisions (taken 2026-05-17 during brainstorming):**
+
+- **Theme strategy: rename legacy → progressively retire.** `globals.css` has four direct collisions with shadcn vars (`--muted`, `--accent`, `--card`, `--border`); the worst is `--muted` (your code uses it as a *text color*, shadcn uses it as a *background color*). Mechanical rename to `--legacy-*` is a zero-visual-change step that removes the collision; the end state is full shadcn semantics as each component migrates.
+- **Font: keep Geist, drop Inter.** shadcn's init wired Geist via `--font-sans`; `<body>` still has `inter.className` which means Inter is actually rendering. Delete the Inter import + class to let Geist take effect.
+- **Tables: keep the global CSS.** Your `globals.css` table rules render six report pages consistently. Migrate to shadcn `Table` only if sorting/pagination ever becomes a requirement.
+- **Help (`?` tooltips): migrate to shadcn `Tooltip`** — same primitive across the site, plus the accessibility win.
+
+**Ordering note:** 2.5.1 must ship before any other 2.5 item — the rename is a prerequisite for clean migrations. Phase 2.2's delete-confirm UI depends on the `AlertDialog` from 2.5.3. 2.5.4 rebuilds the Header from scratch, so the Header sign-out button in 2.5.2 is satisfied by 2.5.4 — only worth migrating in isolation if you ship 2.5.2 before 2.5.4.
+
+### 2.5.1 Foundations _(no visible change; prerequisite)_
+
+- [ ] Rename legacy CSS vars in `globals.css` to `--legacy-*` (`--muted` → `--legacy-muted`, plus `--accent`, `--card`, `--border`, `--bg`, `--fg`, `--card-fg`, `--accent-fg`, `--subtle`, `--positive`, `--negative`). Update the `@theme inline` mappings (`--color-muted: var(--legacy-muted)`, etc.) so existing Tailwind classnames (`text-muted`, `bg-card`, `bg-accent`) keep resolving to the same values until each component is migrated.
+- [ ] Drop Inter from `app/layout.tsx`: remove the import, the `inter` const, and `className={inter.className}` from `<body>`. Verify Geist renders.
+- [ ] Add `pnpm shadcn:add` npm script: `shadcn add "$@" && prettier --write "components/ui/**/*.{ts,tsx}"`. Eliminates the double-quote / no-semi formatting churn on every future component add.
+- [ ] Install baseline shadcn primitives via that script: `input`, `label`, `textarea`, `alert`, `dialog`, `alert-dialog`, `tooltip`, `popover`, `command`, `select`, `toggle-group`, `separator`, `skeleton`.
+
+### 2.5.2 Primitive migration _(group by mechanical similarity)_
+
+Each migration both swaps the component **and** moves it off `--legacy-*` to shadcn semantics (`text-muted-foreground`, `bg-primary`, etc.) — that's how the legacy vars eventually get retired.
+
+- [ ] Buttons (~30 instances). Sub-checklist by file:
+  - [ ] `components/Header/Header.tsx` — sign-out → `Button variant="outline" size="sm"` _(skip if 2.5.4 is shipped first; the rewritten header uses `DropdownMenu` for user actions)_
+  - [ ] `components/DateFilter/DateFilter.tsx` — ~12 chip buttons → `Button variant="ghost" size="sm"`
+  - [ ] `components/Card/Card.tsx` — action link → `Link` + `buttonVariants({ variant: 'link' })`
+  - [ ] `features/accounts/AccountButtons.tsx` — link group → `Link` + `buttonVariants`
+  - [ ] `app/transactions/new/TransactionForm.tsx` — submit, "+ Add posting", remove posting, **status toggle group → shadcn `ToggleGroup`**
+  - [ ] `app/login/page.tsx` + `app/signup/page.tsx` + `app/import/page.tsx` — primary actions
+  - [ ] `features/dashboard/Dashboard.tsx` — quick-add button
+- [ ] Form inputs:
+  - [ ] `app/signup/page.tsx` — replace the inline `Field` subcomponent with `Label` + `Input` + inline error
+  - [ ] `app/transactions/new/TransactionForm.tsx` — same `Field` pattern; also wrap the note `<textarea>` in `Textarea`
+  - [ ] `app/import/page.tsx` — wrap the file `<input>` in shadcn `Input` + `Label`
+- [ ] Error / success boxes — collapse the duplicated red/green box pattern in `login`, `signup`, `import`, `TransactionForm` into shadcn `Alert` (`variant="destructive"` for errors, default for success).
+
+### 2.5.3 Interactive upgrades _(real UX wins)_
+
+- [ ] Replace `<datalist>` autocomplete in `TransactionForm` with shadcn `Command` + `Popover` (Combobox) for both account and payee suggestions — keyboard nav, fuzzy filter, larger lists.
+- [ ] Migrate `components/Help/Help.tsx` to shadcn `Tooltip` — keep the same `Help` API so every page header stays unchanged.
+- [ ] Build a reusable `<ConfirmDialog>` wrapper around shadcn `AlertDialog` — **prerequisite for Phase 2.2 delete-transaction.**
+
+### 2.5.4 Navigation rewrite — sidebar + mega-menu header
+
+Today's `components/Header/Header.tsx` is a single horizontal nav with **11 top-level links** crammed into one row. It already wraps on narrow viewports and is the highest-touch surface in the app. Rewrite it around shadcn's navigation primitives.
+
+**Target shape:**
+
+- **Persistent left sidebar** (shadcn `Sidebar` + `SidebarProvider`):
+  - Groups: `Reports` (Dashboard, Accounts, Balance, Net Worth, Periodic Balance, Cash Flow, Debts), `Activity` (Payees, Reconcile), `Journal` (Add transaction, Import; later: list / templates from Phase 2.2 / 2.3)
+  - Collapsible (icon-only rail mode)
+  - Mobile: collapses into a `Sheet`-backed drawer triggered from the header
+- **Top header** — thin: app brand on the left, **mega menu** in the middle (shadcn `NavigationMenu`), user menu on the right (shadcn `DropdownMenu`).
+  - Mega menu trigger → flyout panels with grouped report links, short descriptions per item, and a featured "Add transaction" CTA. Use `NavigationMenu` + `NavigationMenuContent` with a grid layout.
+  - User menu → email, sign-out, link to a future `/account` page. Replaces the inline `<button>` and `<span>` in today's header.
+- **Active state** logic moves into a small `useActiveMenu(pathname)` hook so both the sidebar and the mega menu share the same `match: 'exact' | 'prefix'` semantics that exist in `Header.tsx:47–51` today.
+
+**Subtasks:**
+
+- [ ] Run `pnpm shadcn:add sidebar navigation-menu dropdown-menu sheet`.
+- [ ] Build `components/Sidebar/AppSidebar.tsx` driven by a typed `navConfig` (single source of truth for the new header *and* sidebar).
+- [ ] Extract the existing `menus` array out of `Header.tsx` into `components/nav/config.ts`; group entries by section; add `description` and optional `icon` (lucide) fields for the mega menu.
+- [ ] Build `components/Header/AppHeader.tsx` from scratch using `NavigationMenu` for the mega menu and `DropdownMenu` for the user actions. Delete the old `Header.tsx`.
+- [ ] Wire `SidebarProvider` into `app/layout.tsx`; restructure `<main>` so the page container sits to the right of the sidebar. Hide both sidebar and header on `/login` and `/signup` (today's `isAuthPage` guard).
+- [ ] Move the `monthStart` / `monthEnd` calculation for "Periodic Balance" out of the header into `navConfig` so it doesn't force `'use client'` on the whole nav tree (today it does — `Header.tsx:1`). Server-render where possible.
+- [ ] Mobile drawer: header shows a `SidebarTrigger` on screens < `lg`; sidebar renders inside a `Sheet`.
+- [ ] Persist sidebar collapsed/expanded state per user (cookie or `localStorage`; shadcn's `SidebarProvider` already supports `defaultOpen` and a state callback).
+- [ ] Verify the active-state hook handles every existing case in `Header.tsx:16–45` (especially `Periodic Balance` and `Add transaction` prefix matches).
+
+### 2.5.5 Optional / cosmetic
+
+- [ ] Wrap Dashboard / Balance / Payees card containers in shadcn `Card` (purely visual unification).
+- [ ] Replace `<div className="h-px bg-border" />` dividers with `Separator` (mainly inside `DateFilter`).
+- [ ] Add `Sonner` for transient feedback after `addTransaction` / `replaceJournalFromZip` — currently both rely on full-page redirects.
+- [ ] `Skeleton` loaders on report pages that block on `ledger` (Dashboard, Balance, Accounts, Monthly). Replaces 3.3's "loading skeletons" bullet — keep this version and drop the duplicate when this lands.
+- [ ] If sorting/pagination is ever needed: migrate the six tables to shadcn `Table`.
+
+---
+
 ## Phase 3 — Quality, cleanup, tests
 
 Pay down what's already known to be wrong before adding more surface area.
