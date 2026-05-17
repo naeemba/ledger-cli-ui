@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Header from '@/components/Header';
+import AppShell from '@/components/AppShell';
 import { APP_NAME } from '@/lib/app';
 import { cn } from '@/lib/utils';
 import { Geist } from 'next/font/google';
@@ -20,10 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn('font-sans', geist.variable)}>
       <body>
-        <Header />
-        <main className="container mx-auto px-4 pb-20 pt-8 sm:px-6 lg:px-8">
-          {children}
-        </main>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

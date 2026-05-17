@@ -1,0 +1,74 @@
+'use client';
+
+import * as React from 'react';
+import { getNavSections } from '@/components/nav/config';
+import { useActiveMenu } from '@/components/nav/useActiveMenu';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from '@/components/ui/sidebar';
+import { APP_NAME } from '@/lib/app';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const AppSidebar = () => {
+  const pathname = usePathname();
+  const sections = React.useMemo(() => getNavSections(), []);
+  const { isActive } = useActiveMenu(pathname);
+
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 px-2 py-1"
+          aria-label={`${APP_NAME} home`}
+        >
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-accent text-xs font-bold text-accent-fg">
+            L
+          </span>
+          <span className="truncate text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+            {APP_NAME}
+          </span>
+        </Link>
+      </SidebarHeader>
+      <SidebarContent>
+        {sections.map((section) => (
+          <SidebarGroup key={section.id}>
+            <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton
+                        isActive={isActive(item)}
+                        tooltip={item.title}
+                        render={<Link href={item.href} />}
+                      >
+                        <Icon />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+      <SidebarRail />
+    </Sidebar>
+  );
+};
+
+export default AppSidebar;

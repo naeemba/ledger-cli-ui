@@ -98,32 +98,25 @@ Each migration swaps the custom component for its shadcn equivalent. The shadcn 
 - [x] `components/Help/Help.tsx` now wraps shadcn `Tooltip` (with self-contained `TooltipProvider`); same `Help` props (`children`, `label`, `className`) so every page header stays unchanged.
 - [x] Reusable `components/ConfirmDialog/` wraps shadcn `AlertDialog` (`children` as `render`-trigger, configurable `title`/`description`/`confirmLabel`/`cancelLabel`/`variant` — default `destructive`, `onConfirm` handler). **Prerequisite for Phase 4.1 delete-transaction.**
 
-### 3.4 Navigation rewrite — sidebar + mega-menu header
+### 3.4 Navigation rewrite — sidebar + mega-menu header + command palette
 
-Today's `components/Header/Header.tsx` is a single horizontal nav with **11 top-level links** crammed into one row. It already wraps on narrow viewports and is the highest-touch surface in the app. Rewrite it around shadcn's navigation primitives.
+The old `components/Header/Header.tsx` was a single horizontal nav with 11 links crammed into one row. Rewritten around shadcn navigation primitives plus a global Cmd+K / Ctrl+K command palette.
 
-**Target shape:**
+**Shipped shape:**
 
-- **Persistent left sidebar** (shadcn `Sidebar` + `SidebarProvider`):
-  - Groups: `Reports` (Dashboard, Accounts, Balance, Net Worth, Periodic Balance, Cash Flow, Debts), `Activity` (Payees, Reconcile), `Journal` (Add transaction, Import; later: list / templates from Phase 4)
-  - Collapsible (icon-only rail mode)
-  - Mobile: collapses into a `Sheet`-backed drawer triggered from the header
-- **Top header** — thin: app brand on the left, **mega menu** in the middle (shadcn `NavigationMenu`), user menu on the right (shadcn `DropdownMenu`).
-  - Mega menu trigger → flyout panels with grouped report links, short descriptions per item, and a featured "Add transaction" CTA. Use `NavigationMenu` + `NavigationMenuContent` with a grid layout.
-  - User menu → email, sign-out, link to a future `/account` page. Replaces the inline `<button>` and `<span>` in today's header.
-- **Active state** logic moves into a small `useActiveMenu(pathname)` hook so both the sidebar and the mega menu share the same `match: 'exact' | 'prefix'` semantics that exist in `Header.tsx:47–51` today.
+- **`components/nav/config.ts`** — typed `NavSection[]` (Reports / Activity / Journal), one entry per route with `title`, `href`, `description`, `icon` (lucide), `match: 'exact' | 'prefix'`, optional `activePrefix`, and `keywords` for search. Single source of truth for sidebar, mega menu, and command palette. `getNavSections()` computes the dynamic Periodic-Balance month range each call.
+- **`components/nav/useActiveMenu.ts`** — shared helper consolidating the `Header.tsx:47–51` active-state semantics.
+- **`components/Sidebar/AppSidebar.tsx`** — collapsible icon-rail sidebar (shadcn `Sidebar` + `SidebarProvider` from layout), groups driven by the nav config; `SidebarRail` for desktop toggle; mobile drawer via `Sheet` is automatic from `SidebarProvider`.
+- **`components/Header/AppHeader.tsx`** — thin top bar: `SidebarTrigger` on the left, `NavigationMenu` mega menu in the middle (per-section flyout in a 2-col grid with icon + title + description), `CommandPaletteTrigger` + user `DropdownMenu` (avatar / signed-in-as label / sign-out) on the right. Mega menu hidden below `md`; mobile users navigate via sidebar drawer + Cmd+K.
+- **`components/CommandPalette/`** — `CommandPaletteProvider` mounts a global Cmd+K / Ctrl+K listener; the dialog (shadcn `CommandDialog`) lists every nav entry grouped by section, searchable by title/description/keywords/section. `CommandPaletteTrigger` is a header button with a platform-aware `⌘ K` / `Ctrl K` kbd hint (`useSyncExternalStore` to avoid hydration mismatch).
+- **`components/AppShell/AppShell.tsx`** — client wrapper used by `app/layout.tsx`. On `/login` and `/signup` it renders a centered card layout with no sidebar/header; everywhere else it mounts `TooltipProvider` → `CommandPaletteProvider` → `SidebarProvider` → `AppSidebar` + `SidebarInset(AppHeader + page)` + `CommandPalette`.
+- **Sidebar persistence** — shadcn's `SidebarProvider` already writes a `sidebar_state` cookie on every toggle (7-day TTL); collapsed/expanded state survives reloads.
+- **Old `Header.tsx` deleted**; `components/Header/index.ts` now re-exports `AppHeader`.
 
-**Subtasks:**
+**Notes / known limitations:**
 
-- [ ] Run `pnpm shadcn:add sidebar navigation-menu dropdown-menu sheet`.
-- [ ] Build `components/Sidebar/AppSidebar.tsx` driven by a typed `navConfig` (single source of truth for the new header *and* sidebar).
-- [ ] Extract the existing `menus` array out of `Header.tsx` into `components/nav/config.ts`; group entries by section; add `description` and optional `icon` (lucide) fields for the mega menu.
-- [ ] Build `components/Header/AppHeader.tsx` from scratch using `NavigationMenu` for the mega menu and `DropdownMenu` for the user actions. Delete the old `Header.tsx`.
-- [ ] Wire `SidebarProvider` into `app/layout.tsx`; restructure `<main>` so the page container sits to the right of the sidebar. Hide both sidebar and header on `/login` and `/signup` (today's `isAuthPage` guard).
-- [ ] Move the `monthStart` / `monthEnd` calculation for "Periodic Balance" out of the header into `navConfig` so it doesn't force `'use client'` on the whole nav tree (today it does — `Header.tsx:1`). Server-render where possible.
-- [ ] Mobile drawer: header shows a `SidebarTrigger` on screens < `lg`; sidebar renders inside a `Sheet`.
-- [ ] Persist sidebar collapsed/expanded state per user (cookie or `localStorage`; shadcn's `SidebarProvider` already supports `defaultOpen` and a state callback).
-- [ ] Verify the active-state hook handles every existing case in `Header.tsx:16–45` (especially `Periodic Balance` and `Add transaction` prefix matches).
+- Sidebar default-open state is not yet seeded from the cookie at SSR time — first paint is always expanded, then user toggles persist. Worth wiring up via a server-side cookie read into `<SidebarProvider defaultOpen={…}>` in a future pass.
+- Auth pages do not show the Cmd+K palette (no signed-in nav surface yet).
 
 ### 3.5 Optional / cosmetic
 
