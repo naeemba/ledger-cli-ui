@@ -5,6 +5,7 @@ import {
   createTransactionAction,
   type TransactionActionState,
 } from './actions';
+import Combobox from '@/components/Combobox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -140,26 +141,13 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
         </Field>
       </div>
 
-      <Field
-        label="Payee"
-        htmlFor="tx-payee"
-        error={fieldError(state, 'payee')}
-      >
-        <Input
-          id="tx-payee"
-          type="text"
+      <Field label="Payee" error={fieldError(state, 'payee')}>
+        <Combobox
           value={payee}
-          onChange={(e) => setPayee(e.target.value)}
-          list="payee-suggestions"
-          autoComplete="off"
-          required
-          aria-invalid={!!fieldError(state, 'payee')}
+          onChange={setPayee}
+          options={payees}
+          placeholder="Type or pick a payee…"
         />
-        <datalist id="payee-suggestions">
-          {payees.map((p) => (
-            <option key={p} value={p} />
-          ))}
-        </datalist>
       </Field>
 
       <Field
@@ -185,17 +173,12 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
           <BalanceIndicator balance={balance} />
         </div>
 
-        <datalist id="account-suggestions">
-          {accounts.map((a) => (
-            <option key={a} value={a} />
-          ))}
-        </datalist>
-
         <div className="flex flex-col gap-2">
           {postings.map((posting, idx) => (
             <PostingRow
               key={idx}
               posting={posting}
+              accounts={accounts}
               canRemove={postings.length > 2}
               onChange={(patch) => updatePosting(idx, patch)}
               onRemove={() => removePosting(idx)}
@@ -259,23 +242,23 @@ const Field = ({
 
 const PostingRow = ({
   posting,
+  accounts,
   canRemove,
   onChange,
   onRemove,
 }: {
   posting: Posting;
+  accounts: string[];
   canRemove: boolean;
   onChange: (patch: Partial<Posting>) => void;
   onRemove: () => void;
 }) => (
   <div className="grid grid-cols-[1fr_140px_90px_auto] items-center gap-2">
-    <Input
-      type="text"
+    <Combobox
       value={posting.account}
-      onChange={(e) => onChange({ account: e.target.value })}
-      list="account-suggestions"
+      onChange={(v) => onChange({ account: v })}
+      options={accounts}
       placeholder="Account (e.g. Expenses:Food)"
-      autoComplete="off"
     />
     <Input
       type="text"

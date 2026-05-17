@@ -94,9 +94,9 @@ Each migration swaps the custom component for its shadcn equivalent. The shadcn 
 
 ### 3.3 Interactive upgrades _(real UX wins)_
 
-- [ ] Replace `<datalist>` autocomplete in `TransactionForm` with shadcn `Command` + `Popover` (Combobox) for both account and payee suggestions — keyboard nav, fuzzy filter, larger lists.
-- [ ] Migrate `components/Help/Help.tsx` to shadcn `Tooltip` — keep the same `Help` API so every page header stays unchanged.
-- [ ] Build a reusable `<ConfirmDialog>` wrapper around shadcn `AlertDialog` — **prerequisite for Phase 4.1 delete-transaction.**
+- [x] Reusable `components/Combobox/` (button trigger + `Popover` + `Command` + `CommandInput`) wired into `TransactionForm` for payee and per-row account; supports `allowFreeText` via a "Use \"$search\"" fallback item; both `<datalist>` blocks removed.
+- [x] `components/Help/Help.tsx` now wraps shadcn `Tooltip` (with self-contained `TooltipProvider`); same `Help` props (`children`, `label`, `className`) so every page header stays unchanged.
+- [x] Reusable `components/ConfirmDialog/` wraps shadcn `AlertDialog` (`children` as `render`-trigger, configurable `title`/`description`/`confirmLabel`/`cancelLabel`/`variant` — default `destructive`, `onConfirm` handler). **Prerequisite for Phase 4.1 delete-transaction.**
 
 ### 3.4 Navigation rewrite — sidebar + mega-menu header
 
