@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import Help from '@/components/Help';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -38,15 +39,12 @@ export default function ImportPage() {
       if (!res.ok || !result.ok)
         throw new Error(result.error ?? 'Upload failed');
       setPhase('done');
-      if (result.mode === 'archive') {
-        setMessage(
-          `Imported ${result.fileCount} file${result.fileCount === 1 ? '' : 's'} (${(result.bytes ?? 0).toLocaleString()} bytes). Main file: ${result.mainFile}.`
-        );
-      } else {
-        setMessage(
-          `Imported ${(result.bytes ?? 0).toLocaleString()} bytes. Reports refresh on next view.`
-        );
-      }
+      const description =
+        result.mode === 'archive'
+          ? `Imported ${result.fileCount} file${result.fileCount === 1 ? '' : 's'} (${(result.bytes ?? 0).toLocaleString()} bytes). Main file: ${result.mainFile}.`
+          : `Imported ${(result.bytes ?? 0).toLocaleString()} bytes. Reports refresh on next view.`;
+      setMessage(description);
+      toast.success('Journal imported', { description });
       router.refresh();
     } catch (err) {
       setPhase('error');

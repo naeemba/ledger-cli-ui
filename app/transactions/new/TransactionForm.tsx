@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import {
   createTransactionAction,
   type TransactionActionState,
@@ -8,6 +9,7 @@ import {
 import Combobox from '@/components/Combobox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -59,9 +61,15 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
 
   useEffect(() => {
     if (state?.ok) {
+      toast.success('Transaction saved', {
+        description: `${payee.trim() || 'New entry'} appended to your journal.`,
+      });
       router.push('/');
       router.refresh();
     }
+    // payee is intentionally omitted — we only want this effect to run on
+    // state changes from the server action, not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, router]);
 
   const balance = computeBalance(postings);
@@ -105,122 +113,141 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
   });
 
   return (
-    <form
-      ref={formRef}
-      action={formAction}
-      className="flex flex-col gap-6 rounded-2xl border border-border bg-card p-6 shadow-sm"
-    >
-      <input type="hidden" name="draft" value={draftJson} />
+    <Card>
+      <CardContent>
+        <form ref={formRef} action={formAction} className="flex flex-col gap-6">
+          <input type="hidden" name="draft" value={draftJson} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Date" htmlFor="tx-date" error={fieldError(state, 'date')}>
-          <Input
-            id="tx-date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            aria-invalid={!!fieldError(state, 'date')}
-            required
-          />
-        </Field>
+          <div className="grid gap-8 lg:grid-cols-[minmax(280px,360px)_1fr]">
+            <section className="flex flex-col gap-5">
+              <SectionLabel>Details</SectionLabel>
 
-        <Field label="Status">
-          <ToggleGroup
-            value={[status]}
-            onValueChange={(values) => {
-              if (values.length > 0) setStatus(values[0] as Status);
-            }}
-            spacing={0}
-            variant="outline"
-            size="sm"
-          >
-            <ToggleGroupItem value="none">Unmarked</ToggleGroupItem>
-            <ToggleGroupItem value="pending">Pending (!)</ToggleGroupItem>
-            <ToggleGroupItem value="cleared">Cleared (*)</ToggleGroupItem>
-          </ToggleGroup>
-        </Field>
-      </div>
+              <Field
+                label="Date"
+                htmlFor="tx-date"
+                error={fieldError(state, 'date')}
+              >
+                <Input
+                  id="tx-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  aria-invalid={!!fieldError(state, 'date')}
+                  required
+                />
+              </Field>
 
-      <Field label="Payee" error={fieldError(state, 'payee')}>
-        <Combobox
-          value={payee}
-          onChange={setPayee}
-          options={payees}
-          placeholder="Type or pick a payee…"
-        />
-      </Field>
+              <Field label="Status">
+                <ToggleGroup
+                  value={[status]}
+                  onValueChange={(values) => {
+                    if (values.length > 0) setStatus(values[0] as Status);
+                  }}
+                  spacing={0}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  <ToggleGroupItem value="none" className="flex-1">
+                    Unmarked
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="pending" className="flex-1">
+                    Pending (!)
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="cleared" className="flex-1">
+                    Cleared (*)
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </Field>
 
-      <Field
-        label="Note (optional)"
-        htmlFor="tx-note"
-        error={fieldError(state, 'note')}
-      >
-        <Textarea
-          id="tx-note"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={2}
-          placeholder="Comment lines — written below the payee with a ; prefix"
-          aria-invalid={!!fieldError(state, 'note')}
-        />
-      </Field>
+              <Field label="Payee" error={fieldError(state, 'payee')}>
+                <Combobox
+                  value={payee}
+                  onChange={setPayee}
+                  options={payees}
+                  placeholder="Type or pick a payee…"
+                />
+              </Field>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between">
-          <span className="text-xs font-medium uppercase tracking-wider text-muted">
-            Postings
-          </span>
-          <BalanceIndicator balance={balance} />
-        </div>
+              <Field
+                label="Note (optional)"
+                htmlFor="tx-note"
+                error={fieldError(state, 'note')}
+              >
+                <Textarea
+                  id="tx-note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={4}
+                  placeholder="Comment lines — written below the payee with a ; prefix"
+                  aria-invalid={!!fieldError(state, 'note')}
+                />
+              </Field>
+            </section>
 
-        <div className="flex flex-col gap-2">
-          {postings.map((posting, idx) => (
-            <PostingRow
-              key={idx}
-              posting={posting}
-              accounts={accounts}
-              canRemove={postings.length > 2}
-              onChange={(patch) => updatePosting(idx, patch)}
-              onRemove={() => removePosting(idx)}
-            />
-          ))}
-        </div>
+            <section className="flex flex-col gap-3 lg:border-l lg:border-border lg:pl-8">
+              <div className="flex items-baseline justify-between">
+                <SectionLabel>Postings</SectionLabel>
+                <BalanceIndicator balance={balance} />
+              </div>
 
-        <div className="flex items-center justify-between">
-          <Button
-            type="button"
-            onClick={addPosting}
-            variant="link"
-            size="sm"
-            className="px-0"
-          >
-            + Add posting
-          </Button>
-          {fieldError(state, 'postings') && (
-            <span className="text-xs text-negative">
-              {fieldError(state, 'postings')}
-            </span>
+              <div className="flex flex-col gap-2">
+                {postings.map((posting, idx) => (
+                  <PostingRow
+                    key={idx}
+                    posting={posting}
+                    accounts={accounts}
+                    canRemove={postings.length > 2}
+                    onChange={(patch) => updatePosting(idx, patch)}
+                    onRemove={() => removePosting(idx)}
+                  />
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  onClick={addPosting}
+                  variant="link"
+                  size="sm"
+                  className="px-0"
+                >
+                  + Add posting
+                </Button>
+                {fieldError(state, 'postings') && (
+                  <span className="text-xs text-destructive">
+                    {fieldError(state, 'postings')}
+                  </span>
+                )}
+              </div>
+            </section>
+          </div>
+
+          {state?.formError && (
+            <Alert variant="destructive">
+              <AlertDescription>{state.formError}</AlertDescription>
+            </Alert>
           )}
-        </div>
-      </div>
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={!canSubmit}>
-          {isPending ? 'Saving…' : 'Save transaction'}
-        </Button>
-        <span className="text-xs text-muted">
-          Appended to your journal&apos;s main file.
-        </span>
-      </div>
-
-      {state?.formError && (
-        <Alert variant="destructive">
-          <AlertDescription>{state.formError}</AlertDescription>
-        </Alert>
-      )}
-    </form>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <span className="text-xs text-muted-foreground">
+              Appended to your journal&apos;s main file.
+            </span>
+            <Button type="submit" disabled={!canSubmit}>
+              {isPending ? 'Saving…' : 'Save transaction'}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
+
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+    {children}
+  </div>
+);
 
 const Field = ({
   label,

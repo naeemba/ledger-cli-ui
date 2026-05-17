@@ -6,6 +6,7 @@ import CommandPalette, {
 import AppHeader from '@/components/Header/AppHeader';
 import AppSidebar from '@/components/Sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { usePathname } from 'next/navigation';
 
@@ -21,6 +22,7 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
         <main className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-4 py-12 sm:px-6">
           {children}
         </main>
+        <Toaster />
       </TooltipProvider>
     );
   }
@@ -37,6 +39,7 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
             </div>
           </SidebarInset>
           <CommandPalette />
+          <Toaster />
         </SidebarProvider>
       </CommandPaletteProvider>
     </TooltipProvider>

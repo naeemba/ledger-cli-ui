@@ -1,6 +1,7 @@
 import { getCashFlow } from './MonthlyComparison.utils';
 import Chart from '@/components/Chart';
 import Help from '@/components/Help';
+import { Card, CardContent } from '@/components/ui/card';
 import formatDate, { Format } from '@/utils/formatDate';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 
@@ -28,7 +29,7 @@ const MonthlyComparison = async () => {
         <p className="mt-1 text-sm text-muted">Income vs expenses by month</p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <Card className="gap-0 overflow-hidden p-0">
         <table>
           <thead>
             <tr>
@@ -71,32 +72,38 @@ const MonthlyComparison = async () => {
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {rows.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <Chart
-            data={{
-              labels: rows.map((r) =>
-                formatDate(r.date.toISOString(), Format.SHORT_MONTH_YEAR)
-              ),
-              datasets: [
+        <Card>
+          <CardContent>
+            <Chart
+              type="bar"
+              data={rows.map((r) => ({
+                month: formatDate(
+                  r.date.toISOString(),
+                  Format.SHORT_MONTH_YEAR
+                ),
+                income: r.income,
+                expenses: r.expenses,
+              }))}
+              xKey="month"
+              series={[
                 {
+                  key: 'income',
                   label: 'Income',
-                  data: rows.map((r) => r.income),
-                  backgroundColor: 'rgba(5, 150, 105, 0.7)',
-                  borderColor: 'rgb(5, 150, 105)',
+                  color: 'var(--positive)',
                 },
                 {
+                  key: 'expenses',
                   label: 'Expenses',
-                  data: rows.map((r) => r.expenses),
-                  backgroundColor: 'rgba(220, 38, 38, 0.7)',
-                  borderColor: 'rgb(220, 38, 38)',
+                  color: 'var(--negative)',
                 },
-              ],
-            }}
-          />
-        </div>
+              ]}
+              height={320}
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );

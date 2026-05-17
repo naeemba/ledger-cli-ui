@@ -1,8 +1,8 @@
 import Chart from '@/components/Chart';
 import Help from '@/components/Help';
+import { Card, CardContent } from '@/components/ui/card';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
-import getColor from '@/utils/getColor';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 import isValidAccount from '@/utils/validateAccount';
@@ -34,9 +34,6 @@ const Monthly = async ({
     '%T',
   ]);
   const results = stdout.split('NNN').filter(Boolean);
-  const colors = results.map((each) =>
-    getColor(each.split('|')[0] ?? '', 0.8, 1)
-  );
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -64,7 +61,7 @@ const Monthly = async ({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <Card className="gap-0 overflow-hidden p-0">
         <table>
           <thead>
             <tr>
@@ -94,28 +91,35 @@ const Monthly = async ({
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {results.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <Chart
-            data={{
-              labels: results.map((each) =>
-                formatDate(each.split('|')[0], Format.SHORT_MONTH_YEAR)
-              ),
-              datasets: [
-                {
-                  label: 'Monthly',
-                  data: results.map((each) =>
-                    each.split('|')[1].split(' ')[1].replaceAll(',', '')
+        <Card>
+          <CardContent>
+            <Chart
+              type="bar"
+              data={results.map((each) => {
+                const [date, raw] = each.split('|');
+                return {
+                  month: formatDate(date, Format.SHORT_MONTH_YEAR),
+                  balance: Number(
+                    (raw.split(' ')[1] ?? '0').replaceAll(',', '')
                   ),
-                  backgroundColor: colors.map((each) => each[0]),
-                  borderColor: colors.map((each) => each[1]),
+                };
+              })}
+              xKey="month"
+              series={[
+                {
+                  key: 'balance',
+                  label: `Balance (${defaultCurrency})`,
+                  color: 'var(--chart-1)',
                 },
-              ],
-            }}
-          />
-        </div>
+              ]}
+              showLegend={false}
+              height={320}
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );
