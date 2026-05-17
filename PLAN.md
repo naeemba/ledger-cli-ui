@@ -37,15 +37,13 @@ Per-user journals, auth, and a way to get a journal into the app.
 
 ---
 
-## Phase 2 — Authoring _(current — unblocks daily use)_
+## Phase 2 — Authoring MVP _(complete)_
 
-**Why:** today the only mutation path is wholesale import; once a journal is loaded the app is read-only. This phase makes the UI usable as a daily-driver tool.
-
-### 2.1 Add transaction _(MVP — ship first)_
+First mutation path: a working "add transaction" flow so the app stops being read-only.
 
 - [x] Server action `addTransaction(userId, draft)` that appends a properly-formatted block to `mainPath`
   - [x] Atomic write: single `fs.appendFile` (atomic at syscall level for sub-PIPE_BUF writes); leading `\n\n` guards against missing trailing newline
-  - [x] Invalidate the `ledger-cli-exec` cache via per-user `updateTag('ledger:<userId>')` — see 2.4
+  - [x] Invalidate the `ledger-cli-exec` cache via per-user `updateTag('ledger:<userId>')`
 - [x] `/transactions/new` page with form fields: date, payee, optional `*`/`!` cleared flag, optional note, dynamic posting rows (account, amount, currency)
   - [x] Client-side balance check (sum of postings must equal zero, or exactly one posting blank for auto-balance)
   - [x] Account autocomplete sourced from `ledger accounts`
@@ -54,33 +52,11 @@ Per-user journals, auth, and a way to get a journal into the app.
 - [x] "Add transaction" entry point in Header nav (and a quick-add button on Dashboard)
 - [x] Redirect to Dashboard after success; surface friendly error inline on failure
 
-### 2.2 Edit / delete transaction
-
-- [ ] Decide the addressing scheme: line range in `mainPath`, or generated transaction ID via a custom comment tag (e.g. `; :uid: <ulid>`). The tag approach survives reformatting; line ranges break the moment anyone edits the file outside the app.
-- [ ] Backfill UID tags on import (one-time migration over the journal)
-- [ ] List view at `/transactions` with pagination (use `ledger reg` JSON-ish output — or parse our own)
-- [ ] Edit page reusing the add-transaction form
-- [ ] Delete with confirm modal
-- [ ] All mutations go through a single `writeJournal` helper that locks, parses, rewrites, and bumps cache
-
-### 2.3 Recurring / templated transactions
-
-- [ ] "Save as template" on any transaction
-- [ ] Templates stored in SQLite (`template` table) — not in the journal file
-- [ ] "New from template" prefills the add-transaction form
-- [ ] Unblocks the paused Budget item (`TODO.md` Tier 2) once periodic transactions are easy
-
-### 2.4 Cache & freshness
-
-- [ ] Replace `unstable_cache` key with one that includes the user's journal mtime so writes invalidate immediately
-- [ ] Or: drop caching entirely for mutating users and keep it for read-heavy sessions (measure first)
-- [ ] Confirm `revalidatePath('/', 'layout')` after every mutation is sufficient
-
 ---
 
-## Phase 2.5 — UI library adoption (shadcn/ui)
+## Phase 3 — UI library adoption (shadcn/ui) _(current)_
 
-**Why:** the project just adopted shadcn/ui (`base-nova` preset over `@base-ui/react`, neutral base color). The init landed `components.json`, `lib/utils.ts`, `components/ui/button.tsx`, and merged its CSS variables into `app/globals.css`. Right now the codebase has two parallel design systems: ~30 custom buttons, custom `Field` form subcomponents, a custom Help tooltip, and a custom error-box pattern alongside an empty `components/ui/` directory. This phase unifies them.
+**Why:** the project just adopted shadcn/ui (`base-nova` preset over `@base-ui/react`, neutral base color). The init landed `components.json`, `lib/utils.ts`, `components/ui/button.tsx`, and merged its CSS variables into `app/globals.css`. Right now the codebase has two parallel design systems: ~30 custom buttons, custom `Field` form subcomponents, a custom Help tooltip, and a custom error-box pattern alongside an empty `components/ui/` directory. This phase unifies them — and lands the primitives (`AlertDialog`, `Command`, `Combobox`) that Phase 4's edit/delete/templates flows depend on.
 
 **Decisions (taken 2026-05-17 during brainstorming):**
 
@@ -89,21 +65,21 @@ Per-user journals, auth, and a way to get a journal into the app.
 - **Tables: keep the global CSS.** Your `globals.css` table rules render six report pages consistently. Migrate to shadcn `Table` only if sorting/pagination ever becomes a requirement.
 - **Help (`?` tooltips): migrate to shadcn `Tooltip`** — same primitive across the site, plus the accessibility win.
 
-**Ordering note:** 2.5.1 must ship before any other 2.5 item — the rename is a prerequisite for clean migrations. Phase 2.2's delete-confirm UI depends on the `AlertDialog` from 2.5.3. 2.5.4 rebuilds the Header from scratch, so the Header sign-out button in 2.5.2 is satisfied by 2.5.4 — only worth migrating in isolation if you ship 2.5.2 before 2.5.4.
+**Ordering note:** 3.1 must ship before any other 3.x item — the rename is a prerequisite for clean migrations. Phase 4.1's delete-confirm UI depends on the `AlertDialog` from 3.3. 3.4 rebuilds the Header from scratch, so the Header sign-out button in 3.2 is satisfied by 3.4 — only worth migrating in isolation if you ship 3.2 before 3.4.
 
-### 2.5.1 Foundations _(no visible change; prerequisite)_
+### 3.1 Foundations _(no visible change; prerequisite)_
 
 - [ ] Rename legacy CSS vars in `globals.css` to `--legacy-*` (`--muted` → `--legacy-muted`, plus `--accent`, `--card`, `--border`, `--bg`, `--fg`, `--card-fg`, `--accent-fg`, `--subtle`, `--positive`, `--negative`). Update the `@theme inline` mappings (`--color-muted: var(--legacy-muted)`, etc.) so existing Tailwind classnames (`text-muted`, `bg-card`, `bg-accent`) keep resolving to the same values until each component is migrated.
 - [ ] Drop Inter from `app/layout.tsx`: remove the import, the `inter` const, and `className={inter.className}` from `<body>`. Verify Geist renders.
 - [ ] Add `pnpm shadcn:add` npm script: `shadcn add "$@" && prettier --write "components/ui/**/*.{ts,tsx}"`. Eliminates the double-quote / no-semi formatting churn on every future component add.
 - [ ] Install baseline shadcn primitives via that script: `input`, `label`, `textarea`, `alert`, `dialog`, `alert-dialog`, `tooltip`, `popover`, `command`, `select`, `toggle-group`, `separator`, `skeleton`.
 
-### 2.5.2 Primitive migration _(group by mechanical similarity)_
+### 3.2 Primitive migration _(group by mechanical similarity)_
 
 Each migration both swaps the component **and** moves it off `--legacy-*` to shadcn semantics (`text-muted-foreground`, `bg-primary`, etc.) — that's how the legacy vars eventually get retired.
 
 - [ ] Buttons (~30 instances). Sub-checklist by file:
-  - [ ] `components/Header/Header.tsx` — sign-out → `Button variant="outline" size="sm"` _(skip if 2.5.4 is shipped first; the rewritten header uses `DropdownMenu` for user actions)_
+  - [ ] `components/Header/Header.tsx` — sign-out → `Button variant="outline" size="sm"` _(skip if 3.4 is shipped first; the rewritten header uses `DropdownMenu` for user actions)_
   - [ ] `components/DateFilter/DateFilter.tsx` — ~12 chip buttons → `Button variant="ghost" size="sm"`
   - [ ] `components/Card/Card.tsx` — action link → `Link` + `buttonVariants({ variant: 'link' })`
   - [ ] `features/accounts/AccountButtons.tsx` — link group → `Link` + `buttonVariants`
@@ -116,20 +92,20 @@ Each migration both swaps the component **and** moves it off `--legacy-*` to sha
   - [ ] `app/import/page.tsx` — wrap the file `<input>` in shadcn `Input` + `Label`
 - [ ] Error / success boxes — collapse the duplicated red/green box pattern in `login`, `signup`, `import`, `TransactionForm` into shadcn `Alert` (`variant="destructive"` for errors, default for success).
 
-### 2.5.3 Interactive upgrades _(real UX wins)_
+### 3.3 Interactive upgrades _(real UX wins)_
 
 - [ ] Replace `<datalist>` autocomplete in `TransactionForm` with shadcn `Command` + `Popover` (Combobox) for both account and payee suggestions — keyboard nav, fuzzy filter, larger lists.
 - [ ] Migrate `components/Help/Help.tsx` to shadcn `Tooltip` — keep the same `Help` API so every page header stays unchanged.
-- [ ] Build a reusable `<ConfirmDialog>` wrapper around shadcn `AlertDialog` — **prerequisite for Phase 2.2 delete-transaction.**
+- [ ] Build a reusable `<ConfirmDialog>` wrapper around shadcn `AlertDialog` — **prerequisite for Phase 4.1 delete-transaction.**
 
-### 2.5.4 Navigation rewrite — sidebar + mega-menu header
+### 3.4 Navigation rewrite — sidebar + mega-menu header
 
 Today's `components/Header/Header.tsx` is a single horizontal nav with **11 top-level links** crammed into one row. It already wraps on narrow viewports and is the highest-touch surface in the app. Rewrite it around shadcn's navigation primitives.
 
 **Target shape:**
 
 - **Persistent left sidebar** (shadcn `Sidebar` + `SidebarProvider`):
-  - Groups: `Reports` (Dashboard, Accounts, Balance, Net Worth, Periodic Balance, Cash Flow, Debts), `Activity` (Payees, Reconcile), `Journal` (Add transaction, Import; later: list / templates from Phase 2.2 / 2.3)
+  - Groups: `Reports` (Dashboard, Accounts, Balance, Net Worth, Periodic Balance, Cash Flow, Debts), `Activity` (Payees, Reconcile), `Journal` (Add transaction, Import; later: list / templates from Phase 4)
   - Collapsible (icon-only rail mode)
   - Mobile: collapses into a `Sheet`-backed drawer triggered from the header
 - **Top header** — thin: app brand on the left, **mega menu** in the middle (shadcn `NavigationMenu`), user menu on the right (shadcn `DropdownMenu`).
@@ -149,27 +125,55 @@ Today's `components/Header/Header.tsx` is a single horizontal nav with **11 top-
 - [ ] Persist sidebar collapsed/expanded state per user (cookie or `localStorage`; shadcn's `SidebarProvider` already supports `defaultOpen` and a state callback).
 - [ ] Verify the active-state hook handles every existing case in `Header.tsx:16–45` (especially `Periodic Balance` and `Add transaction` prefix matches).
 
-### 2.5.5 Optional / cosmetic
+### 3.5 Optional / cosmetic
 
 - [ ] Wrap Dashboard / Balance / Payees card containers in shadcn `Card` (purely visual unification).
 - [ ] Replace `<div className="h-px bg-border" />` dividers with `Separator` (mainly inside `DateFilter`).
 - [ ] Add `Sonner` for transient feedback after `addTransaction` / `replaceJournalFromZip` — currently both rely on full-page redirects.
-- [ ] `Skeleton` loaders on report pages that block on `ledger` (Dashboard, Balance, Accounts, Monthly). Replaces 3.3's "loading skeletons" bullet — keep this version and drop the duplicate when this lands.
+- [ ] `Skeleton` loaders on report pages that block on `ledger` (Dashboard, Balance, Accounts, Monthly). Replaces 5.3's "loading skeletons" bullet — keep this version and drop the duplicate when this lands.
 - [ ] If sorting/pagination is ever needed: migrate the six tables to shadcn `Table`.
 
 ---
 
-## Phase 3 — Quality, cleanup, tests
+## Phase 4 — Authoring continued
+
+The remaining authoring work that didn't land in Phase 2's MVP. Edit/delete depends on `<ConfirmDialog>` from 3.3, so this comes after Phase 3.
+
+### 4.1 Edit / delete transaction
+
+- [ ] Decide the addressing scheme: line range in `mainPath`, or generated transaction ID via a custom comment tag (e.g. `; :uid: <ulid>`). The tag approach survives reformatting; line ranges break the moment anyone edits the file outside the app.
+- [ ] Backfill UID tags on import (one-time migration over the journal)
+- [ ] List view at `/transactions` with pagination (use `ledger reg` JSON-ish output — or parse our own)
+- [ ] Edit page reusing the add-transaction form
+- [ ] Delete with confirm modal (uses the `<ConfirmDialog>` from 3.3)
+- [ ] All mutations go through a single `writeJournal` helper that locks, parses, rewrites, and bumps cache
+
+### 4.2 Recurring / templated transactions
+
+- [ ] "Save as template" on any transaction
+- [ ] Templates stored in SQLite (`template` table) — not in the journal file
+- [ ] "New from template" prefills the add-transaction form
+- [ ] Unblocks the paused Budget item (`TODO.md` Tier 2) once periodic transactions are easy
+
+### 4.3 Cache & freshness
+
+- [ ] Replace `unstable_cache` key with one that includes the user's journal mtime so writes invalidate immediately
+- [ ] Or: drop caching entirely for mutating users and keep it for read-heavy sessions (measure first)
+- [ ] Confirm `revalidatePath('/', 'layout')` after every mutation is sufficient
+
+---
+
+## Phase 5 — Quality, cleanup, tests
 
 Pay down what's already known to be wrong before adding more surface area.
 
-### 3.1 From `TODO.md`
+### 5.1 From `TODO.md`
 
 - [ ] Delete orphan `FileUpload` component (no UI references it) — `components/FileUpload/FileUpload.tsx` already shows as deleted in `git status`, just commit
 - [ ] Fix amount parsing fragility in `/registers/monthly/[account]` — `each.split('|')[1].split(' ')[1]` assumes `<unit> <amount>` shape, breaks for unit-less amounts
 - [ ] ESLint 10 upgrade — revisit when `eslint-plugin-react` lands a compatible release
 
-### 3.2 Tests
+### 5.2 Tests
 
 Bring in Vitest and cover the pure functions first (no `ledger` shell-out needed):
 
@@ -180,9 +184,9 @@ Bring in Vitest and cover the pure functions first (no `ledger` shell-out needed
 - [ ] `validateAccount`
 - [ ] `formatAmount` / `formatDate`
 - [ ] Journal helpers: `detectMain`, `replaceJournalFromZip` path-traversal guard
-- [ ] After 2.1 lands: `addTransaction` round-trip (write → re-read via `ledger reg`)
+- [ ] `addTransaction` round-trip (write → re-read via `ledger reg`)
 
-### 3.3 Errors & UX rough edges
+### 5.3 Errors & UX rough edges
 
 - [ ] Server-side error boundary that doesn't leak `ledger` stderr to the client
 - [ ] "Journal is empty" empty-state on Dashboard pointing to `/import` or `/transactions/new`
@@ -190,11 +194,11 @@ Bring in Vitest and cover the pure functions first (no `ledger` shell-out needed
 
 ---
 
-## Phase 4 — Power features
+## Phase 6 — Power features
 
 The Tier-2/3 items from `TODO.md` that need more than a weekend.
 
-- [ ] **Budget actual-vs-target** — `ledger budget`; depends on 2.3 (templates / periodic transactions)
+- [ ] **Budget actual-vs-target** — `ledger budget`; depends on 4.2 (templates / periodic transactions)
 - [ ] **CSV export** for any report (`ledger csv`)
 - [ ] **Commodity / portfolio view** (`bal Assets:Investments -X CCY`)
 - [ ] **Forecasting** (`ledger --forecast`)
@@ -202,7 +206,7 @@ The Tier-2/3 items from `TODO.md` that need more than a weekend.
 
 ---
 
-## Phase 5 — Multi-user hardening
+## Phase 7 — Multi-user hardening
 
 Only relevant if this gets deployed to anyone other than you.
 
@@ -217,7 +221,7 @@ Only relevant if this gets deployed to anyone other than you.
 
 ---
 
-## Phase 6 — Stretch / maybe-never
+## Phase 8 — Stretch / maybe-never
 
 - [ ] Mobile-first re-layout (current nav already wraps, but the tables don't)
 - [ ] Offline-first / PWA shell for read-only reports
@@ -231,5 +235,5 @@ Only relevant if this gets deployed to anyone other than you.
 
 - When you finish something, change `[ ]` to `[x]` in the same commit
 - New work goes under the right phase, not the bottom of the file
-- If a phase grows past ~10 items, split it into sub-sections like Phase 2 above
+- If a phase grows past ~10 items, split it into sub-sections like Phase 3 above
 - Don't delete completed phases — they're the project's changelog
