@@ -54,10 +54,9 @@ const amountSchema = z
 const currencySchema = z
   .string()
   .trim()
-  .min(1, 'Currency is required')
   .max(CURRENCY_MAX, 'Currency is too long')
   .refine(
-    (s) => /^[^\s\x00-\x1f;]+$/.test(s),
+    (s) => s === '' || /^[^\s\x00-\x1f;]+$/.test(s),
     'Currency contains forbidden characters'
   );
 
@@ -69,11 +68,16 @@ const uidSchema = z
   )
   .optional();
 
-export const postingSchema = z.object({
-  account: accountSchema,
-  amount: amountSchema,
-  currency: currencySchema,
-});
+export const postingSchema = z
+  .object({
+    account: accountSchema,
+    amount: amountSchema,
+    currency: currencySchema,
+  })
+  .refine((p) => p.amount === '' || p.currency.trim() !== '', {
+    message: 'Currency is required',
+    path: ['currency'],
+  });
 
 export const transactionDraftSchema = z
   .object({

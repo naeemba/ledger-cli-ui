@@ -78,12 +78,16 @@ const TransactionTable = ({ transactions }: Props) => {
             </td>
             <td className="py-2">{statusBadge(t.status)}</td>
             <td className="py-2">
-              <Link
-                href={`/transactions/${t.uid}/edit`}
-                className="hover:underline"
-              >
-                {t.payee}
-              </Link>
+              {t.uid ? (
+                <Link
+                  href={`/transactions/${t.uid}/edit`}
+                  className="hover:underline"
+                >
+                  {t.payee}
+                </Link>
+              ) : (
+                <span>{t.payee}</span>
+              )}
             </td>
             <td className="py-2 text-muted-foreground">
               {t.postings
@@ -100,27 +104,36 @@ const TransactionTable = ({ transactions }: Props) => {
               ))}
             </td>
             <td className="py-2 text-right">
-              <div className="flex justify-end gap-1">
-                <Link
-                  href={`/transactions/${t.uid}/edit`}
-                  className={cn(
-                    buttonVariants({ variant: 'ghost', size: 'icon-sm' })
-                  )}
+              {t.uid ? (
+                <div className="flex justify-end gap-1">
+                  <Link
+                    href={`/transactions/${t.uid}/edit`}
+                    className={cn(
+                      buttonVariants({ variant: 'ghost', size: 'icon-sm' })
+                    )}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Link>
+                  <ConfirmDialog
+                    title="Delete transaction?"
+                    description="This will permanently remove the transaction from the journal."
+                    confirmLabel="Delete"
+                    variant="destructive"
+                    onConfirm={() => onDelete(t.uid!, t.fingerprint)}
+                  >
+                    <Button variant="ghost" size="icon-sm">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </ConfirmDialog>
+                </div>
+              ) : (
+                <span
+                  className="text-xs text-muted-foreground"
+                  title="Re-import the journal to enable editing for this transaction"
                 >
-                  <Pencil className="h-4 w-4" />
-                </Link>
-                <ConfirmDialog
-                  title="Delete transaction?"
-                  description="This will permanently remove the transaction from the journal."
-                  confirmLabel="Delete"
-                  variant="destructive"
-                  onConfirm={() => onDelete(t.uid ?? '', t.fingerprint)}
-                >
-                  <Button variant="ghost" size="icon-sm">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </ConfirmDialog>
-              </div>
+                  no uid
+                </span>
+              )}
             </td>
           </tr>
         ))}

@@ -3,6 +3,7 @@
 import type { TransactionActionState } from '@/app/transactions/new/actions';
 import { requireUser } from '@/lib/auth/require-user';
 import { writeJournal } from '@/lib/journal/write';
+import type { TransactionDraft } from '@/lib/transactions/schema';
 
 export async function updateTransactionAction(
   _prev: TransactionActionState | null,
@@ -35,7 +36,7 @@ export async function updateTransactionAction(
     kind: 'edit',
     uid,
     expectedFingerprint,
-    draft: parsed as never,
+    draft: parsed as TransactionDraft,
   });
 
   if (!result.ok) {
