@@ -254,10 +254,27 @@ const TransactionForm = ({
             </section>
           </div>
 
-          {state?.formError && (
+          {state?.formError ===
+          'This transaction was modified somewhere else.' ? (
             <Alert variant="destructive">
-              <AlertDescription>{state.formError}</AlertDescription>
+              <AlertDescription className="flex items-center justify-between gap-3">
+                <span>{state.formError} Reload to see the latest version.</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.refresh()}
+                >
+                  Reload
+                </Button>
+              </AlertDescription>
             </Alert>
+          ) : (
+            state?.formError && (
+              <Alert variant="destructive">
+                <AlertDescription>{state.formError}</AlertDescription>
+              </Alert>
+            )
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
