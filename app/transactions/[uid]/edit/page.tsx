@@ -1,6 +1,6 @@
 import 'server-only';
+import { updateTransactionAction } from './actions';
 import TransactionForm from '@/app/transactions/new/TransactionForm';
-import type { TransactionActionState } from '@/app/transactions/new/actions';
 import { requireUser } from '@/lib/auth/require-user';
 import { fingerprintDraft } from '@/lib/journal/fingerprint';
 import { parseJournal } from '@/lib/journal/parser';
@@ -13,14 +13,6 @@ import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
-
-// Placeholder — replaced in Task 22 with the real updateTransactionAction.
-const updateTransactionAction = async (
-  _prev: TransactionActionState | null,
-  _formData: FormData
-): Promise<TransactionActionState> => {
-  return { ok: false, formError: 'Edit action not yet wired (Task 22).' };
-};
 
 export default async function EditTransactionPage({
   params,
