@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { fingerprintDraft } from './fingerprint';
 import { UID_LINE_REGEX } from './uid';
 
 export type ParsedHeader = {
@@ -151,6 +152,7 @@ export type Transaction = {
   note: string | null;
   postings: ParsedPosting[];
   rawBlock: string;
+  fingerprint: string;
 };
 
 export type ParsedJournal = {
@@ -173,6 +175,14 @@ export const parseJournalFile = (
     if (blockStart === null) return;
     const block = parseBlock(blockLines.join('\n'));
     if (block) {
+      const fingerprint = fingerprintDraft({
+        date: block.date,
+        payee: block.payee,
+        status: block.status,
+        note: block.note ?? undefined,
+        uid: block.uid ?? undefined,
+        postings: block.postings,
+      });
       transactions.push({
         uid: block.uid,
         file: filePath,
@@ -184,6 +194,7 @@ export const parseJournalFile = (
         note: block.note,
         postings: block.postings,
         rawBlock: blockLines.join('\n'),
+        fingerprint,
       });
     }
     blockStart = null;
