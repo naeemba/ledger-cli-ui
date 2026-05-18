@@ -61,6 +61,14 @@ const currencySchema = z
     'Currency contains forbidden characters'
   );
 
+const uidSchema = z
+  .string()
+  .regex(
+    /^[0-9A-HJKMNP-TV-Z]{26}$/,
+    'uid must be a 26-character Crockford ULID'
+  )
+  .optional();
+
 export const postingSchema = z.object({
   account: accountSchema,
   amount: amountSchema,
@@ -73,6 +81,7 @@ export const transactionDraftSchema = z
     payee: payeeSchema,
     status: z.enum(['cleared', 'pending', 'none']).default('none'),
     note: noteSchema,
+    uid: uidSchema,
     postings: z
       .array(postingSchema)
       .min(MIN_POSTINGS, `At least ${MIN_POSTINGS} postings are required`)
@@ -132,11 +141,12 @@ const statusMarker = (status: TransactionDraft['status']): string => {
 
 export const formatTransaction = (draft: TransactionDraft): string => {
   const header = `${draft.date}${statusMarker(draft.status)} ${draft.payee}`;
+  const uidLines = draft.uid ? [`    ; :uid: ${draft.uid}`] : [];
   const noteLines = (draft.note ?? '')
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => `    ; ${line}`);
   const postings = draft.postings.map(formatPosting);
-  return [header, ...noteLines, ...postings].join('\n');
+  return [header, ...uidLines, ...noteLines, ...postings].join('\n');
 };
