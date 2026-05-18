@@ -7,6 +7,7 @@ import { user as userTable } from '@/db/schema';
 import { db } from '@/lib/db';
 import { env } from '@/lib/env';
 import { backfillUids } from '@/lib/journal/backfill';
+import { generateUid } from '@/lib/journal/uid';
 import {
   formatTransaction,
   transactionDraftSchema,
@@ -178,7 +179,7 @@ export const addTransaction = async (
     return { ok: false, fieldErrors };
   }
 
-  const draft: TransactionDraft = parsed.data;
+  const draft: TransactionDraft = { ...parsed.data, uid: generateUid() };
   const { mainPath } = await ensureJournal(userId);
   // `appendFile` opens with `'a'` and a single small write is atomic at the
   // syscall level — well under PIPE_BUF for any reasonable transaction.
