@@ -1,3 +1,5 @@
+import { promises as fs } from 'fs';
+import path from 'path';
 import { UID_LINE_REGEX } from './uid';
 
 export type ParsedHeader = {
@@ -106,4 +108,34 @@ export const parseBlock = (block: string): ParsedBlock | null => {
     note: noteLines.length > 0 ? noteLines.join('\n') : null,
     postings,
   };
+};
+
+const INCLUDE_LINE_REGEX = /^\s*include\s+(\S.*?)\s*$/;
+
+export const resolveIncludes = async (mainPath: string): Promise<string[]> => {
+  const seen = new Set<string>();
+  const order: string[] = [];
+
+  const visit = async (filePath: string, stack: string[]): Promise<void> => {
+    const abs = path.resolve(filePath);
+    if (stack.includes(abs)) {
+      throw new Error(
+        `Include cycle detected: ${[...stack, abs].join(' -> ')}`
+      );
+    }
+    if (seen.has(abs)) return;
+    seen.add(abs);
+    order.push(abs);
+    const text = await fs.readFile(abs, 'utf-8');
+    for (const line of text.split('\n')) {
+      const m = line.match(INCLUDE_LINE_REGEX);
+      if (m) {
+        const target = path.resolve(path.dirname(abs), m[1]);
+        await visit(target, [...stack, abs]);
+      }
+    }
+  };
+
+  await visit(mainPath, []);
+  return order;
 };

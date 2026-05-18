@@ -1,5 +1,11 @@
+import path from 'path';
 import { describe, it, expect } from 'vitest';
-import { parseHeader, parsePostingLine, parseBlock } from './parser';
+import {
+  parseHeader,
+  parsePostingLine,
+  parseBlock,
+  resolveIncludes,
+} from './parser';
 
 describe('parseHeader', () => {
   it('parses YYYY-MM-DD with no status', () => {
@@ -169,5 +175,26 @@ describe('parseBlock', () => {
   it('returns null when first line is not a header', () => {
     expect(parseBlock('    Expenses:Food  USD 10')).toBeNull();
     expect(parseBlock('')).toBeNull();
+  });
+});
+
+const fixturePath = (...parts: string[]) =>
+  path.resolve(__dirname, '__fixtures__', ...parts);
+
+describe('resolveIncludes', () => {
+  it('returns the main file when there are no includes', async () => {
+    const main = fixturePath('includes-basic', 'sub.ledger');
+    expect(await resolveIncludes(main)).toEqual([main]);
+  });
+
+  it('resolves a single include relative to its host file', async () => {
+    const main = fixturePath('includes-basic', 'main.ledger');
+    const sub = fixturePath('includes-basic', 'sub.ledger');
+    expect(await resolveIncludes(main)).toEqual([main, sub]);
+  });
+
+  it('throws on include cycles', async () => {
+    const main = fixturePath('includes-cycle', 'main.ledger');
+    await expect(resolveIncludes(main)).rejects.toThrow(/cycle/i);
   });
 });
