@@ -123,11 +123,78 @@ const performEdit = async (
   return { ok: true };
 };
 
+const performDelete = async (
+  userId: string,
+  input: WriteDeleteInput
+): Promise<WriteResult> => {
+  const { mainPath } = await resolveUserJournal(userId);
+  const journal = await parseJournal(mainPath);
+  const tx = journal.transactions.find((t) => t.uid === input.uid);
+  if (!tx) {
+    return {
+      ok: false,
+      reason: 'not-found',
+      message: 'Transaction not found.',
+    };
+  }
+
+  const text = await fs.readFile(tx.file, 'utf-8');
+  const fileTxs = parseJournalFile(tx.file, text);
+  const current = fileTxs.find((t) => t.uid === input.uid);
+  if (!current) {
+    return {
+      ok: false,
+      reason: 'not-found',
+      message: 'Transaction not found.',
+    };
+  }
+
+  const fp = fingerprintDraft({
+    date: current.date,
+    payee: current.payee,
+    status: current.status,
+    note: current.note ?? undefined,
+    uid: current.uid ?? undefined,
+    postings: current.postings,
+  });
+  if (fp !== input.expectedFingerprint) {
+    return {
+      ok: false,
+      reason: 'stale',
+      message: 'This transaction was modified somewhere else.',
+    };
+  }
+
+  const lines = text.split('\n');
+  let removeStart = current.startLine - 1; // inclusive, 0-based
+  let removeEnd = current.endLine - 1; // inclusive, 0-based
+  // Trailing blank line if present
+  if (lines[removeEnd + 1] === '') {
+    removeEnd++;
+  } else if (removeStart > 0 && lines[removeStart - 1] === '') {
+    removeStart--;
+  }
+  const next = [
+    ...lines.slice(0, removeStart),
+    ...lines.slice(removeEnd + 1),
+  ].join('\n');
+  await writeFileAtomic(tx.file, next);
+
+  // Cache invalidation — best-effort outside Next.js context
+  try {
+    updateTag(getJournalCacheTag(userId));
+    revalidatePath('/', 'layout');
+  } catch {
+    // best-effort
+  }
+  return { ok: true };
+};
+
 export const writeJournal = async (
   userId: string,
   input: WriteInput
 ): Promise<WriteResult> =>
   withUserLock(userId, async () => {
     if (input.kind === 'edit') return performEdit(userId, input);
-    throw new Error('delete not yet implemented');
+    return performDelete(userId, input);
   });
