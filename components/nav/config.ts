@@ -7,6 +7,7 @@ import {
   FolderTree,
   Gauge,
   GitCompareArrows,
+  ListChecks,
   PiggyBank,
   PlusCircle,
   Users,
@@ -106,6 +107,16 @@ export const getNavSections = (): NavSection[] => {
       id: 'activity',
       title: 'Activity',
       items: [
+        {
+          id: 'transactions',
+          title: 'Transactions',
+          href: '/transactions',
+          match: 'prefix',
+          activePrefix: '/transactions',
+          description: 'Edit or delete posted transactions.',
+          icon: ListChecks,
+          keywords: ['edit', 'delete', 'list', 'history'],
+        },
         {
           id: 'payees',
           title: 'Payees',
