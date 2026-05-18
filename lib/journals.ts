@@ -6,6 +6,7 @@ import 'server-only';
 import { user as userTable } from '@/db/schema';
 import { db } from '@/lib/db';
 import { env } from '@/lib/env';
+import { backfillUids } from '@/lib/journal/backfill';
 import {
   formatTransaction,
   transactionDraftSchema,
@@ -88,11 +89,13 @@ const setJournalMain = async (userId: string, mainFile: string) => {
 export const replaceJournalFromSingleFile = async (
   userId: string,
   content: Buffer
-): Promise<void> => {
+): Promise<{ uidsAdded: number }> => {
   const dir = getJournalDir(userId);
   await emptyDir(dir);
   await fs.writeFile(path.join(dir, DEFAULT_MAIN), content);
   await setJournalMain(userId, DEFAULT_MAIN);
+  const backfill = await backfillUids(userId);
+  return { uidsAdded: backfill.uidsAdded };
 };
 
 const PATH_TRAVERSAL = /(^|[/\\])\.\.([/\\]|$)/;
@@ -125,7 +128,7 @@ const detectMain = (entries: { name: string }[]): string => {
 export const replaceJournalFromZip = async (
   userId: string,
   buffer: Buffer
-): Promise<{ mainFile: string; fileCount: number }> => {
+): Promise<{ mainFile: string; fileCount: number; uidsAdded: number }> => {
   const zip = new AdmZip(buffer);
   const entries = zip.getEntries().filter((e) => !e.isDirectory);
 
@@ -153,7 +156,8 @@ export const replaceJournalFromZip = async (
 
   const mainFile = detectMain(entries.map((e) => ({ name: e.entryName })));
   await setJournalMain(userId, mainFile);
-  return { mainFile, fileCount: entries.length };
+  const backfill = await backfillUids(userId);
+  return { mainFile, fileCount: entries.length, uidsAdded: backfill.uidsAdded };
 };
 
 export type AddTransactionResult =

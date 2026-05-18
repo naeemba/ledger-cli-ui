@@ -17,6 +17,7 @@ type UploadResult = {
   mainFile?: string;
   fileCount?: number;
   bytes?: number;
+  uidsAdded?: number;
   error?: string;
 };
 
@@ -39,10 +40,14 @@ export default function ImportPage() {
       if (!res.ok || !result.ok)
         throw new Error(result.error ?? 'Upload failed');
       setPhase('done');
+      const tagged =
+        result.uidsAdded && result.uidsAdded > 0
+          ? `, ${result.uidsAdded} transaction${result.uidsAdded === 1 ? '' : 's'} tagged`
+          : '';
       const description =
         result.mode === 'archive'
-          ? `Imported ${result.fileCount} file${result.fileCount === 1 ? '' : 's'} (${(result.bytes ?? 0).toLocaleString()} bytes). Main file: ${result.mainFile}.`
-          : `Imported ${(result.bytes ?? 0).toLocaleString()} bytes. Reports refresh on next view.`;
+          ? `Imported ${result.fileCount} file${result.fileCount === 1 ? '' : 's'}${tagged}. Main file: ${result.mainFile}.`
+          : `Imported ${(result.bytes ?? 0).toLocaleString()} bytes${tagged}. Reports refresh on next view.`;
       setMessage(description);
       toast.success('Journal imported', { description });
       router.refresh();

@@ -40,16 +40,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         mode: 'archive',
         mainFile: result.mainFile,
         fileCount: result.fileCount,
+        uidsAdded: result.uidsAdded,
         bytes: buffer.length,
       });
     }
 
     if (ALLOWED_SINGLE_EXTS.has(ext)) {
-      await replaceJournalFromSingleFile(user.id, buffer);
+      const result = await replaceJournalFromSingleFile(user.id, buffer);
       revalidatePath('/', 'layout');
       return NextResponse.json({
         ok: true,
         mode: 'single',
+        uidsAdded: result.uidsAdded,
         bytes: buffer.length,
       });
     }
