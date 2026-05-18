@@ -1,3 +1,5 @@
+import { UID_LINE_REGEX } from './uid';
+
 export type ParsedHeader = {
   date: string;
   status: 'cleared' | 'pending' | 'none';
@@ -54,4 +56,54 @@ export const parsePostingLine = (line: string): ParsedPosting | null => {
     return { account: bareMatch[1].trim(), amount: '', currency: '' };
   }
   return null;
+};
+
+export type ParsedBlock = {
+  uid: string | null;
+  date: string;
+  status: 'cleared' | 'pending' | 'none';
+  payee: string;
+  note: string | null;
+  postings: ParsedPosting[];
+};
+
+const COMMENT_LINE_REGEX = /^\s*;\s?(.*)$/;
+
+export const parseBlock = (block: string): ParsedBlock | null => {
+  const lines = block.split('\n');
+  if (lines.length === 0) return null;
+  const header = parseHeader(lines[0]);
+  if (!header) return null;
+
+  let uid: string | null = null;
+  const noteLines: string[] = [];
+  const postings: ParsedPosting[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() === '') continue;
+    const uidMatch = line.match(UID_LINE_REGEX);
+    if (uidMatch) {
+      uid = uidMatch[1];
+      continue;
+    }
+    const commentMatch = line.match(COMMENT_LINE_REGEX);
+    if (commentMatch) {
+      noteLines.push(commentMatch[1].trim());
+      continue;
+    }
+    const posting = parsePostingLine(line);
+    if (posting) {
+      postings.push(posting);
+    }
+  }
+
+  return {
+    uid,
+    date: header.date,
+    status: header.status,
+    payee: header.payee,
+    note: noteLines.length > 0 ? noteLines.join('\n') : null,
+    postings,
+  };
 };
