@@ -198,3 +198,54 @@ describe('resolveIncludes', () => {
     await expect(resolveIncludes(main)).rejects.toThrow(/cycle/i);
   });
 });
+
+describe('parseJournal', () => {
+  it('parses multi-file journals with includes', async () => {
+    const { parseJournal } = await import('./parser');
+    const main = fixturePath('realistic', 'main.ledger');
+    const result = await parseJournal(main);
+    expect(result.transactions).toHaveLength(3);
+    expect(result.files.map((f) => path.basename(f.path))).toEqual([
+      'main.ledger',
+      'q1.ledger',
+    ]);
+  });
+
+  it('normalizes slash dates to dashes', async () => {
+    const { parseJournal } = await import('./parser');
+    const main = fixturePath('realistic', 'main.ledger');
+    const { transactions } = await parseJournal(main);
+    const lunch = transactions.find((t) => t.payee === 'lunch - darya');
+    expect(lunch?.date).toBe('2024-09-01');
+  });
+
+  it('strips comma thousands in amounts', async () => {
+    const { parseJournal } = await import('./parser');
+    const main = fixturePath('realistic', 'main.ledger');
+    const { transactions } = await parseJournal(main);
+    const lunch = transactions.find((t) => t.payee === 'lunch - darya')!;
+    const bank = lunch.postings.find(
+      (p) => p.account === 'Assets:Bank:Blubank'
+    );
+    expect(bank?.amount).toBe('-1000');
+  });
+
+  it('preserves UID from source', async () => {
+    const { parseJournal } = await import('./parser');
+    const main = fixturePath('realistic', 'main.ledger');
+    const { transactions } = await parseJournal(main);
+    const tj = transactions.find((t) => t.payee === "Trader Joe's");
+    expect(tj?.uid).toBe('01HZX5G5KJDS9HQRYK8E5T0DJC');
+  });
+
+  it('attaches source coordinates', async () => {
+    const { parseJournal } = await import('./parser');
+    const main = fixturePath('realistic', 'main.ledger');
+    const { transactions } = await parseJournal(main);
+    for (const tx of transactions) {
+      expect(tx.startLine).toBeGreaterThan(0);
+      expect(tx.endLine).toBeGreaterThanOrEqual(tx.startLine);
+      expect(tx.rawBlock.length).toBeGreaterThan(0);
+    }
+  });
+});

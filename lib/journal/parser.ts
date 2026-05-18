@@ -139,3 +139,89 @@ export const resolveIncludes = async (mainPath: string): Promise<string[]> => {
   await visit(mainPath, []);
   return order;
 };
+
+export type Transaction = {
+  uid: string | null;
+  file: string;
+  startLine: number;
+  endLine: number;
+  date: string;
+  payee: string;
+  status: 'cleared' | 'pending' | 'none';
+  note: string | null;
+  postings: ParsedPosting[];
+  rawBlock: string;
+};
+
+export type ParsedJournal = {
+  files: Array<{ path: string; mtimeMs: number }>;
+  transactions: Transaction[];
+};
+
+const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
+
+export const parseJournalFile = (
+  filePath: string,
+  text: string
+): Transaction[] => {
+  const lines = text.split('\n');
+  const transactions: Transaction[] = [];
+  let blockStart: number | null = null;
+  let blockLines: string[] = [];
+
+  const flush = (endLine: number) => {
+    if (blockStart === null) return;
+    const block = parseBlock(blockLines.join('\n'));
+    if (block) {
+      transactions.push({
+        uid: block.uid,
+        file: filePath,
+        startLine: blockStart + 1,
+        endLine: endLine + 1,
+        date: block.date,
+        payee: block.payee,
+        status: block.status,
+        note: block.note,
+        postings: block.postings,
+        rawBlock: blockLines.join('\n'),
+      });
+    }
+    blockStart = null;
+    blockLines = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (blockStart === null) {
+      if (HEADER_START_REGEX.test(line)) {
+        blockStart = i;
+        blockLines = [line];
+      }
+      continue;
+    }
+    if (line.trim() === '') {
+      flush(i - 1);
+      continue;
+    }
+    blockLines.push(line);
+  }
+  flush(lines.length - 1);
+  return transactions;
+};
+
+export const parseJournal = async (
+  mainPath: string
+): Promise<ParsedJournal> => {
+  const filePaths = await resolveIncludes(mainPath);
+  const files: Array<{ path: string; mtimeMs: number }> = [];
+  const transactions: Transaction[] = [];
+  for (const filePath of filePaths) {
+    const [stat, text] = await Promise.all([
+      fs.stat(filePath),
+      fs.readFile(filePath, 'utf-8'),
+    ]);
+    files.push({ path: filePath, mtimeMs: stat.mtimeMs });
+    transactions.push(...parseJournalFile(filePath, text));
+  }
+  return { files, transactions };
+};

@@ -1,0 +1,13 @@
+include ./q1.ledger
+
+2024/09/01 lunch - darya
+	Expenses:Restaurant
+	Assets:Credited:Hooman                              168 Kirt
+	Expenses:Family                                     275 Kirt
+	Assets:Bank:Blubank                              -1,000 Kirt
+
+2024-09-02 * Trader Joe's
+    ; :uid: 01HZX5G5KJDS9HQRYK8E5T0DJC
+    ; weekly groceries
+    Expenses:Food_Groceries  USD 42.50
+    Assets:Cash
