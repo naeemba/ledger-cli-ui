@@ -1,4 +1,5 @@
 import TransactionForm from './TransactionForm';
+import { createTransactionAction } from './actions';
 import Help from '@/components/Help';
 import {
   getAccountSuggestions,
@@ -38,6 +39,7 @@ export default async function NewTransactionPage() {
         accounts={accounts}
         payees={payees}
         defaultCurrency={defaultCurrency}
+        submitAction={createTransactionAction}
       />
     </div>
   );

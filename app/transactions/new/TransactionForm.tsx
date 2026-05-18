@@ -2,10 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  createTransactionAction,
-  type TransactionActionState,
-} from './actions';
+import type { TransactionActionState } from './actions';
 import Combobox from '@/components/Combobox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -14,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import type { TransactionDraft } from '@/lib/transactions/schema';
 import { useRouter } from 'next/navigation';
 
 type Status = 'cleared' | 'pending' | 'none';
@@ -24,10 +22,20 @@ type Posting = {
   currency: string;
 };
 
+type SubmitAction = (
+  prev: TransactionActionState | null,
+  formData: FormData
+) => Promise<TransactionActionState>;
+
 type Props = {
   accounts: string[];
   payees: string[];
   defaultCurrency: string;
+  mode?: 'create' | 'edit';
+  initialDraft?: TransactionDraft;
+  uid?: string;
+  expectedFingerprint?: string;
+  submitAction: SubmitAction;
 };
 
 const todayISO = (): string => {
@@ -41,36 +49,48 @@ const initialState: TransactionActionState = { ok: false };
 const fieldError = (state: TransactionActionState | null, key: string) =>
   state?.fieldErrors?.[key];
 
-const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
+const TransactionForm = ({
+  accounts,
+  payees,
+  defaultCurrency,
+  mode,
+  initialDraft,
+  uid,
+  expectedFingerprint,
+  submitAction,
+}: Props) => {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
-    createTransactionAction,
+    submitAction,
     initialState
   );
 
-  const [date, setDate] = useState(todayISO);
-  const [payee, setPayee] = useState('');
-  const [status, setStatus] = useState<Status>('none');
-  const [note, setNote] = useState('');
-  const [postings, setPostings] = useState<Posting[]>([
-    { account: '', amount: '', currency: defaultCurrency },
-    { account: '', amount: '', currency: defaultCurrency },
-  ]);
+  const [date, setDate] = useState(initialDraft?.date ?? todayISO);
+  const [payee, setPayee] = useState(initialDraft?.payee ?? '');
+  const [status, setStatus] = useState<Status>(initialDraft?.status ?? 'none');
+  const [note, setNote] = useState(initialDraft?.note ?? '');
+  const [postings, setPostings] = useState<Posting[]>(
+    initialDraft?.postings.map((p) => ({
+      account: p.account,
+      amount: p.amount,
+      currency: p.currency,
+    })) ?? [
+      { account: '', amount: '', currency: defaultCurrency },
+      { account: '', amount: '', currency: defaultCurrency },
+    ]
+  );
 
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state?.ok) {
-      toast.success('Transaction saved', {
-        description: `${payee.trim() || 'New entry'} appended to your journal.`,
-      });
-      router.push('/');
+      toast.success(
+        mode === 'edit' ? 'Transaction updated' : 'Transaction saved'
+      );
+      router.push(mode === 'edit' ? '/transactions' : '/');
       router.refresh();
     }
-    // payee is intentionally omitted — we only want this effect to run on
-    // state changes from the server action, not on every keystroke.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, router]);
+  }, [state, router, mode]);
 
   const balance = computeBalance(postings);
 
@@ -105,6 +125,7 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
     payee: payee.trim(),
     status,
     note: note.trim() || undefined,
+    uid: mode === 'edit' ? uid : undefined,
     postings: postings.map((p) => ({
       account: p.account.trim(),
       amount: p.amount.trim(),
@@ -117,6 +138,16 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
       <CardContent>
         <form ref={formRef} action={formAction} className="flex flex-col gap-6">
           <input type="hidden" name="draft" value={draftJson} />
+          {mode === 'edit' && uid && (
+            <input type="hidden" name="uid" value={uid} />
+          )}
+          {mode === 'edit' && expectedFingerprint && (
+            <input
+              type="hidden"
+              name="expectedFingerprint"
+              value={expectedFingerprint}
+            />
+          )}
 
           <div className="grid gap-8 lg:grid-cols-[minmax(280px,360px)_1fr]">
             <section className="flex flex-col gap-5">
@@ -231,10 +262,16 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
             <span className="text-xs text-muted-foreground">
-              Appended to your journal&apos;s main file.
+              {mode === 'edit'
+                ? 'Rewrites the original block in its source file.'
+                : "Appended to your journal's main file."}
             </span>
             <Button type="submit" disabled={!canSubmit}>
-              {isPending ? 'Saving…' : 'Save transaction'}
+              {isPending
+                ? 'Saving…'
+                : mode === 'edit'
+                  ? 'Save changes'
+                  : 'Add transaction'}
             </Button>
           </div>
         </form>
