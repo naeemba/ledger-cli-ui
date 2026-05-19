@@ -1,48 +1,21 @@
 import { promises as fs } from 'fs';
-import os from 'os';
 import path from 'path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
-import * as schema from '@/db/schema';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import {
+  setupTestDb,
+  teardownTestDb,
+  type TestDbContext,
+} from '@/lib/test-utils/db';
 
 describe('writeJournal — edit', () => {
-  let tmp: string;
-  let sqlite: Database.Database;
+  let ctx: TestDbContext;
 
   beforeEach(async () => {
-    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'write-'));
-    const dbPath = path.join(tmp, 'db.sqlite');
-    sqlite = new Database(dbPath);
-    sqlite.pragma('journal_mode = WAL');
-    sqlite.pragma('foreign_keys = ON');
-
-    drizzle(sqlite, { schema });
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS "user" (
-        "id" text PRIMARY KEY NOT NULL,
-        "name" text NOT NULL,
-        "email" text NOT NULL UNIQUE,
-        "emailVerified" integer NOT NULL DEFAULT 0,
-        "image" text,
-        "journalMain" text NOT NULL DEFAULT 'main.ledger',
-        "createdAt" integer NOT NULL DEFAULT (unixepoch()),
-        "updatedAt" integer NOT NULL DEFAULT (unixepoch())
-      );
-    `);
-
-    process.env.DATA_DIR = tmp;
-    process.env.DATABASE_URL = dbPath;
-    process.env.BETTER_AUTH_SECRET = 'x'.repeat(32);
+    ctx = await setupTestDb('write-');
   });
 
   afterEach(async () => {
-    try {
-      sqlite.close();
-      await fs.rm(tmp, { recursive: true, force: true });
-    } catch {
-      // ignore
-    }
+    await teardownTestDb(ctx);
   });
 
   it('rewrites only the target block; rest byte-exact', async () => {
@@ -158,42 +131,14 @@ describe('writeJournal — edit', () => {
 });
 
 describe('writeJournal — delete', () => {
-  let tmp: string;
-  let sqlite: Database.Database;
+  let ctx: TestDbContext;
 
   beforeEach(async () => {
-    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'write-del-'));
-    const dbPath = path.join(tmp, 'db.sqlite');
-    sqlite = new Database(dbPath);
-    sqlite.pragma('journal_mode = WAL');
-    sqlite.pragma('foreign_keys = ON');
-
-    drizzle(sqlite, { schema });
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS "user" (
-        "id" text PRIMARY KEY NOT NULL,
-        "name" text NOT NULL,
-        "email" text NOT NULL UNIQUE,
-        "emailVerified" integer NOT NULL DEFAULT 0,
-        "image" text,
-        "journalMain" text NOT NULL DEFAULT 'main.ledger',
-        "createdAt" integer NOT NULL DEFAULT (unixepoch()),
-        "updatedAt" integer NOT NULL DEFAULT (unixepoch())
-      );
-    `);
-
-    process.env.DATA_DIR = tmp;
-    process.env.DATABASE_URL = dbPath;
-    process.env.BETTER_AUTH_SECRET = 'x'.repeat(32);
+    ctx = await setupTestDb('write-del-');
   });
 
   afterEach(async () => {
-    try {
-      sqlite.close();
-      await fs.rm(tmp, { recursive: true, force: true });
-    } catch {
-      // ignore
-    }
+    await teardownTestDb(ctx);
   });
 
   it('removes the block plus the trailing blank line', async () => {
