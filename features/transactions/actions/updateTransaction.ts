@@ -1,6 +1,6 @@
 'use server';
 
-import type { TransactionActionState } from '@/app/transactions/new/actions';
+import type { TransactionActionState } from './types';
 import { requireUser } from '@/lib/auth/require-user';
 import { writeJournal } from '@/lib/journal/write';
 import type { TransactionDraft } from '@/lib/transactions/schema';

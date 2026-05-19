@@ -3,12 +3,14 @@
 import { requireUser } from '@/lib/auth/require-user';
 import { writeJournal } from '@/lib/journal/write';
 
-export type DeleteResult = { ok: true } | { ok: false; message: string };
+export type DeleteTransactionResult =
+  | { ok: true }
+  | { ok: false; message: string };
 
 export async function deleteTransactionAction(
   uid: string,
   expectedFingerprint: string
-): Promise<DeleteResult> {
+): Promise<DeleteTransactionResult> {
   const user = await requireUser();
   const result = await writeJournal(user.id, {
     kind: 'delete',

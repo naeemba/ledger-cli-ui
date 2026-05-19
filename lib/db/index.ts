@@ -1,12 +1,9 @@
-import Database from 'better-sqlite3';
-import * as schema from '@/db/schema';
+import { createDbConnection } from './connection';
 import { env } from '@/lib/env';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 const dbPath = env.DATABASE_URL ?? `${env.DATA_DIR}/db.sqlite`;
 
-const sqlite = new Database(dbPath);
-sqlite.pragma('journal_mode = WAL');
-sqlite.pragma('foreign_keys = ON');
+export const db = createDbConnection(dbPath);
 
-export const db = drizzle(sqlite, { schema });
+export { createDbConnection } from './connection';
+export type { DbInstance } from './connection';

@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  Bookmark,
   CalendarRange,
   Coins,
   FileBarChart,
@@ -148,6 +149,15 @@ export const getNavSections = (): NavSection[] => {
           description: 'Append a new transaction to your journal.',
           icon: PlusCircle,
           keywords: ['new', 'create', 'entry'],
+        },
+        {
+          id: 'templates',
+          title: 'Templates',
+          href: '/templates',
+          match: 'exact',
+          description: 'Saved transaction shapes you can reuse.',
+          icon: Bookmark,
+          keywords: ['template', 'recurring', 'save', 'reuse'],
         },
         {
           id: 'import',

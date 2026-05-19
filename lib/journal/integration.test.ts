@@ -1,38 +1,12 @@
 import { promises as fs } from 'fs';
-import os from 'os';
 import path from 'path';
 import { describe, it, expect } from 'vitest';
-import Database from 'better-sqlite3';
-import * as schema from '@/db/schema';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { setupTestDb, teardownTestDb } from '@/lib/test-utils/db';
 
 describe('Phase 4.1 integration', () => {
   it('parses → backfills → edits → deletes a real fixture', async () => {
     const src = path.resolve(__dirname, '__fixtures__/integration');
-
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'integration-'));
-    const dbPath = path.join(tmp, 'db.sqlite');
-    const sqlite = new Database(dbPath);
-    sqlite.pragma('journal_mode = WAL');
-    sqlite.pragma('foreign_keys = ON');
-
-    drizzle(sqlite, { schema });
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS "user" (
-        "id" text PRIMARY KEY NOT NULL,
-        "name" text NOT NULL,
-        "email" text NOT NULL UNIQUE,
-        "emailVerified" integer NOT NULL DEFAULT 0,
-        "image" text,
-        "journalMain" text NOT NULL DEFAULT 'main.ledger',
-        "createdAt" integer NOT NULL DEFAULT (unixepoch()),
-        "updatedAt" integer NOT NULL DEFAULT (unixepoch())
-      );
-    `);
-
-    process.env.DATA_DIR = tmp;
-    process.env.DATABASE_URL = dbPath;
-    process.env.BETTER_AUTH_SECRET = 'x'.repeat(32);
+    const ctx = await setupTestDb('integration-');
 
     try {
       const { getJournalDir } = await import('@/lib/journals');
@@ -91,12 +65,7 @@ describe('Phase 4.1 integration', () => {
         journal3.transactions.find((t) => t.payee === 'lunch v2')
       ).toBeUndefined();
     } finally {
-      try {
-        sqlite.close();
-        await fs.rm(tmp, { recursive: true, force: true });
-      } catch {
-        // ignore
-      }
+      await teardownTestDb(ctx);
     }
   });
 });

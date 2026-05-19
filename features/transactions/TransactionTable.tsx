@@ -1,15 +1,9 @@
 'use client';
 
-import { Pencil, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { deleteTransactionAction } from './actions';
-import ConfirmDialog from '@/components/ConfirmDialog';
-import { Button, buttonVariants } from '@/components/ui/button';
+import RowActions from './RowActions';
 import type { Transaction } from '@/lib/journal/parser';
-import { cn } from '@/lib/utils';
 import formatAmount from '@/utils/formatAmount';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 type Props = { transactions: Transaction[] };
 
@@ -31,8 +25,6 @@ const magnitudeByCurrency = (t: Transaction): Array<[string, number]> => {
 };
 
 const TransactionTable = ({ transactions }: Props) => {
-  const router = useRouter();
-
   if (transactions.length === 0) {
     return (
       <div className="rounded-md border border-border p-8 text-center text-sm text-muted-foreground">
@@ -40,16 +32,6 @@ const TransactionTable = ({ transactions }: Props) => {
       </div>
     );
   }
-
-  const onDelete = async (uid: string, expectedFingerprint: string) => {
-    const res = await deleteTransactionAction(uid, expectedFingerprint);
-    if (!res.ok) {
-      toast.error(res.message);
-    } else {
-      toast.success('Transaction deleted');
-    }
-    router.refresh();
-  };
 
   return (
     <table className="w-full text-left text-sm">
@@ -105,27 +87,7 @@ const TransactionTable = ({ transactions }: Props) => {
             </td>
             <td className="py-2 text-right">
               {t.uid ? (
-                <div className="flex justify-end gap-1">
-                  <Link
-                    href={`/transactions/${t.uid}/edit`}
-                    className={cn(
-                      buttonVariants({ variant: 'ghost', size: 'icon-sm' })
-                    )}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Link>
-                  <ConfirmDialog
-                    title="Delete transaction?"
-                    description="This will permanently remove the transaction from the journal."
-                    confirmLabel="Delete"
-                    variant="destructive"
-                    onConfirm={() => onDelete(t.uid!, t.fingerprint)}
-                  >
-                    <Button variant="ghost" size="icon-sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </ConfirmDialog>
-                </div>
+                <RowActions transaction={t} />
               ) : (
                 <span
                   className="text-xs text-muted-foreground"

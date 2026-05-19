@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import SaveAsTemplateButton from '@/features/templates/SaveAsTemplateButton';
+import type { TemplateDraft } from '@/lib/templates/schema';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 import { useRouter } from 'next/navigation';
 
@@ -32,10 +34,13 @@ type Props = {
   payees: string[];
   defaultCurrency: string;
   mode?: 'create' | 'edit';
-  initialDraft?: TransactionDraft;
+  // `date` is optional on the prop so server-side template prefill can omit it
+  // and let the client compute today's date in the user's local timezone.
+  initialDraft?: Omit<TransactionDraft, 'date'> & { date?: string };
   uid?: string;
   expectedFingerprint?: string;
   submitAction: SubmitAction;
+  templateMissing?: boolean;
 };
 
 const todayISO = (): string => {
@@ -58,6 +63,7 @@ const TransactionForm = ({
   uid,
   expectedFingerprint,
   submitAction,
+  templateMissing,
 }: Props) => {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
@@ -92,6 +98,13 @@ const TransactionForm = ({
     }
   }, [state, router, mode]);
 
+  useEffect(() => {
+    if (templateMissing) {
+      toast.error('Template not found — starting from scratch');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const balance = computeBalance(postings);
 
   const canSubmit =
@@ -119,6 +132,20 @@ const TransactionForm = ({
       rows.length <= 2 ? rows : rows.filter((_, i) => i !== idx)
     );
   };
+
+  const templateDraft: TemplateDraft = {
+    payee: payee.trim() || '—',
+    status,
+    note: note.trim() || undefined,
+    postings: postings.map((p) => ({
+      account: p.account.trim(),
+      amount: p.amount.trim(),
+      currency: p.currency.trim(),
+    })),
+  };
+  const canSaveTemplate =
+    payee.trim() !== '' &&
+    postings.filter((p) => p.account.trim() !== '').length >= 2;
 
   const draftJson = JSON.stringify({
     date,
@@ -283,13 +310,19 @@ const TransactionForm = ({
                 ? 'Rewrites the original block in its source file.'
                 : "Appended to your journal's main file."}
             </span>
-            <Button type="submit" disabled={!canSubmit}>
-              {isPending
-                ? 'Saving…'
-                : mode === 'edit'
-                  ? 'Save changes'
-                  : 'Add transaction'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <SaveAsTemplateButton
+                draft={templateDraft}
+                disabled={!canSaveTemplate}
+              />
+              <Button type="submit" disabled={!canSubmit}>
+                {isPending
+                  ? 'Saving…'
+                  : mode === 'edit'
+                    ? 'Save changes'
+                    : 'Add transaction'}
+              </Button>
+            </div>
           </div>
         </form>
       </CardContent>

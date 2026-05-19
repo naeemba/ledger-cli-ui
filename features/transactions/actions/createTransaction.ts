@@ -1,14 +1,9 @@
 'use server';
 
+import type { TransactionActionState } from './types';
 import { requireUser } from '@/lib/auth/require-user';
 import { addTransaction, getJournalCacheTag } from '@/lib/journals';
 import { revalidatePath, updateTag } from 'next/cache';
-
-export type TransactionActionState = {
-  ok: boolean;
-  fieldErrors?: Record<string, string>;
-  formError?: string;
-};
 
 export async function createTransactionAction(
   _prev: TransactionActionState | null,
