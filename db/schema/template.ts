@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { user } from './user';
+import type { TemplateDraft } from '@/lib/templates/schema';
 import {
   integer,
   sqliteTable,
@@ -15,8 +16,7 @@ export const template = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
-    // TODO(Task 3): switch to TemplateDraft once lib/templates/schema.ts is in.
-    draft: text('draft', { mode: 'json' }).notNull().$type<unknown>(),
+    draft: text('draft', { mode: 'json' }).notNull().$type<TemplateDraft>(),
     createdAt: integer('createdAt', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
