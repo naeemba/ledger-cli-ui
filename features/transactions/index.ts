@@ -1,3 +1,6 @@
+export { default as Transactions } from './Transactions';
+export { default as NewTransaction } from './NewTransaction';
+export { default as EditTransaction } from './EditTransaction';
 export { default as TransactionForm } from './TransactionForm';
 export { default as TransactionTable } from './TransactionTable';
 export { default as Filters } from './Filters';
