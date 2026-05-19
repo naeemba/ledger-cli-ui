@@ -1,6 +1,6 @@
 import 'server-only';
-import { updateTransactionAction } from './actions';
-import TransactionForm from '@/app/transactions/new/TransactionForm';
+import TransactionForm from '@/features/transactions/TransactionForm';
+import { updateTransactionAction } from '@/features/transactions/actions';
 import { requireUser } from '@/lib/auth/require-user';
 import { fingerprintDraft } from '@/lib/journal/fingerprint';
 import { parseJournal } from '@/lib/journal/parser';

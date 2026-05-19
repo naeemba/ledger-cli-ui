@@ -1,6 +1,6 @@
-import TransactionForm from './TransactionForm';
-import { createTransactionAction } from './actions';
 import Help from '@/components/Help';
+import TransactionForm from '@/features/transactions/TransactionForm';
+import { createTransactionAction } from '@/features/transactions/actions';
 import {
   getAccountSuggestions,
   getPayeeSuggestions,

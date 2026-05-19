@@ -1,7 +1,7 @@
 import 'server-only';
-import Filters from './Filters';
-import TransactionTable from './TransactionTable';
 import Help from '@/components/Help';
+import Filters from '@/features/transactions/Filters';
+import TransactionTable from '@/features/transactions/TransactionTable';
 import { requireUser } from '@/lib/auth/require-user';
 import { parseJournal, type Transaction } from '@/lib/journal/parser';
 import { resolveUserJournal, getJournalCacheTag } from '@/lib/journals';
