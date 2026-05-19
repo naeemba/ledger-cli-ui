@@ -3,8 +3,9 @@ import Filters from './Filters';
 import TransactionTable from './TransactionTable';
 import Help from '@/components/Help';
 import { requireUser } from '@/lib/auth/require-user';
-import { parseJournal, type Transaction } from '@/lib/journal/parser';
-import { resolveUserJournal, getJournalCacheTag } from '@/lib/journals';
+import { journalService } from '@/lib/journal';
+import { getJournalCacheTag } from '@/lib/journal/layout';
+import { type Transaction } from '@/lib/journal/parser';
 import { unstable_cache } from 'next/cache';
 
 type SearchParams = {
@@ -18,8 +19,7 @@ type SearchParams = {
 const buildLoader = (tag: string) =>
   unstable_cache(
     async (userId: string): Promise<Transaction[]> => {
-      const { mainPath } = await resolveUserJournal(userId);
-      const journal = await parseJournal(mainPath);
+      const journal = await journalService.listTransactions(userId);
       return journal.transactions;
     },
     ['journal-transactions', tag],

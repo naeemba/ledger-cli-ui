@@ -68,11 +68,16 @@ describe('Phase 4.2 integration', () => {
     expect(fetched?.draft.payee).toBe('Lunch');
 
     // Simulate the "use" flow: build an addTransaction input from the template
-    const { addTransaction, getJournalDir } = await import('@/lib/journals');
+    const { JournalRepository } = await import('@/lib/journal/repository');
+    const { JournalService } = await import('@/lib/journal/service');
+    const { getJournalDir } = await import('@/lib/journal/layout');
+    const journalService = new JournalService(
+      new JournalRepository(drizzle(ctx.sqlite, { schema }))
+    );
     await fs.mkdir(getJournalDir(userId), { recursive: true });
 
     const todayISO = new Date().toISOString().slice(0, 10);
-    const result = await addTransaction(userId, {
+    const result = await journalService.addTransaction(userId, {
       date: todayISO,
       payee: fetched!.draft.payee,
       status: fetched!.draft.status,

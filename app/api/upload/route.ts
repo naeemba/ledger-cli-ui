@@ -1,9 +1,6 @@
 import path from 'path';
 import { requireUser } from '@/lib/auth/require-user';
-import {
-  replaceJournalFromSingleFile,
-  replaceJournalFromZip,
-} from '@/lib/journals';
+import { journalService } from '@/lib/journal';
 import { revalidatePath } from 'next/cache';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -33,7 +30,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     if (ext === ZIP_EXT) {
-      const result = await replaceJournalFromZip(user.id, buffer);
+      const result = await journalService.replaceFromZip(user.id, buffer);
       revalidatePath('/', 'layout');
       return NextResponse.json({
         ok: true,
@@ -46,7 +43,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     if (ALLOWED_SINGLE_EXTS.has(ext)) {
-      const result = await replaceJournalFromSingleFile(user.id, buffer);
+      const result = await journalService.replaceFromSingleFile(
+        user.id,
+        buffer
+      );
       revalidatePath('/', 'layout');
       return NextResponse.json({
         ok: true,

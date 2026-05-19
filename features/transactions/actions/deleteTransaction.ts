@@ -1,7 +1,7 @@
 'use server';
 
 import { requireUser } from '@/lib/auth/require-user';
-import { writeJournal } from '@/lib/journal/write';
+import { journalService } from '@/lib/journal';
 
 export type DeleteTransactionResult =
   | { ok: true }
@@ -12,7 +12,7 @@ export async function deleteTransactionAction(
   expectedFingerprint: string
 ): Promise<DeleteTransactionResult> {
   const user = await requireUser();
-  const result = await writeJournal(user.id, {
+  const result = await journalService.deleteTransaction(user.id, {
     kind: 'delete',
     uid,
     expectedFingerprint,
