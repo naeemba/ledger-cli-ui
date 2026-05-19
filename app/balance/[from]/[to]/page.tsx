@@ -1,10 +1,10 @@
 import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
 import Help from '@/components/Help';
+import { Card, CardContent } from '@/components/ui/card';
 import { parseISODate, toISODate } from '@/utils/date';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
-import getColor from '@/utils/getColor';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 import Link from 'next/link';
@@ -40,10 +40,6 @@ const PeriodBalance = async ({
       .filter(Boolean)
       .find((each) => each.split('|')[1] === '0')
       ?.split('|')[2] ?? '';
-
-  const colors = results.map((each) =>
-    getColor(each.split('|')[0] ?? '', 0.8, 1)
-  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,7 +77,7 @@ const PeriodBalance = async ({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <Card className="gap-0 overflow-hidden p-0">
         <table>
           <thead>
             <tr>
@@ -120,26 +116,33 @@ const PeriodBalance = async ({
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {results.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <Chart
-            data={{
-              labels: results.map((each) => each.split('|')[0]),
-              datasets: [
+        <Card>
+          <CardContent>
+            <Chart
+              type="bar"
+              data={results.map((each) => {
+                const [account, raw] = each.split('|');
+                return {
+                  account,
+                  spend: Number((raw.split(' ')[1] ?? '0').replaceAll(',', '')),
+                };
+              })}
+              xKey="account"
+              series={[
                 {
-                  label: 'Monthly',
-                  data: results.map((each) =>
-                    each.split('|')[1].split(' ')[1].replaceAll(',', '')
-                  ),
-                  backgroundColor: colors.map((each) => each[0]),
-                  borderColor: colors.map((each) => each[1]),
+                  key: 'spend',
+                  label: `Spend (${defaultCurrency.toUpperCase()})`,
+                  color: 'var(--chart-1)',
                 },
-              ],
-            }}
-          />
-        </div>
+              ]}
+              showLegend={false}
+              height={320}
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );

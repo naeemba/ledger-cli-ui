@@ -1,17 +1,17 @@
 'use client';
 
 import { useActionState, useEffect, useRef, useState } from 'react';
-import {
-  createTransactionAction,
-  type TransactionActionState,
-} from './actions';
+import { toast } from 'sonner';
+import type { TransactionActionState } from './actions';
 import Combobox from '@/components/Combobox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import type { TransactionDraft } from '@/lib/transactions/schema';
 import { useRouter } from 'next/navigation';
 
 type Status = 'cleared' | 'pending' | 'none';
@@ -22,10 +22,20 @@ type Posting = {
   currency: string;
 };
 
+type SubmitAction = (
+  prev: TransactionActionState | null,
+  formData: FormData
+) => Promise<TransactionActionState>;
+
 type Props = {
   accounts: string[];
   payees: string[];
   defaultCurrency: string;
+  mode?: 'create' | 'edit';
+  initialDraft?: TransactionDraft;
+  uid?: string;
+  expectedFingerprint?: string;
+  submitAction: SubmitAction;
 };
 
 const todayISO = (): string => {
@@ -39,30 +49,48 @@ const initialState: TransactionActionState = { ok: false };
 const fieldError = (state: TransactionActionState | null, key: string) =>
   state?.fieldErrors?.[key];
 
-const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
+const TransactionForm = ({
+  accounts,
+  payees,
+  defaultCurrency,
+  mode,
+  initialDraft,
+  uid,
+  expectedFingerprint,
+  submitAction,
+}: Props) => {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
-    createTransactionAction,
+    submitAction,
     initialState
   );
 
-  const [date, setDate] = useState(todayISO);
-  const [payee, setPayee] = useState('');
-  const [status, setStatus] = useState<Status>('none');
-  const [note, setNote] = useState('');
-  const [postings, setPostings] = useState<Posting[]>([
-    { account: '', amount: '', currency: defaultCurrency },
-    { account: '', amount: '', currency: defaultCurrency },
-  ]);
+  const [date, setDate] = useState(initialDraft?.date ?? todayISO);
+  const [payee, setPayee] = useState(initialDraft?.payee ?? '');
+  const [status, setStatus] = useState<Status>(initialDraft?.status ?? 'none');
+  const [note, setNote] = useState(initialDraft?.note ?? '');
+  const [postings, setPostings] = useState<Posting[]>(
+    initialDraft?.postings.map((p) => ({
+      account: p.account,
+      amount: p.amount,
+      currency: p.currency,
+    })) ?? [
+      { account: '', amount: '', currency: defaultCurrency },
+      { account: '', amount: '', currency: defaultCurrency },
+    ]
+  );
 
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state?.ok) {
-      router.push('/');
+      toast.success(
+        mode === 'edit' ? 'Transaction updated' : 'Transaction saved'
+      );
+      router.push(mode === 'edit' ? '/transactions' : '/');
       router.refresh();
     }
-  }, [state, router]);
+  }, [state, router, mode]);
 
   const balance = computeBalance(postings);
 
@@ -97,6 +125,7 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
     payee: payee.trim(),
     status,
     note: note.trim() || undefined,
+    uid: mode === 'edit' ? uid : undefined,
     postings: postings.map((p) => ({
       account: p.account.trim(),
       amount: p.amount.trim(),
@@ -105,122 +134,174 @@ const TransactionForm = ({ accounts, payees, defaultCurrency }: Props) => {
   });
 
   return (
-    <form
-      ref={formRef}
-      action={formAction}
-      className="flex flex-col gap-6 rounded-2xl border border-border bg-card p-6 shadow-sm"
-    >
-      <input type="hidden" name="draft" value={draftJson} />
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Date" htmlFor="tx-date" error={fieldError(state, 'date')}>
-          <Input
-            id="tx-date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            aria-invalid={!!fieldError(state, 'date')}
-            required
-          />
-        </Field>
-
-        <Field label="Status">
-          <ToggleGroup
-            value={[status]}
-            onValueChange={(values) => {
-              if (values.length > 0) setStatus(values[0] as Status);
-            }}
-            spacing={0}
-            variant="outline"
-            size="sm"
-          >
-            <ToggleGroupItem value="none">Unmarked</ToggleGroupItem>
-            <ToggleGroupItem value="pending">Pending (!)</ToggleGroupItem>
-            <ToggleGroupItem value="cleared">Cleared (*)</ToggleGroupItem>
-          </ToggleGroup>
-        </Field>
-      </div>
-
-      <Field label="Payee" error={fieldError(state, 'payee')}>
-        <Combobox
-          value={payee}
-          onChange={setPayee}
-          options={payees}
-          placeholder="Type or pick a payee…"
-        />
-      </Field>
-
-      <Field
-        label="Note (optional)"
-        htmlFor="tx-note"
-        error={fieldError(state, 'note')}
-      >
-        <Textarea
-          id="tx-note"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={2}
-          placeholder="Comment lines — written below the payee with a ; prefix"
-          aria-invalid={!!fieldError(state, 'note')}
-        />
-      </Field>
-
-      <div className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between">
-          <span className="text-xs font-medium uppercase tracking-wider text-muted">
-            Postings
-          </span>
-          <BalanceIndicator balance={balance} />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          {postings.map((posting, idx) => (
-            <PostingRow
-              key={idx}
-              posting={posting}
-              accounts={accounts}
-              canRemove={postings.length > 2}
-              onChange={(patch) => updatePosting(idx, patch)}
-              onRemove={() => removePosting(idx)}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between">
-          <Button
-            type="button"
-            onClick={addPosting}
-            variant="link"
-            size="sm"
-            className="px-0"
-          >
-            + Add posting
-          </Button>
-          {fieldError(state, 'postings') && (
-            <span className="text-xs text-negative">
-              {fieldError(state, 'postings')}
-            </span>
+    <Card>
+      <CardContent>
+        <form ref={formRef} action={formAction} className="flex flex-col gap-6">
+          <input type="hidden" name="draft" value={draftJson} />
+          {mode === 'edit' && uid && (
+            <input type="hidden" name="uid" value={uid} />
           )}
-        </div>
-      </div>
+          {mode === 'edit' && expectedFingerprint && (
+            <input
+              type="hidden"
+              name="expectedFingerprint"
+              value={expectedFingerprint}
+            />
+          )}
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={!canSubmit}>
-          {isPending ? 'Saving…' : 'Save transaction'}
-        </Button>
-        <span className="text-xs text-muted">
-          Appended to your journal&apos;s main file.
-        </span>
-      </div>
+          <div className="grid gap-8 lg:grid-cols-[minmax(280px,360px)_1fr]">
+            <section className="flex flex-col gap-5">
+              <SectionLabel>Details</SectionLabel>
 
-      {state?.formError && (
-        <Alert variant="destructive">
-          <AlertDescription>{state.formError}</AlertDescription>
-        </Alert>
-      )}
-    </form>
+              <Field
+                label="Date"
+                htmlFor="tx-date"
+                error={fieldError(state, 'date')}
+              >
+                <Input
+                  id="tx-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  aria-invalid={!!fieldError(state, 'date')}
+                  required
+                />
+              </Field>
+
+              <Field label="Status">
+                <ToggleGroup
+                  value={[status]}
+                  onValueChange={(values) => {
+                    if (values.length > 0) setStatus(values[0] as Status);
+                  }}
+                  spacing={0}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  <ToggleGroupItem value="none" className="flex-1">
+                    Unmarked
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="pending" className="flex-1">
+                    Pending (!)
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="cleared" className="flex-1">
+                    Cleared (*)
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </Field>
+
+              <Field label="Payee" error={fieldError(state, 'payee')}>
+                <Combobox
+                  value={payee}
+                  onChange={setPayee}
+                  options={payees}
+                  placeholder="Type or pick a payee…"
+                />
+              </Field>
+
+              <Field
+                label="Note (optional)"
+                htmlFor="tx-note"
+                error={fieldError(state, 'note')}
+              >
+                <Textarea
+                  id="tx-note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={4}
+                  placeholder="Comment lines — written below the payee with a ; prefix"
+                  aria-invalid={!!fieldError(state, 'note')}
+                />
+              </Field>
+            </section>
+
+            <section className="flex flex-col gap-3 lg:border-l lg:border-border lg:pl-8">
+              <div className="flex items-baseline justify-between">
+                <SectionLabel>Postings</SectionLabel>
+                <BalanceIndicator balance={balance} />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {postings.map((posting, idx) => (
+                  <PostingRow
+                    key={idx}
+                    posting={posting}
+                    accounts={accounts}
+                    canRemove={postings.length > 2}
+                    onChange={(patch) => updatePosting(idx, patch)}
+                    onRemove={() => removePosting(idx)}
+                  />
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  onClick={addPosting}
+                  variant="link"
+                  size="sm"
+                  className="px-0"
+                >
+                  + Add posting
+                </Button>
+                {fieldError(state, 'postings') && (
+                  <span className="text-xs text-destructive">
+                    {fieldError(state, 'postings')}
+                  </span>
+                )}
+              </div>
+            </section>
+          </div>
+
+          {state?.formError ===
+          'This transaction was modified somewhere else.' ? (
+            <Alert variant="destructive">
+              <AlertDescription className="flex items-center justify-between gap-3">
+                <span>{state.formError} Reload to see the latest version.</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.refresh()}
+                >
+                  Reload
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            state?.formError && (
+              <Alert variant="destructive">
+                <AlertDescription>{state.formError}</AlertDescription>
+              </Alert>
+            )
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <span className="text-xs text-muted-foreground">
+              {mode === 'edit'
+                ? 'Rewrites the original block in its source file.'
+                : "Appended to your journal's main file."}
+            </span>
+            <Button type="submit" disabled={!canSubmit}>
+              {isPending
+                ? 'Saving…'
+                : mode === 'edit'
+                  ? 'Save changes'
+                  : 'Add transaction'}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
+
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+    {children}
+  </div>
+);
 
 const Field = ({
   label,

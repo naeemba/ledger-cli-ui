@@ -126,17 +126,18 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
         <Card>
           <CardContent>
             <Chart
-              data={{
-                labels: sorted.map((r) => r.payee),
-                datasets: [
-                  {
-                    label: 'Total spend',
-                    data: sorted.map((r) => r.total),
-                    backgroundColor: 'rgba(220, 38, 38, 0.7)',
-                    borderColor: 'rgb(220, 38, 38)',
-                  },
-                ],
-              }}
+              type="bar"
+              data={sorted.map((r) => ({ payee: r.payee, total: r.total }))}
+              xKey="payee"
+              series={[
+                {
+                  key: 'total',
+                  label: `Total spend (${currency})`,
+                  color: 'var(--chart-3)',
+                },
+              ]}
+              showLegend={false}
+              height={320}
             />
           </CardContent>
         </Card>

@@ -118,12 +118,14 @@ The old `components/Header/Header.tsx` was a single horizontal nav with 11 links
 - Sidebar default-open state is not yet seeded from the cookie at SSR time — first paint is always expanded, then user toggles persist. Worth wiring up via a server-side cookie read into `<SidebarProvider defaultOpen={…}>` in a future pass.
 - Auth pages do not show the Cmd+K palette (no signed-in nav surface yet).
 
-### 3.5 Optional / cosmetic
+### 3.5 Polish (post-3.4)
 
-- [ ] Wrap Dashboard / Balance / Payees card containers in shadcn `Card` (purely visual unification).
-- [ ] Replace `<div className="h-px bg-border" />` dividers with `Separator` (mainly inside `DateFilter`).
-- [ ] Add `Sonner` for transient feedback after `addTransaction` / `replaceJournalFromZip` — currently both rely on full-page redirects.
-- [ ] `Skeleton` loaders on report pages that block on `ledger` (Dashboard, Balance, Accounts, Monthly). Replaces 5.3's "loading skeletons" bullet — keep this version and drop the duplicate when this lands.
+- [x] **Page-width consistency** — `AppShell` now wraps every non-auth page in `mx-auto w-full max-w-7xl`. Removed per-page width overrides in `/import` and `/transactions/new`.
+- [x] **shadcn `Card`** wraps Dashboard (Recent transactions, Journal health) / Balance / Payees / Periodic Balance / Monthly register / Cash Flow card containers. Local `components/Card/Card.tsx` (the stat-tile wrapper) now uses shadcn `Card` internally.
+- [x] **shadcn `Separator`** replaces the lone `<div className="h-px bg-border" />` in `DateFilter`.
+- [x] **Chart redesign** — replaced chart.js + react-chartjs-2 with shadcn `Chart` (Recharts under the hood). New `components/Chart/Chart.tsx` API: `type` (`bar` / `line` / `area`), `data` (flat rows), `xKey`, `series` (key/label/color), `valueFormatter`, `stacked`, `showLegend`. Updated 5 consumers (NetWorth → area, Cash Flow → grouped bars with `--positive`/`--negative`, Payees / Periodic Balance / Monthly register → single-series bars). New chart palette in `globals.css` (`--chart-1..5` are now distinct blue/emerald/coral/violet/amber instead of shadcn's default grays). Removed `utils/getColor.ts`.
+- [x] **`Sonner` toasts** — wired `<Toaster />` into `AppShell` (sonner.tsx patched to drop `next-themes`, default to `theme="system"`); transaction-save and journal-import flows now fire success toasts.
+- [x] **`Skeleton` loaders** — reusable `components/PageSkeleton/` (title block + table block + optional chart block) wired via `app/loading.tsx`. Next renders the skeleton inside the layout while async page bodies hit `ledger`.
 - [ ] If sorting/pagination is ever needed: migrate the six tables to shadcn `Table`.
 
 ---

@@ -1,5 +1,6 @@
 import Chart from '@/components/Chart';
 import Help from '@/components/Help';
+import { Card, CardContent } from '@/components/ui/card';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
@@ -69,30 +70,30 @@ const NetWorth = async () => {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-        {rows.length === 0 ? (
-          <div className="py-12 text-center text-muted">No data</div>
-        ) : (
-          <Chart
-            type="line"
-            data={{
-              labels,
-              datasets: [
+      <Card>
+        <CardContent>
+          {rows.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground">
+              No data
+            </div>
+          ) : (
+            <Chart
+              type="area"
+              data={labels.map((month, i) => ({ month, netWorth: data[i] }))}
+              xKey="month"
+              series={[
                 {
+                  key: 'netWorth',
                   label: `Net worth (${currency.toUpperCase()})`,
-                  data,
-                  fill: true,
-                  borderColor: 'rgb(5, 150, 105)',
-                  backgroundColor: 'rgba(5, 150, 105, 0.12)',
-                  tension: 0.3,
-                  pointRadius: 2,
-                  pointHoverRadius: 4,
+                  color: 'var(--chart-2)',
                 },
-              ],
-            }}
-          />
-        )}
-      </div>
+              ]}
+              showLegend={false}
+              height={320}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

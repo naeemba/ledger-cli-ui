@@ -150,12 +150,20 @@ const Dashboard = async () => {
               (e.g. a debit and matching credit).
             </Help>
           </div>
-          <Link
-            href="/transactions/new"
-            className={buttonVariants({ size: 'sm' })}
-          >
-            Add transaction
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/transactions"
+              className={buttonVariants({ variant: 'link', size: 'sm' })}
+            >
+              View all →
+            </Link>
+            <Link
+              href="/transactions/new"
+              className={buttonVariants({ size: 'sm' })}
+            >
+              Add transaction
+            </Link>
+          </div>
         </div>
         <ShadcnCard className="gap-0 overflow-hidden p-0">
           <table>
