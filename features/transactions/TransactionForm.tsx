@@ -38,6 +38,7 @@ type Props = {
   uid?: string;
   expectedFingerprint?: string;
   submitAction: SubmitAction;
+  templateMissing?: boolean;
 };
 
 const todayISO = (): string => {
@@ -60,6 +61,7 @@ const TransactionForm = ({
   uid,
   expectedFingerprint,
   submitAction,
+  templateMissing,
 }: Props) => {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
@@ -93,6 +95,13 @@ const TransactionForm = ({
       router.refresh();
     }
   }, [state, router, mode]);
+
+  useEffect(() => {
+    if (templateMissing) {
+      toast.error('Template not found — starting from scratch');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const balance = computeBalance(postings);
 
