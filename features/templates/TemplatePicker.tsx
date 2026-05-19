@@ -19,6 +19,7 @@ const TemplatePicker = ({ templates }: Props) => {
         <Combobox
           value=""
           onChange={(value) => {
+            // Names are unique per (userId, name) — see template_user_name index.
             const t = templates.find((x) => x.name === value);
             if (t) router.push(`/transactions/new?template=${t.id}`);
           }}

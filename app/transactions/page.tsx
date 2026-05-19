@@ -2,18 +2,10 @@ import Transactions from '@/features/transactions/Transactions';
 
 export const dynamic = 'force-dynamic';
 
-type SearchParams = {
-  start?: string;
-  end?: string;
-  account?: string;
-  payee?: string;
-  q?: string;
-};
-
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+  searchParams: Parameters<typeof Transactions>[0]['searchParams'];
 }) {
   return <Transactions searchParams={searchParams} />;
 }

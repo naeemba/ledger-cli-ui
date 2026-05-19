@@ -34,7 +34,9 @@ type Props = {
   payees: string[];
   defaultCurrency: string;
   mode?: 'create' | 'edit';
-  initialDraft?: TransactionDraft;
+  // `date` is optional on the prop so server-side template prefill can omit it
+  // and let the client compute today's date in the user's local timezone.
+  initialDraft?: Omit<TransactionDraft, 'date'> & { date?: string };
   uid?: string;
   expectedFingerprint?: string;
   submitAction: SubmitAction;

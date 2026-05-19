@@ -11,12 +11,6 @@ import {
 } from '@/lib/transactions/suggestions';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
 
-const todayISO = (): string => {
-  const d = new Date();
-  const tzOffset = d.getTimezoneOffset() * 60_000;
-  return new Date(d.getTime() - tzOffset).toISOString().slice(0, 10);
-};
-
 type Props = { templateId?: string };
 
 const NewTransaction = async ({ templateId }: Props) => {
@@ -28,13 +22,17 @@ const NewTransaction = async ({ templateId }: Props) => {
   ]);
   const defaultCurrency = getDefaultCurrency() ?? 'USD';
 
-  let initialDraft: TransactionDraft | undefined;
+  // Note: we intentionally do NOT seed `date` here. The client computes today's
+  // date in the user's local timezone (`TransactionForm` falls back to its own
+  // `todayISO`), avoiding a server/client tz skew at midnight boundaries.
+  let initialDraft:
+    | (Omit<TransactionDraft, 'date'> & { date?: string })
+    | undefined;
   let templateMissing = false;
   if (templateId) {
     const t = await getTemplate(user.id, templateId);
     if (t) {
       initialDraft = {
-        date: todayISO(),
         payee: t.draft.payee,
         status: t.draft.status,
         note: t.draft.note,
