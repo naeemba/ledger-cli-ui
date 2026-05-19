@@ -3,7 +3,7 @@ import { createTransactionAction } from './actions';
 import Help from '@/components/Help';
 import TemplatePicker from '@/features/templates/TemplatePicker';
 import { requireUser } from '@/lib/auth/require-user';
-import { listTemplates, getTemplate } from '@/lib/templates/repository';
+import { templateRepository } from '@/lib/templates';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 import {
   getAccountSuggestions,
@@ -18,7 +18,7 @@ const NewTransaction = async ({ templateId }: Props) => {
   const [accounts, payees, templates] = await Promise.all([
     getAccountSuggestions(),
     getPayeeSuggestions(),
-    listTemplates(user.id),
+    templateRepository.list(user.id),
   ]);
   const defaultCurrency = getDefaultCurrency() ?? 'USD';
 
@@ -30,7 +30,7 @@ const NewTransaction = async ({ templateId }: Props) => {
     | undefined;
   let templateMissing = false;
   if (templateId) {
-    const t = await getTemplate(user.id, templateId);
+    const t = await templateRepository.find(user.id, templateId);
     if (t) {
       initialDraft = {
         payee: t.draft.payee,

@@ -1,16 +1,22 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { TemplateRepository } from './repository';
+import type { TemplateInput } from './schema';
+import { TemplateService } from './service';
+import * as schema from '@/db/schema';
 import { findUidInBlock } from '@/lib/journal/uid';
-import type { TemplateInput } from '@/lib/templates/schema';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 describe('Phase 4.2 integration', () => {
   let ctx: TestDbContext;
+  let repo: TemplateRepository;
+  let service: TemplateService;
 
   beforeEach(async () => {
     ctx = await setupTestDb('tpl-int-');
@@ -28,6 +34,8 @@ describe('Phase 4.2 integration', () => {
     ctx.sqlite
       .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
       .run('test-user', 'Test', 'test@example.com');
+    repo = new TemplateRepository(drizzle(ctx.sqlite, { schema }));
+    service = new TemplateService(repo);
   });
 
   afterEach(async () => {
@@ -36,8 +44,6 @@ describe('Phase 4.2 integration', () => {
 
   it('save → list → use → addTransaction round-trip', async () => {
     const userId = 'test-user';
-    const { saveTemplate, listTemplates, getTemplate } =
-      await import('@/lib/templates/repository');
     const input: TemplateInput = {
       name: 'Lunch',
       draft: {
@@ -50,15 +56,15 @@ describe('Phase 4.2 integration', () => {
       },
     };
 
-    const saved = await saveTemplate(userId, input);
+    const saved = await service.saveOrOverwrite(userId, input);
     expect(saved.ok).toBe(true);
     if (!saved.ok) return;
 
-    const list = await listTemplates(userId);
+    const list = await repo.list(userId);
     expect(list).toHaveLength(1);
     expect(list[0].name).toBe('Lunch');
 
-    const fetched = await getTemplate(userId, saved.template.id);
+    const fetched = await repo.find(userId, saved.template.id);
     expect(fetched?.draft.payee).toBe('Lunch');
 
     // Simulate the "use" flow: build an addTransaction input from the template

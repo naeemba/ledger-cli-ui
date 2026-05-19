@@ -1,33 +1,40 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { TemplateRepository } from './repository';
 import type { TemplateInput } from './schema';
+import * as schema from '@/db/schema';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 
-describe('templates repository', () => {
+const TEMPLATE_TABLE = `
+  CREATE TABLE IF NOT EXISTS "template" (
+    "id" text PRIMARY KEY NOT NULL,
+    "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+    "name" text NOT NULL,
+    "draft" text NOT NULL,
+    "createdAt" integer NOT NULL DEFAULT (unixepoch()),
+    "updatedAt" integer NOT NULL DEFAULT (unixepoch())
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS "template_user_name" ON "template"("userId", "name");
+`;
+
+describe('TemplateRepository', () => {
   let ctx: TestDbContext;
+  let repo: TemplateRepository;
 
   beforeEach(async () => {
     ctx = await setupTestDb('templates-');
-    ctx.sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS "template" (
-        "id" text PRIMARY KEY NOT NULL,
-        "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-        "name" text NOT NULL,
-        "draft" text NOT NULL,
-        "createdAt" integer NOT NULL DEFAULT (unixepoch()),
-        "updatedAt" integer NOT NULL DEFAULT (unixepoch())
-      );
-      CREATE UNIQUE INDEX IF NOT EXISTS "template_user_name" ON "template"("userId", "name");
-    `);
+    ctx.sqlite.exec(TEMPLATE_TABLE);
     ctx.sqlite
       .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
       .run('alice', 'Alice', 'alice@example.com');
     ctx.sqlite
       .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
       .run('bob', 'Bob', 'bob@example.com');
+    repo = new TemplateRepository(drizzle(ctx.sqlite, { schema }));
   });
 
   afterEach(async () => {
@@ -46,114 +53,77 @@ describe('templates repository', () => {
     },
   };
 
-  it('saveTemplate inserts a new row with a ULID id', async () => {
-    const { saveTemplate } = await import('./repository');
-    const result = await saveTemplate('alice', sampleInput);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.template.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
-      expect(result.template.name).toBe('Lunch');
-      expect(result.template.userId).toBe('alice');
-      expect(result.template.draft.payee).toBe('Lunch');
-    }
+  it('save inserts a new row with a ULID id', async () => {
+    const row = await repo.save('alice', sampleInput);
+    expect(row.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    expect(row.name).toBe('Lunch');
+    expect(row.userId).toBe('alice');
+    expect(row.draft.payee).toBe('Lunch');
   });
 
-  it('saveTemplate with conflicting (userId,name) returns name-conflict', async () => {
-    const { saveTemplate } = await import('./repository');
-    await saveTemplate('alice', sampleInput);
-    const result = await saveTemplate('alice', sampleInput);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toBe('name-conflict');
+  it('save throws on UNIQUE (userId, name) conflict', async () => {
+    await repo.save('alice', sampleInput);
+    await expect(repo.save('alice', sampleInput)).rejects.toThrow(
+      /UNIQUE constraint failed/i
+    );
   });
 
-  it('saveTemplate with overwrite=true updates the existing row', async () => {
-    const { saveTemplate, getTemplate } = await import('./repository');
-    const first = await saveTemplate('alice', sampleInput);
-    expect(first.ok).toBe(true);
-    if (!first.ok) return;
-    const originalId = first.template.id;
-
-    const updated: TemplateInput = {
-      name: 'Lunch',
-      draft: {
-        payee: 'Lunch v2',
-        status: 'cleared',
-        postings: [
-          { account: 'Expenses:Food', amount: '12', currency: 'USD' },
-          { account: 'Assets:Cash', amount: '-12', currency: 'USD' },
-        ],
-      },
-    };
-    const result = await saveTemplate('alice', updated, { overwrite: true });
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.template.id).toBe(originalId);
-
-    const fetched = await getTemplate('alice', originalId);
-    expect(fetched?.draft.payee).toBe('Lunch v2');
-    expect(fetched?.draft.status).toBe('cleared');
+  it('find returns the row by id for the user', async () => {
+    const created = await repo.save('alice', sampleInput);
+    const fetched = await repo.find('alice', created.id);
+    expect(fetched?.id).toBe(created.id);
   });
 
-  it('listTemplates returns rows sorted by name (case-insensitive) for the user only', async () => {
-    const { saveTemplate, listTemplates } = await import('./repository');
-    await saveTemplate('alice', { ...sampleInput, name: 'banana' });
-    await saveTemplate('alice', { ...sampleInput, name: 'Apple' });
-    await saveTemplate('bob', { ...sampleInput, name: 'Alice-Should-Not-See' });
+  it('find returns null when the id belongs to another user', async () => {
+    const created = await repo.save('alice', sampleInput);
+    expect(await repo.find('bob', created.id)).toBeNull();
+  });
 
-    const rows = await listTemplates('alice');
+  it('findByName returns the row for (userId, name)', async () => {
+    await repo.save('alice', sampleInput);
+    const fetched = await repo.findByName('alice', 'Lunch');
+    expect(fetched?.name).toBe('Lunch');
+  });
+
+  it('findByName returns null for an unknown name', async () => {
+    expect(await repo.findByName('alice', 'Nope')).toBeNull();
+  });
+
+  it('list returns rows sorted by name (case-insensitive), filtered by user', async () => {
+    await repo.save('alice', { ...sampleInput, name: 'banana' });
+    await repo.save('alice', { ...sampleInput, name: 'Apple' });
+    await repo.save('bob', { ...sampleInput, name: 'Alice-Should-Not-See' });
+    const rows = await repo.list('alice');
     expect(rows.map((r) => r.name)).toEqual(['Apple', 'banana']);
   });
 
-  it('renameTemplate updates name and bumps updatedAt', async () => {
-    const { saveTemplate, renameTemplate, getTemplate } =
-      await import('./repository');
-    const created = await saveTemplate('alice', sampleInput);
-    expect(created.ok).toBe(true);
-    if (!created.ok) return;
-
-    const result = await renameTemplate('alice', created.template.id, 'Brunch');
-    expect(result.ok).toBe(true);
-
-    const fetched = await getTemplate('alice', created.template.id);
-    expect(fetched?.name).toBe('Brunch');
+  it('update sets new name and/or draft and bumps updatedAt', async () => {
+    const created = await repo.save('alice', sampleInput);
+    const updated = await repo.update('alice', created.id, { name: 'Brunch' });
+    expect(updated?.name).toBe('Brunch');
+    expect(updated?.id).toBe(created.id);
   });
 
-  it('renameTemplate to an existing name returns name-conflict', async () => {
-    const { saveTemplate, renameTemplate } = await import('./repository');
-    const first = await saveTemplate('alice', { ...sampleInput, name: 'A' });
-    const second = await saveTemplate('alice', { ...sampleInput, name: 'B' });
-    expect(first.ok && second.ok).toBe(true);
-    if (!second.ok) return;
-
-    const result = await renameTemplate('alice', second.template.id, 'A');
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toBe('name-conflict');
+  it('update returns null when the id is not found for the user', async () => {
+    const result = await repo.update('alice', 'missing-id', { name: 'X' });
+    expect(result).toBeNull();
   });
 
-  it('renameTemplate on a missing id returns not-found', async () => {
-    const { renameTemplate } = await import('./repository');
-    const result = await renameTemplate(
-      'alice',
-      '01HZX5G5KJDS9HQRYK8E5T0XXX',
-      'X'
-    );
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toBe('not-found');
-  });
-
-  it('deleteTemplate removes the row', async () => {
-    const { saveTemplate, deleteTemplate, getTemplate } =
-      await import('./repository');
-    const created = await saveTemplate('alice', sampleInput);
-    if (!created.ok) return;
-    await deleteTemplate('alice', created.template.id);
-    const fetched = await getTemplate('alice', created.template.id);
-    expect(fetched).toBeNull();
-  });
-
-  it('deleteTemplate on a missing id is a no-op', async () => {
-    const { deleteTemplate } = await import('./repository');
+  it('update throws on UNIQUE conflict when changing name', async () => {
+    await repo.save('alice', { ...sampleInput, name: 'A' });
+    const second = await repo.save('alice', { ...sampleInput, name: 'B' });
     await expect(
-      deleteTemplate('alice', '01HZX5G5KJDS9HQRYK8E5T0XXX')
-    ).resolves.toBeUndefined();
+      repo.update('alice', second.id, { name: 'A' })
+    ).rejects.toThrow(/UNIQUE constraint failed/i);
+  });
+
+  it('delete removes the row', async () => {
+    const created = await repo.save('alice', sampleInput);
+    await repo.delete('alice', created.id);
+    expect(await repo.find('alice', created.id)).toBeNull();
+  });
+
+  it('delete on a missing id is a no-op', async () => {
+    await expect(repo.delete('alice', 'missing-id')).resolves.toBeUndefined();
   });
 });

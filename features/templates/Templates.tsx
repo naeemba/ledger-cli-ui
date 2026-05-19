@@ -3,13 +3,13 @@ import TemplatesList from './TemplatesList';
 import Help from '@/components/Help';
 import { buttonVariants } from '@/components/ui/button';
 import { requireUser } from '@/lib/auth/require-user';
-import { listTemplates } from '@/lib/templates/repository';
+import { templateRepository } from '@/lib/templates';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 const Templates = async () => {
   const user = await requireUser();
-  const templates = await listTemplates(user.id);
+  const templates = await templateRepository.list(user.id);
 
   return (
     <div className="flex flex-col gap-6">
