@@ -1,7 +1,13 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { describe, it, expect } from 'vitest';
+import { getJournalDir } from './layout';
+import { parseJournal } from './parser';
+import { JournalRepository } from './repository';
+import { JournalService } from './service';
+import * as schema from '@/db/schema';
 import { setupTestDb, teardownTestDb } from '@/lib/test-utils/db';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 describe('Phase 4.1 integration', () => {
   it('parses → backfills → edits → deletes a real fixture', async () => {
@@ -9,7 +15,12 @@ describe('Phase 4.1 integration', () => {
     const ctx = await setupTestDb('integration-');
 
     try {
-      const { getJournalDir } = await import('@/lib/journals');
+      ctx.sqlite
+        .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
+        .run('integration-user', 'Integration', 'integration@example.com');
+      const db = drizzle(ctx.sqlite, { schema });
+      const service = new JournalService(new JournalRepository(db));
+
       const userId = 'integration-user';
       const dir = getJournalDir(userId);
       await fs.mkdir(dir, { recursive: true });
@@ -18,15 +29,10 @@ describe('Phase 4.1 integration', () => {
         await fs.copyFile(path.join(src, name), path.join(dir, name));
       }
 
-      // Verify tab characters are preserved in the fixture
       const q1Content = await fs.readFile(path.join(dir, 'q1.ledger'));
       expect(Buffer.from(q1Content).includes(0x09)).toBe(true);
 
-      const { backfillUids } = await import('./backfill');
-      const { parseJournal } = await import('./parser');
-      const { writeJournal } = await import('./write');
-
-      const { uidsAdded } = await backfillUids(userId);
+      const { uidsAdded } = await service.backfillUids(userId);
       expect(uidsAdded).toBe(2);
 
       const journal1 = await parseJournal(path.join(dir, 'main.ledger'));
@@ -34,7 +40,7 @@ describe('Phase 4.1 integration', () => {
       const lunch = journal1.transactions.find((t) => t.payee === 'lunch')!;
       expect(lunch.uid).not.toBeNull();
 
-      const editResult = await writeJournal(userId, {
+      const editResult = await service.editTransaction(userId, {
         kind: 'edit',
         uid: lunch.uid!,
         expectedFingerprint: lunch.fingerprint,
@@ -53,7 +59,7 @@ describe('Phase 4.1 integration', () => {
       expect(lunchV2).toBeDefined();
       expect(lunchV2!.uid).toBe(lunch.uid);
 
-      const deleteResult = await writeJournal(userId, {
+      const deleteResult = await service.deleteTransaction(userId, {
         kind: 'delete',
         uid: lunchV2!.uid!,
         expectedFingerprint: lunchV2!.fingerprint,

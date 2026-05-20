@@ -1,7 +1,8 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { requireUser } from '@/lib/auth/require-user';
-import { ensureJournal, getJournalCacheTag } from '@/lib/journals';
+import { journalRepository } from '@/lib/journal';
+import { getJournalCacheTag } from '@/lib/journal/layout';
 import { unstable_cache } from 'next/cache';
 import { connection } from 'next/server';
 
@@ -29,7 +30,9 @@ const runLedger = async (
 ): Promise<string> => {
   await connection();
   const user = await requireUser();
-  const { mainPath, priceDbPath } = await ensureJournal(user.id);
+  const { mainPath, priceDbPath } = await journalRepository.ensureLayout(
+    user.id
+  );
 
   const baseArgs: string[] = ['--file', mainPath];
   if (priceDbPath) baseArgs.push('--price-db', priceDbPath);

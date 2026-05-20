@@ -2,9 +2,8 @@ import 'server-only';
 import TransactionForm from './TransactionForm';
 import { updateTransactionAction } from './actions';
 import { requireUser } from '@/lib/auth/require-user';
+import { journalService } from '@/lib/journal';
 import { fingerprintDraft } from '@/lib/journal/fingerprint';
-import { parseJournal } from '@/lib/journal/parser';
-import { resolveUserJournal } from '@/lib/journals';
 import {
   getAccountSuggestions,
   getPayeeSuggestions,
@@ -14,9 +13,7 @@ import { notFound } from 'next/navigation';
 
 const EditTransaction = async ({ uid }: { uid: string }) => {
   const user = await requireUser();
-  const { mainPath } = await resolveUserJournal(user.id);
-  const journal = await parseJournal(mainPath);
-  const tx = journal.transactions.find((t) => t.uid === uid);
+  const tx = await journalService.findTransaction(user.id, uid);
   if (!tx) notFound();
 
   const defaultCurrency = getDefaultCurrency() ?? 'USD';

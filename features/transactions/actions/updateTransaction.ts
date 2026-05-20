@@ -2,7 +2,7 @@
 
 import type { TransactionActionState } from './types';
 import { requireUser } from '@/lib/auth/require-user';
-import { writeJournal } from '@/lib/journal/write';
+import { journalService } from '@/lib/journal';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 
 export async function updateTransactionAction(
@@ -32,7 +32,7 @@ export async function updateTransactionAction(
     return { ok: false, formError: 'Edit payload is not an object' };
   }
 
-  const result = await writeJournal(user.id, {
+  const result = await journalService.editTransaction(user.id, {
     kind: 'edit',
     uid,
     expectedFingerprint,
