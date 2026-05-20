@@ -1,7 +1,6 @@
 import path from 'path';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
-import { revalidatePath } from 'next/cache';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const ALLOWED_SINGLE_EXTS = new Set(['.ledger', '.dat', '.journal', '.txt']);
@@ -31,7 +30,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     if (ext === ZIP_EXT) {
       const result = await journalService.replaceFromZip(user.id, buffer);
-      revalidatePath('/', 'layout');
       return NextResponse.json({
         ok: true,
         mode: 'archive',
@@ -47,7 +45,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         user.id,
         buffer
       );
-      revalidatePath('/', 'layout');
       return NextResponse.json({
         ok: true,
         mode: 'single',
