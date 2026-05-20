@@ -30,10 +30,10 @@ const runLedger = async (
 ): Promise<string> => {
   await connection();
   const user = await requireUser();
-  const { mainPath, priceDbPath } = await journalRepository.ensureLayout(
-    user.id
-  );
+  // `getMaxMtime` calls `ensureLayout` internally — we then use the cheaper
+  // `getLayout` for the actual path, avoiding a duplicate mkdir+access.
   const mtimeMs = await journalRepository.getMaxMtime(user.id);
+  const { mainPath, priceDbPath } = await journalRepository.getLayout(user.id);
 
   const baseArgs: string[] = ['--file', mainPath];
   if (priceDbPath) baseArgs.push('--price-db', priceDbPath);
