@@ -2,7 +2,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { eq } from 'drizzle-orm';
 import { DEFAULT_MAIN, PRICE_DB_NAME, getJournalDir } from './layout';
-import { parseJournal, type ParsedJournal, type Transaction } from './parser';
+import {
+  parseJournal,
+  resolveIncludes,
+  type ParsedJournal,
+  type Transaction,
+} from './parser';
 import { user as userTable } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 
@@ -98,6 +103,16 @@ export class JournalRepository {
   async find(userId: string, uid: string): Promise<Transaction | null> {
     const { transactions } = await this.list(userId);
     return transactions.find((t) => t.uid === uid) ?? null;
+  }
+
+  /** Returns max mtimeMs across the user's include graph. Used as a cache-key
+   * input so any file change (internal or external) invalidates `unstable_cache`. */
+  async getMaxMtime(userId: string): Promise<number> {
+    const { mainPath } = await this.ensureLayout(userId);
+    const files = await resolveIncludes(mainPath);
+    if (files.length === 0) return 0;
+    const stats = await Promise.all(files.map((f) => fs.stat(f)));
+    return Math.max(...stats.map((s) => s.mtimeMs));
   }
 
   private async findPriceDb(dir: string): Promise<string | null> {
