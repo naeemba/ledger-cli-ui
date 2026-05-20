@@ -10,13 +10,13 @@ const execFilePromise = promisify(execFile);
 
 const LEDGER_CACHE_TTL_SECONDS = 60;
 
-const buildExecLedger = (tag: string) =>
+const buildExecLedger = (tag: string, mtimeMs: number) =>
   unstable_cache(
     async (allArgs: string[]): Promise<string> => {
       const { stdout } = await execFilePromise('ledger', allArgs);
       return stdout;
     },
-    ['ledger-cli-exec', tag],
+    ['ledger-cli-exec', tag, String(mtimeMs)],
     { revalidate: LEDGER_CACHE_TTL_SECONDS, tags: [tag] }
   );
 
@@ -33,12 +33,13 @@ const runLedger = async (
   const { mainPath, priceDbPath } = await journalRepository.ensureLayout(
     user.id
   );
+  const mtimeMs = await journalRepository.getMaxMtime(user.id);
 
   const baseArgs: string[] = ['--file', mainPath];
   if (priceDbPath) baseArgs.push('--price-db', priceDbPath);
   if (options?.sortByDate ?? true) baseArgs.push('--sort', '-date');
 
-  const execLedger = buildExecLedger(getJournalCacheTag(user.id));
+  const execLedger = buildExecLedger(getJournalCacheTag(user.id), mtimeMs);
   return execLedger([...baseArgs, ...args]);
 };
 
