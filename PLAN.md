@@ -150,11 +150,11 @@ The remaining authoring work that didn't land in Phase 2's MVP. Edit/delete depe
 - [ ] "New from template" prefills the add-transaction form
 - [ ] Unblocks the paused Budget item (`TODO.md` Tier 2) once periodic transactions are easy
 
-### 4.3 Cache & freshness
+### 4.3 Cache & freshness _(complete)_
 
-- [ ] Replace `unstable_cache` key with one that includes the user's journal mtime so writes invalidate immediately
-- [ ] Or: drop caching entirely for mutating users and keep it for read-heavy sessions (measure first)
-- [ ] Confirm `revalidatePath('/', 'layout')` after every mutation is sufficient
+- [x] Replace `unstable_cache` key with one that includes the user's journal mtime so writes invalidate immediately
+- [x] Or: drop caching entirely for mutating users and keep it for read-heavy sessions (measure first) _(parked — mtime-keyed cache supersedes; see spec)_
+- [x] Confirm `revalidatePath('/', 'layout')` after every mutation is sufficient _(audited — yes; cleanup landed: upload route stopped duplicating it, service is sole source)_
 
 ---
 
