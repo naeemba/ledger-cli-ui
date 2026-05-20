@@ -186,6 +186,7 @@ Bring in Vitest and cover the pure functions first (no `ledger` shell-out needed
 - [ ] Server-side error boundary that doesn't leak `ledger` stderr to the client
 - [ ] "Journal is empty" empty-state on Dashboard pointing to `/import` or `/transactions/new`
 - [ ] Loading skeletons (currently most pages just block on `ledger`)
+- [ ] **Verify writes with `ledger`** — after `JournalService.addTransaction` / `editTransaction` / `deleteTransaction` and after the `/import` flow, shell out to `ledger -f <main> stats` (or equivalent) and surface a parse error if the journal is no longer valid. Today our parser/writer is trusted to produce ledger-compatible output; if they ever diverge or the user's existing journal has syntax we silently mishandle, broken state lands in the file and only surfaces when a report page renders wrong.
 
 ---
 
