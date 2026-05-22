@@ -150,11 +150,11 @@ The remaining authoring work that didn't land in Phase 2's MVP. Edit/delete depe
 - [ ] "New from template" prefills the add-transaction form
 - [ ] Unblocks the paused Budget item (`TODO.md` Tier 2) once periodic transactions are easy
 
-### 4.3 Cache & freshness
+### 4.3 Cache & freshness _(complete)_
 
-- [ ] Replace `unstable_cache` key with one that includes the user's journal mtime so writes invalidate immediately
-- [ ] Or: drop caching entirely for mutating users and keep it for read-heavy sessions (measure first)
-- [ ] Confirm `revalidatePath('/', 'layout')` after every mutation is sufficient
+- [x] Replace `unstable_cache` key with one that includes the user's journal mtime so writes invalidate immediately
+- [x] Or: drop caching entirely for mutating users and keep it for read-heavy sessions (measure first) _(parked — mtime-keyed cache supersedes; see spec)_
+- [x] Confirm `revalidatePath('/', 'layout')` after every mutation is sufficient _(audited — yes; cleanup landed: upload route stopped duplicating it, service is sole source)_
 
 ---
 
@@ -186,6 +186,7 @@ Bring in Vitest and cover the pure functions first (no `ledger` shell-out needed
 - [ ] Server-side error boundary that doesn't leak `ledger` stderr to the client
 - [ ] "Journal is empty" empty-state on Dashboard pointing to `/import` or `/transactions/new`
 - [ ] Loading skeletons (currently most pages just block on `ledger`)
+- [ ] **Verify writes with `ledger`** — after `JournalService.addTransaction` / `editTransaction` / `deleteTransaction` and after the `/import` flow, shell out to `ledger -f <main> stats` (or equivalent) and surface a parse error if the journal is no longer valid. Today our parser/writer is trusted to produce ledger-compatible output; if they ever diverge or the user's existing journal has syntax we silently mishandle, broken state lands in the file and only surfaces when a report page renders wrong.
 
 ---
 

@@ -3,7 +3,7 @@ import Filters from './Filters';
 import TransactionTable from './TransactionTable';
 import Help from '@/components/Help';
 import { requireUser } from '@/lib/auth/require-user';
-import { journalService } from '@/lib/journal';
+import { journalRepository, journalService } from '@/lib/journal';
 import { getJournalCacheTag } from '@/lib/journal/layout';
 import { type Transaction } from '@/lib/journal/parser';
 import { unstable_cache } from 'next/cache';
@@ -16,18 +16,20 @@ type SearchParams = {
   q?: string;
 };
 
-const buildLoader = (tag: string) =>
+const buildLoader = (tag: string, mtimeMs: number) =>
   unstable_cache(
     async (userId: string): Promise<Transaction[]> => {
       const journal = await journalService.listTransactions(userId);
       return journal.transactions;
     },
-    ['journal-transactions', tag],
+    ['journal-transactions', tag, String(mtimeMs)],
     { revalidate: 60, tags: [tag] }
   );
 
-const loadTransactions = (userId: string) =>
-  buildLoader(getJournalCacheTag(userId))(userId);
+const loadTransactions = async (userId: string) => {
+  const mtimeMs = await journalRepository.getMaxMtime(userId);
+  return buildLoader(getJournalCacheTag(userId), mtimeMs)(userId);
+};
 
 const applyFilters = (txs: Transaction[], params: SearchParams) => {
   const start = params.start ? Date.parse(params.start) : null;

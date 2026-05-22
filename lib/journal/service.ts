@@ -7,7 +7,6 @@ import {
   DEFAULT_MAIN,
   PRICE_DB_NAME,
   VALID_EXTS,
-  getJournalCacheTag,
   getJournalDir,
 } from './layout';
 import { withUserLock } from './mutex';
@@ -24,7 +23,7 @@ import {
   transactionDraftSchema,
   type TransactionDraft,
 } from '@/lib/transactions/schema';
-import { revalidatePath, updateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 
 const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
 const PATH_TRAVERSAL = /(^|[/\\])\.\.([/\\]|$)/;
@@ -67,11 +66,14 @@ export type BackfillResult = {
   uidsAdded: number;
 };
 
-const invalidateCache = (userId: string) => {
+const invalidateCache = (_userId: string) => {
   // Cache invalidation is best-effort outside the Next.js runtime context
-  // (e.g. inside vitest); inside Next, updateTag + revalidatePath fire normally.
+  // (e.g. inside vitest); inside Next, revalidatePath fires normally.
+  //
+  // The journal's max mtime is part of every cache key (see runLedger and
+  // Transactions.tsx), so any file change implicitly invalidates the data
+  // cache. revalidatePath here forces the RSC payload re-render.
   try {
-    updateTag(getJournalCacheTag(userId));
     revalidatePath('/', 'layout');
   } catch {
     // no-op outside Next.js
@@ -195,6 +197,7 @@ export class JournalService {
     await fs.writeFile(path.join(dir, DEFAULT_MAIN), content);
     await this.repo.setMainFile(userId, DEFAULT_MAIN);
     const backfill = await this.backfillUids(userId);
+    invalidateCache(userId);
     return { uidsAdded: backfill.uidsAdded };
   }
 
@@ -231,6 +234,7 @@ export class JournalService {
     const mainFile = detectMain(entries.map((e) => ({ name: e.entryName })));
     await this.repo.setMainFile(userId, mainFile);
     const backfill = await this.backfillUids(userId);
+    invalidateCache(userId);
     return {
       mainFile,
       fileCount: entries.length,
