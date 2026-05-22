@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
 import getDefaultCurrency from '@/utils/getDefaultCurrency';
+import parseAmountColumn from '@/utils/parseAmountColumn';
 import runLedger from '@/utils/runLedger';
 import isValidAccount from '@/utils/validateAccount';
 import { notFound } from 'next/navigation';
@@ -102,9 +103,7 @@ const Monthly = async ({
                 const [date, raw] = each.split('|');
                 return {
                   month: formatDate(date, Format.SHORT_MONTH_YEAR),
-                  balance: Number(
-                    (raw.split(' ')[1] ?? '0').replaceAll(',', '')
-                  ),
+                  balance: parseAmountColumn(raw),
                 };
               })}
               xKey="month"
