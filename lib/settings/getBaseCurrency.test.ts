@@ -12,7 +12,7 @@ vi.mock('@/lib/auth/require-user', () => ({
   getOptionalUser: () => getOptionalUser(),
 }));
 
-vi.mock('./index', () => ({
+vi.mock('./instances', () => ({
   userSettingRepository: { get: (id: string) => repoGet(id) },
 }));
 

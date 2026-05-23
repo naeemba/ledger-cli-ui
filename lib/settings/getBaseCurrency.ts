@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import 'server-only';
-import { userSettingRepository } from './index';
+import { userSettingRepository } from './instances';
 import { baseCurrencySchema } from './schema';
 import { getOptionalUser } from '@/lib/auth/require-user';
 import { env } from '@/lib/env';
