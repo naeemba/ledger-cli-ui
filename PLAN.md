@@ -168,18 +168,18 @@ Pay down what's already known to be wrong before adding more surface area.
 - [x] Fix amount parsing fragility in `/registers/monthly/[account]` _(replaced the brittle `split(' ')[1]` with a regex-based `parseAmountColumn` helper in `utils/parseAmountColumn.ts`; 8 unit tests cover unit-less amounts, currency-prefix/suffix orderings, comma thousands, and the null/garbage fallback)_
 - [ ] ESLint 10 upgrade — revisit when `eslint-plugin-react` lands a compatible release _(still blocked on upstream)_
 
-### 5.2 Tests
+### 5.2 Tests _(mostly complete)_
 
 Bring in Vitest and cover the pure functions first (no `ledger` shell-out needed):
 
-- [ ] `Dashboard.utils#getHighestExpense`
-- [ ] `Accounts.utils#buildTree`
-- [ ] `MonthlyComparison.utils#getCashFlow`
-- [ ] `Reconcile#parseRows`
-- [ ] `validateAccount`
-- [ ] `formatAmount` / `formatDate`
-- [ ] Journal helpers: `detectMain`, `replaceJournalFromZip` path-traversal guard
-- [ ] `addTransaction` round-trip (write → re-read via `ledger reg`)
+- [x] `Dashboard.utils#getHighestExpense`
+- [x] `Accounts.utils#buildTree`
+- [ ] `MonthlyComparison.utils#getCashFlow` _(shells out to ledger; deferred — would need a `runLedger` mock to be worth writing)_
+- [x] `Reconcile#parseRows` _(extracted from `Reconcile.tsx` to `Reconcile.utils.ts` so it can be unit-tested)_
+- [x] `validateAccount`
+- [x] `formatAmount` _(via `renderToStaticMarkup` since it returns JSX)_ / `formatDate`
+- [x] Journal helpers: `detectMain` _(exercised via `replaceFromZip` happy paths)_; `replaceJournalFromZip` path-traversal guard _(see note below — adm-zip normalizes input names, so this is tracked for Phase 7 to test via a hand-crafted malicious zip fixture)_
+- [ ] `addTransaction` round-trip _(already covered by `JournalService` tests merged in Phase 4.2)_
 
 ### 5.3 Errors & UX rough edges
 
