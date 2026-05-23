@@ -1,6 +1,7 @@
 import {
   ArrowLeftRight,
   Bookmark,
+  Briefcase,
   CalendarRange,
   Coins,
   FileBarChart,
@@ -75,6 +76,15 @@ export const getNavSections = (): NavSection[] => {
           description: 'Assets minus liabilities, over time.',
           icon: PiggyBank,
           keywords: ['wealth', 'equity', 'assets'],
+        },
+        {
+          id: 'portfolio',
+          title: 'Portfolio',
+          href: '/portfolio',
+          match: 'exact',
+          description: 'Holdings in native commodities + converted value.',
+          icon: Briefcase,
+          keywords: ['investments', 'stocks', 'commodities', 'shares'],
         },
         {
           id: 'periodic',

@@ -20,6 +20,9 @@ const envSchema = clientEnvSchema.extend({
   DEFAULT_CURRENCY: z.string().default('USD'),
   LEDGER_PRICE_DB: z.string().optional(),
   DATE_LOCALE: z.string().default('en-US'),
+  // Account prefix the /portfolio report aggregates. Matches whatever your
+  // journal calls its investment account tree (e.g. "Assets:Brokerage").
+  PORTFOLIO_ACCOUNT_PREFIX: z.string().default('Assets:Investments'),
 });
 
 const parsed = envSchema.safeParse(process.env);
