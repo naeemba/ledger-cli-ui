@@ -18,6 +18,7 @@ import {
 } from './parser';
 import { JournalRepository } from './repository';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
+import { verifyJournalParseable } from './verify';
 import {
   formatTransaction,
   transactionDraftSchema,
@@ -51,7 +52,7 @@ export type WriteResult =
   | { ok: true }
   | {
       ok: false;
-      reason: 'not-found' | 'stale' | 'invalid';
+      reason: 'not-found' | 'stale' | 'invalid' | 'parse-failed';
       message: string;
       fieldErrors?: Record<string, string>;
     };
@@ -142,6 +143,8 @@ export class JournalService {
 
     const draft: TransactionDraft = { ...parsed.data, uid: generateUid() };
     const { mainPath } = await this.repo.ensureLayout(userId);
+    // Snapshot the file so we can roll back if ledger rejects the result.
+    const snapshot = await this.repo.readFile(mainPath);
     // Leading "\n\n" guards against imported files that lack a trailing newline.
     const block = `\n\n${formatTransaction(draft)}\n`;
     try {
@@ -151,6 +154,16 @@ export class JournalService {
         ok: false,
         fieldErrors: {},
         formError: e instanceof Error ? e.message : 'Failed to write journal',
+      };
+    }
+    const verify = await verifyJournalParseable(mainPath);
+    if (!verify.ok) {
+      // Roll back so the journal stays parseable.
+      await this.repo.writeFileAtomic(mainPath, snapshot);
+      return {
+        ok: false,
+        fieldErrors: {},
+        formError: `Ledger rejected the new transaction: ${verify.firstLine}`,
       };
     }
     invalidateCache(userId);
@@ -191,21 +204,33 @@ export class JournalService {
   async replaceFromSingleFile(
     userId: string,
     content: Buffer
-  ): Promise<{ uidsAdded: number }> {
+  ): Promise<{ uidsAdded: number; parseFailure?: string }> {
     await this.repo.emptyJournalDir(userId);
     const dir = getJournalDir(userId);
-    await fs.writeFile(path.join(dir, DEFAULT_MAIN), content);
+    const mainPath = path.join(dir, DEFAULT_MAIN);
+    await fs.writeFile(mainPath, content);
     await this.repo.setMainFile(userId, DEFAULT_MAIN);
     const backfill = await this.backfillUids(userId);
     invalidateCache(userId);
-    return { uidsAdded: backfill.uidsAdded };
+    // No rollback on parse failure for imports — too much state to undo.
+    // Surface the error so the user can re-upload a clean journal.
+    const verify = await verifyJournalParseable(mainPath);
+    return {
+      uidsAdded: backfill.uidsAdded,
+      ...(verify.ok ? {} : { parseFailure: verify.firstLine }),
+    };
   }
 
   /** Extracts a .zip into the journal dir, picks a main file, backfills UIDs. */
   async replaceFromZip(
     userId: string,
     buffer: Buffer
-  ): Promise<{ mainFile: string; fileCount: number; uidsAdded: number }> {
+  ): Promise<{
+    mainFile: string;
+    fileCount: number;
+    uidsAdded: number;
+    parseFailure?: string;
+  }> {
     const zip = new AdmZip(buffer);
     const entries = zip.getEntries().filter((e) => !e.isDirectory);
 
@@ -235,10 +260,14 @@ export class JournalService {
     await this.repo.setMainFile(userId, mainFile);
     const backfill = await this.backfillUids(userId);
     invalidateCache(userId);
+    // No rollback on parse failure for imports — too much state to undo.
+    // Surface the error so the user can re-upload a clean journal.
+    const verify = await verifyJournalParseable(path.join(dir, mainFile));
     return {
       mainFile,
       fileCount: entries.length,
       uidsAdded: backfill.uidsAdded,
+      ...(verify.ok ? {} : { parseFailure: verify.firstLine }),
     };
   }
 
@@ -314,6 +343,18 @@ export class JournalService {
       (before ? before + '\n' : '') + newBlock + (after ? '\n' + after : '');
     await this.repo.writeFileAtomic(tx.file, next);
 
+    const { mainPath } = await this.repo.getLayout(userId);
+    const verify = await verifyJournalParseable(mainPath);
+    if (!verify.ok) {
+      // Roll the file back to its pre-edit content so the journal stays parseable.
+      await this.repo.writeFileAtomic(tx.file, text);
+      return {
+        ok: false,
+        reason: 'parse-failed',
+        message: `Ledger rejected the edit: ${verify.firstLine}`,
+      };
+    }
+
     invalidateCache(userId);
     return { ok: true };
   }
@@ -371,6 +412,18 @@ export class JournalService {
       ...lines.slice(removeEnd + 1),
     ].join('\n');
     await this.repo.writeFileAtomic(tx.file, next);
+
+    const { mainPath } = await this.repo.getLayout(userId);
+    const verify = await verifyJournalParseable(mainPath);
+    if (!verify.ok) {
+      // Roll back so the journal stays parseable.
+      await this.repo.writeFileAtomic(tx.file, text);
+      return {
+        ok: false,
+        reason: 'parse-failed',
+        message: `Ledger rejected the delete: ${verify.firstLine}`,
+      };
+    }
 
     invalidateCache(userId);
     return { ok: true };
