@@ -22,6 +22,9 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Install ledger
+        run: sudo apt-get update && sudo apt-get install -y ledger
+
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm lint

@@ -18,6 +18,7 @@ type UploadResult = {
   fileCount?: number;
   bytes?: number;
   uidsAdded?: number;
+  parseFailure?: string;
   error?: string;
 };
 
@@ -39,7 +40,6 @@ export default function ImportPage() {
       const result: UploadResult = await res.json();
       if (!res.ok || !result.ok)
         throw new Error(result.error ?? 'Upload failed');
-      setPhase('done');
       const tagged =
         result.uidsAdded && result.uidsAdded > 0
           ? `, ${result.uidsAdded} transaction${result.uidsAdded === 1 ? '' : 's'} tagged`
@@ -48,8 +48,21 @@ export default function ImportPage() {
         result.mode === 'archive'
           ? `Imported ${result.fileCount} file${result.fileCount === 1 ? '' : 's'}${tagged}. Main file: ${result.mainFile}.`
           : `Imported ${(result.bytes ?? 0).toLocaleString()} bytes${tagged}. Reports refresh on next view.`;
-      setMessage(description);
-      toast.success('Journal imported', { description });
+      if (result.parseFailure) {
+        // Files landed on disk but ledger can't parse them. Don't claim
+        // success — the user needs to know reports will be broken.
+        setPhase('error');
+        setMessage(
+          `${description} Ledger rejected the resulting journal: ${result.parseFailure}`
+        );
+        toast.error('Journal imported but not parseable', {
+          description: result.parseFailure,
+        });
+      } else {
+        setPhase('done');
+        setMessage(description);
+        toast.success('Journal imported', { description });
+      }
       router.refresh();
     } catch (err) {
       setPhase('error');

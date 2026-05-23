@@ -37,6 +37,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         fileCount: result.fileCount,
         uidsAdded: result.uidsAdded,
         bytes: buffer.length,
+        ...(result.parseFailure ? { parseFailure: result.parseFailure } : {}),
       });
     }
 
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         mode: 'single',
         uidsAdded: result.uidsAdded,
         bytes: buffer.length,
+        ...(result.parseFailure ? { parseFailure: result.parseFailure } : {}),
       });
     }
 
