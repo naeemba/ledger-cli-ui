@@ -1,3 +1,4 @@
+import { parseReconcileRows } from './Reconcile.utils';
 import Help from '@/components/Help';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
@@ -7,28 +8,6 @@ import Link from 'next/link';
 
 const STALE_DAYS = 30;
 
-type Row = {
-  date: string;
-  payee: string;
-  account: string;
-  amount: string;
-  days: number;
-};
-
-const parseRows = (stdout: string): Row[] => {
-  const today = Date.now();
-  return stdout
-    .split('NNN')
-    .map((line) => line.split('|').map((s) => s.trim()))
-    .filter((cols) => cols.length >= 4 && cols[0])
-    .map(([date, payee, account, amount]) => {
-      const d = new Date(date);
-      const days = Math.floor((today - d.getTime()) / 86_400_000);
-      return { date, payee, account, amount, days };
-    })
-    .sort((a, b) => b.days - a.days);
-};
-
 const Reconcile = async () => {
   const currency = getDefaultCurrency() ?? 'USD';
   const stdout = await runLedger(
@@ -36,7 +15,7 @@ const Reconcile = async () => {
     { sortByDate: false }
   );
 
-  const rows = parseRows(stdout);
+  const rows = parseReconcileRows(stdout);
 
   const stale = rows.filter((r) => r.days > STALE_DAYS).length;
 

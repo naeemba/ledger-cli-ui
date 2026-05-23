@@ -10,7 +10,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['**/*.test.ts'],
+    include: ['**/*.test.ts', '**/*.test.tsx'],
+    setupFiles: ['./vitest-setup.ts'],
     coverage: {
       provider: 'v8',
       include: ['lib/journal/**/*.ts'],
