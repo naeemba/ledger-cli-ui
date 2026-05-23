@@ -54,7 +54,7 @@ First mutation path: a working "add transaction" flow so the app stops being rea
 
 ---
 
-## Phase 3 — UI library adoption (shadcn/ui) _(current)_
+## Phase 3 — UI library adoption (shadcn/ui) _(complete)_
 
 **Why:** the project just adopted shadcn/ui (`base-nova` preset over `@base-ui/react`, neutral base color). The init landed `components.json`, `lib/utils.ts`, `components/ui/button.tsx`, and merged its CSS variables into `app/globals.css`. Right now the codebase has two parallel design systems: ~30 custom buttons, custom `Field` form subcomponents, a custom Help tooltip, and a custom error-box pattern alongside an empty `components/ui/` directory. This phase unifies them — and lands the primitives (`AlertDialog`, `Command`, `Combobox`) that Phase 4's edit/delete/templates flows depend on.
 
@@ -134,21 +134,23 @@ The old `components/Header/Header.tsx` was a single horizontal nav with 11 links
 
 The remaining authoring work that didn't land in Phase 2's MVP. Edit/delete depends on `<ConfirmDialog>` from 3.3, so this comes after Phase 3.
 
-### 4.1 Edit / delete transaction
+### 4.1 Edit / delete transaction _(complete)_
 
-- [ ] Decide the addressing scheme: line range in `mainPath`, or generated transaction ID via a custom comment tag (e.g. `; :uid: <ulid>`). The tag approach survives reformatting; line ranges break the moment anyone edits the file outside the app.
-- [ ] Backfill UID tags on import (one-time migration over the journal)
-- [ ] List view at `/transactions` with pagination (use `ledger reg` JSON-ish output — or parse our own)
-- [ ] Edit page reusing the add-transaction form
-- [ ] Delete with confirm modal (uses the `<ConfirmDialog>` from 3.3)
-- [ ] All mutations go through a single `writeJournal` helper that locks, parses, rewrites, and bumps cache
+- [x] **Addressing scheme** — `; :uid: <ULID>` comment tag inside each transaction block (survives reformatting; line ranges would break the moment anyone edits the file outside the app). ULID helpers in `lib/journal/uid.ts`; schema accepts `uid` on `TransactionDraft`; `formatTransaction` emits the UID line right after the header.
+- [x] **Backfill UID tags on import** — `JournalService.backfillUids` walks the include graph, inserts a UID into any block missing one, writes the file back via tmpfile + rename. Idempotent; preserves indent of the first posting line. Hooked into `replaceJournalFromSingleFile` / `replaceJournalFromZip` as their last step.
+- [x] **List view at `/transactions`** — server component reading via `lib/journal/parser.ts` (238-line hand-rolled parser that understands tabs, slash dates, comma thousands, blank-amount auto-balance, and the project's `include` graph). Filters live in URL search params: date range (reuses `DateFilter`), account combobox, payee combobox, debounced free-text search. Columns: Date / Status / Payee / Accounts / Amount(s) / Actions. No pagination yet — the user's ~1,880-row journal renders fine.
+- [x] **Edit page reusing the add-transaction form** — `app/transactions/[uid]/edit` loads via parser, builds `initialDraft`, computes `expectedFingerprint`, renders `<TransactionForm mode="edit">`. The form now branches by `mode: 'create' | 'edit'` and binds either `createTransactionAction` or `updateTransactionAction` (one server-action file per mutation under `features/transactions/actions/`).
+- [x] **Delete with confirm modal** — `RowActions.tsx` dropdown per row → `ConfirmDialog` (`variant="destructive"`) → `deleteTransactionAction`. No undo; the dialog is the only friction.
+- [x] **`writeJournal` helper** — `JournalService.{editTransaction, deleteTransaction}` with per-user in-memory async mutex (`lib/journal/mutex.ts`), TOCTOU-narrowed re-read of the target file, fingerprint match (`lib/journal/fingerprint.ts` = sha256 of canonical render), splice, atomic tmpfile + rename, cache-tag bump. Returns a discriminated `WriteResult` (`not-found` / `stale` / `invalid`). Stale-edit UX surfaces inline with a Reload button.
+- [x] **Tests** — `parser.test.ts`, `uid.test.ts`, `mutex.test.ts`, `fingerprint.test.ts`, `repository.test.ts`, `service.test.ts`, and `integration.test.ts` (end-to-end parse → backfill → edit → delete round-trip against a fixture journal with includes, tabs, and slash dates).
 
-### 4.2 Recurring / templated transactions
+### 4.2 Recurring / templated transactions _(complete)_
 
-- [ ] "Save as template" on any transaction
-- [ ] Templates stored in SQLite (`template` table) — not in the journal file
-- [ ] "New from template" prefills the add-transaction form
-- [ ] Unblocks the paused Budget item (`TODO.md` Tier 2) once periodic transactions are easy
+- [x] **"Save as template" on any transaction** — `SaveAsTemplateButton.tsx` on the transaction form (and an entry in the `/transactions` row dropdown) opens a name prompt and POSTs to `templateService.save`.
+- [x] **Templates stored in SQLite** — new `template` table (`db/schema/template.ts`) with `(userId, name)` unique index. `lib/templates/` ships a Repository (CRUD) + Service (business logic) + Zod schema (`templateDraftSchema`, `templateInputSchema`, `templateNameSchema`), per the architecture rule. Server actions in `features/templates/actions/` are one file each (`save`, `rename`, `delete`).
+- [x] **"New from template" prefills the form** — `TemplatePicker.tsx` on `/transactions/new`; selecting a template navigates to `/transactions/new?template=<id>` and the form hydrates from `templateService.get`. Standalone `/templates` page lists / renames / deletes templates (`TemplatesList.tsx` + `RenameDialog.tsx`).
+- [x] **Architecture refactor (incidental but load-bearing)** — same PRs landed the Repository + Service convention across the journal layer too (`JournalRepository` + `JournalService` replacing the flat `lib/journals.ts`), plus one-action-per-file under `features/*/actions/`. Subsequent phases (4.3 cache, 5.3 verify, 6 CSV) all build on this seam.
+- [ ] _Budget actual-vs-target_ — still parked. Templates are starting-point snapshots, not periodic transactions; `ledger budget` still needs a recurring-schedule story. Tracked under Phase 6.
 
 ### 4.3 Cache & freshness _(complete)_
 
@@ -179,7 +181,7 @@ Bring in Vitest and cover the pure functions first (no `ledger` shell-out needed
 - [x] `validateAccount`
 - [x] `formatAmount` _(via `renderToStaticMarkup` since it returns JSX)_ / `formatDate`
 - [x] Journal helpers: `detectMain` _(exercised via `replaceFromZip` happy paths)_; `replaceJournalFromZip` path-traversal guard _(see note below — adm-zip normalizes input names, so this is tracked for Phase 7 to test via a hand-crafted malicious zip fixture)_
-- [ ] `addTransaction` round-trip _(already covered by `JournalService` tests merged in Phase 4.2)_
+- [x] `addTransaction` round-trip _(covered by `lib/journal/service.test.ts` + `integration.test.ts`, both merged with Phase 4.1)_
 
 ### 5.3 Errors & UX rough edges
 
