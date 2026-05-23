@@ -1,10 +1,13 @@
 'use client';
 
+import { Download } from 'lucide-react';
 import { useState } from 'react';
 import Combobox from '@/components/Combobox';
 import DateFilter from '@/components/DateFilter';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type Props = {
@@ -40,6 +43,15 @@ const Filters = ({ payees, accounts, start, end }: Props) => {
   })();
 
   const hasFilters = q || account || payee || start || end;
+
+  // The export endpoint reuses the same filter params, so the user downloads
+  // whatever subset the table is currently showing.
+  const exportHref = (() => {
+    const u = new URLSearchParams(params.toString());
+    return (
+      '/api/transactions/export' + (u.toString() ? '?' + u.toString() : '')
+    );
+  })();
 
   return (
     <div className="flex flex-col gap-4">
@@ -94,6 +106,18 @@ const Filters = ({ payees, accounts, start, end }: Props) => {
             Clear
           </Button>
         )}
+        <Link
+          href={exportHref}
+          className={cn(
+            buttonVariants({ variant: 'outline', size: 'default' })
+          )}
+          // download is a same-origin hint; the server also sets
+          // Content-Disposition: attachment so most browsers honor it.
+          download
+        >
+          <Download className="h-4 w-4" />
+          Export CSV
+        </Link>
       </div>
     </div>
   );

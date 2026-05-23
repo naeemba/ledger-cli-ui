@@ -195,7 +195,7 @@ Bring in Vitest and cover the pure functions first (no `ledger` shell-out needed
 The Tier-2/3 items from `TODO.md` that need more than a weekend.
 
 - [ ] **Budget actual-vs-target** — `ledger budget`; depends on 4.2 (templates / periodic transactions)
-- [ ] **CSV export** for any report (`ledger csv`)
+- [~] **CSV export** for any report (`ledger csv`) — `/transactions` ships with an Export CSV button that downloads the currently-filtered list as RFC 4180 CSV via `/api/transactions/export`. One row per posting (long format) for spreadsheet/pandas compatibility. Other report pages (balance / monthly / payees) don't have export buttons yet; revisit if asked.
 - [ ] **Commodity / portfolio view** (`bal Assets:Investments -X CCY`)
 - [ ] **Forecasting** (`ledger --forecast`)
 - [ ] **Saved views** — pin a filtered Payees/Register query and reach it from the Dashboard
