@@ -3,6 +3,7 @@ import {
   getJournalStats,
   getRecentTransactions,
 } from './Dashboard.utils';
+import EmptyJournal from './EmptyJournal';
 import Card from '@/components/Card';
 import Help from '@/components/Help';
 import { buttonVariants } from '@/components/ui/button';
@@ -90,6 +91,13 @@ const Dashboard = async () => {
   const [highestAccount, highestAmount] = highestExpenseThisMonth
     ? highestExpenseThisMonth.split('|')
     : [null, null];
+
+  // `ledger stats` returns "0" (or an empty string when the journal is just
+  // the stub from `ensureLayout`). Either way we show the empty-state CTA.
+  const postingsCount = Number(stats.postings || '0');
+  if (!Number.isFinite(postingsCount) || postingsCount === 0) {
+    return <EmptyJournal />;
+  }
 
   return (
     <div className="flex flex-col gap-8">
