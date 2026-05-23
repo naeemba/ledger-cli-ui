@@ -196,7 +196,7 @@ The Tier-2/3 items from `TODO.md` that need more than a weekend.
 
 - [ ] **Budget actual-vs-target** — `ledger budget`; depends on 4.2 (templates / periodic transactions)
 - [~] **CSV export** for any report (`ledger csv`) — `/transactions` ships with an Export CSV button that downloads the currently-filtered list as RFC 4180 CSV via `/api/transactions/export`. One row per posting (long format) for spreadsheet/pandas compatibility. Other report pages (balance / monthly / payees) don't have export buttons yet; revisit if asked.
-- [ ] **Commodity / portfolio view** (`bal Assets:Investments -X CCY`)
+- [x] **Commodity / portfolio view** (`bal Assets:Investments -X CCY`) — `/portfolio` lists holdings under the configurable `PORTFOLIO_ACCOUNT_PREFIX` (default `Assets:Investments`) in their native commodity plus the value converted to your default currency. Empty-state when the prefix matches nothing; account names drill into the existing register page.
 - [ ] **Forecasting** (`ledger --forecast`)
 - [ ] **Saved views** — pin a filtered Payees/Register query and reach it from the Dashboard
 
