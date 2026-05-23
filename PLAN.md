@@ -164,9 +164,9 @@ Pay down what's already known to be wrong before adding more surface area.
 
 ### 5.1 From `TODO.md`
 
-- [ ] Delete orphan `FileUpload` component (no UI references it) — `components/FileUpload/FileUpload.tsx` already shows as deleted in `git status`, just commit
-- [ ] Fix amount parsing fragility in `/registers/monthly/[account]` — `each.split('|')[1].split(' ')[1]` assumes `<unit> <amount>` shape, breaks for unit-less amounts
-- [ ] ESLint 10 upgrade — revisit when `eslint-plugin-react` lands a compatible release
+- [x] Delete orphan `FileUpload` component _(landed earlier — verified absent in main; the bullet in `TODO.md` was already stale by the time this phase opened)_
+- [x] Fix amount parsing fragility in `/registers/monthly/[account]` _(replaced the brittle `split(' ')[1]` with a regex-based `parseAmountColumn` helper in `utils/parseAmountColumn.ts`; 8 unit tests cover unit-less amounts, currency-prefix/suffix orderings, comma thousands, and the null/garbage fallback)_
+- [ ] ESLint 10 upgrade — revisit when `eslint-plugin-react` lands a compatible release _(still blocked on upstream)_
 
 ### 5.2 Tests
 
