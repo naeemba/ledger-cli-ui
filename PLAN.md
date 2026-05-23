@@ -183,10 +183,10 @@ Bring in Vitest and cover the pure functions first (no `ledger` shell-out needed
 
 ### 5.3 Errors & UX rough edges
 
-- [ ] Server-side error boundary that doesn't leak `ledger` stderr to the client
-- [ ] "Journal is empty" empty-state on Dashboard pointing to `/import` or `/transactions/new`
-- [ ] Loading skeletons (currently most pages just block on `ledger`)
-- [ ] **Verify writes with `ledger`** — after `JournalService.addTransaction` / `editTransaction` / `deleteTransaction` and after the `/import` flow, shell out to `ledger -f <main> stats` (or equivalent) and surface a parse error if the journal is no longer valid. Today our parser/writer is trusted to produce ledger-compatible output; if they ever diverge or the user's existing journal has syntax we silently mishandle, broken state lands in the file and only surfaces when a report page renders wrong.
+- [x] Server-side error boundary that doesn't leak `ledger` stderr to the client _(added `app/error.tsx` and `app/global-error.tsx`; both render a generic message + retry button and only log the real error to the server console)_
+- [x] "Journal is empty" empty-state on Dashboard pointing to `/import` or `/transactions/new` _(`features/dashboard/EmptyJournal.tsx`; Dashboard short-circuits to it when `ledger stats` reports zero postings)_
+- [x] Loading skeletons _(per-route `loading.tsx` for `/balance`, `/net-worth`, `/monthly`, `/payees`, `/debts`, `/reconcile`, `/accounts`; row counts and chart blocks tuned per page so payees-style table pages no longer flash a chart placeholder)_
+- [ ] **Verify writes with `ledger`** — after `JournalService.addTransaction` / `editTransaction` / `deleteTransaction` and after the `/import` flow, shell out to `ledger -f <main> stats` (or equivalent) and surface a parse error if the journal is no longer valid. _(Carved out to a follow-up PR since it touches the mutation hot paths — see Phase 5.3 split rationale in the cache PR description.)_
 
 ---
 
