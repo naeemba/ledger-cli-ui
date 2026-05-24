@@ -1,0 +1,28 @@
+import type { CashFlowRow } from '@/features/monthlyComparison/MonthlyComparison.utils';
+import { formatRow } from '@/lib/csv';
+
+const COLUMNS = ['month', 'income', 'expenses', 'net', 'currency'] as const;
+
+const monthKey = (d: Date): string =>
+  `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+
+const fmt = (n: number) => n.toFixed(2);
+
+export const cashFlowRowsToCsv = (
+  rows: CashFlowRow[],
+  currency: string
+): string => {
+  const lines = [COLUMNS.join(',')];
+  for (const r of rows) {
+    lines.push(
+      formatRow([
+        monthKey(r.date),
+        fmt(r.income),
+        fmt(r.expenses),
+        fmt(r.income - r.expenses),
+        currency,
+      ])
+    );
+  }
+  return lines.join('\n') + '\n';
+};

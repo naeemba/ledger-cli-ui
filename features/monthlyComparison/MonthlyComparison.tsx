@@ -1,5 +1,6 @@
 import { getCashFlow } from './MonthlyComparison.utils';
 import Chart from '@/components/Chart';
+import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
 import { getBaseCurrency } from '@/lib/settings';
@@ -25,6 +26,7 @@ const MonthlyComparison = async () => {
             (income minus expenses). Income is shown as a positive number even
             though Ledger records it as a credit.
           </Help>
+          <ExportButton href="/api/monthly/export" />
         </div>
         <p className="mt-1 text-sm text-muted">Income vs expenses by month</p>
       </div>
