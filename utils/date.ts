@@ -8,6 +8,23 @@ export const parseISODate = (iso: string): Date => {
   return new Date(y, (m ?? 1) - 1, day ?? 1);
 };
 
+/**
+ * Strict version: throws `RangeError` if the input isn't a parseable
+ * `YYYY-MM-DD`. Used at server-action / API-route boundaries where a bad
+ * caller param should become a 400 rather than an Invalid Date silently
+ * flowing into downstream calls.
+ */
+export const parseISODateStrict = (
+  iso: string | null | undefined
+): string | undefined => {
+  if (!iso) return undefined;
+  const parsed = parseISODate(iso);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new RangeError(`Invalid date: ${iso}`);
+  }
+  return toISODate(parsed);
+};
+
 export const startOfMonth = (d: Date = new Date()): Date =>
   new Date(d.getFullYear(), d.getMonth(), 1);
 

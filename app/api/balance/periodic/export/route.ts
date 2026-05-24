@@ -3,28 +3,19 @@ import { periodicBalanceRowsToCsv } from '@/lib/balance/csvPeriodic';
 import { parsePeriodicBalanceRows } from '@/lib/balance/parsePeriodic';
 import { csvDownload } from '@/lib/csv';
 import { getBaseCurrency } from '@/lib/settings';
-import { parseISODate, toISODate } from '@/utils/date';
+import { parseISODateStrict } from '@/utils/date';
 import runLedger from '@/utils/runLedger';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
-const parseDateParam = (raw: string | null): string | undefined => {
-  if (!raw) return undefined;
-  const parsed = parseISODate(raw);
-  if (Number.isNaN(parsed.getTime())) {
-    throw new RangeError(`Invalid date: ${raw}`);
-  }
-  return toISODate(parsed);
-};
 
 export async function GET(req: NextRequest): Promise<Response> {
   await requireUser();
   const sp = req.nextUrl.searchParams;
 
   try {
-    const start = parseDateParam(sp.get('start'));
-    const end = parseDateParam(sp.get('end'));
+    const start = parseISODateStrict(sp.get('start'));
+    const end = parseISODateStrict(sp.get('end'));
     if (!start || !end) {
       return NextResponse.json(
         { error: 'Missing start or end date' },

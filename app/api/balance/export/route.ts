@@ -3,19 +3,11 @@ import { balanceRowsToCsv } from '@/lib/balance/csv';
 import { parseBalanceRows } from '@/lib/balance/parse';
 import { csvDownload } from '@/lib/csv';
 import { getBaseCurrency } from '@/lib/settings';
-import { parseISODate, toISODate } from '@/utils/date';
+import { parseISODateStrict } from '@/utils/date';
 import runLedger from '@/utils/runLedger';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
-const parseDateParam = (raw: string): string => {
-  const parsed = parseISODate(raw);
-  if (Number.isNaN(parsed.getTime())) {
-    throw new RangeError(`Invalid date: ${raw}`);
-  }
-  return toISODate(parsed);
-};
 
 const buildArgs = (
   currency: string,
@@ -31,18 +23,18 @@ const buildArgs = (
     '--format',
     '%A|%T\n',
   ];
-  if (start) args.push('-b', parseDateParam(start));
-  if (end) args.push('-e', parseDateParam(end));
+  if (start) args.push('-b', start);
+  if (end) args.push('-e', end);
   return args;
 };
 
 export async function GET(req: NextRequest): Promise<Response> {
   await requireUser();
   const sp = req.nextUrl.searchParams;
-  const start = sp.get('start') ?? undefined;
-  const end = sp.get('end') ?? undefined;
 
   try {
+    const start = parseISODateStrict(sp.get('start'));
+    const end = parseISODateStrict(sp.get('end'));
     const base = await getBaseCurrency();
     const stdout = await runLedger(buildArgs(base, start, end));
     return csvDownload(
