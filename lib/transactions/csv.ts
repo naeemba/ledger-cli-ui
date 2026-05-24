@@ -1,3 +1,4 @@
+import { formatRow } from '@/lib/csv';
 import type { Transaction } from '@/lib/journal/parser';
 
 // One row per posting (long format) is the most useful shape for downstream
@@ -13,18 +14,6 @@ const COLUMNS = [
   'amount',
   'currency',
 ] as const;
-
-const NEEDS_QUOTING = /[",\r\n]/;
-
-/** RFC 4180 quoting: double-quote the field if it contains comma, quote, CR, or LF. */
-const escapeField = (raw: string | null | undefined): string => {
-  const s = raw ?? '';
-  if (!NEEDS_QUOTING.test(s)) return s;
-  return `"${s.replace(/"/g, '""')}"`;
-};
-
-const formatRow = (cells: Array<string | null | undefined>): string =>
-  cells.map(escapeField).join(',');
 
 /**
  * Serialize transactions to CSV (RFC 4180). One row per posting; header row
