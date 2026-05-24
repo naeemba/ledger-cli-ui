@@ -37,6 +37,7 @@ export const setupTestDb = async (
   process.env.DATA_DIR = tmpDir;
   process.env.DATABASE_URL = dbPath;
   process.env.BETTER_AUTH_SECRET = 'x'.repeat(32);
+  process.env.PRICE_REFRESH_ENABLED = 'false';
 
   return { tmpDir, dbPath, sqlite };
 };
