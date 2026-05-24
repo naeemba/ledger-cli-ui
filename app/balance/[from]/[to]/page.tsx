@@ -78,7 +78,7 @@ const PeriodBalance = async ({
             </div>
           </div>
           <ExportButton
-            href={`/api/balance/export?start=${fromParam}&end=${toParam}`}
+            href={`/api/balance/periodic/export?start=${fromParam}&end=${toParam}`}
           />
         </div>
       </div>
