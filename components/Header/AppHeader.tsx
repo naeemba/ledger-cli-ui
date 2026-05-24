@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOutIcon } from 'lucide-react';
+import { LogOutIcon, Settings as SettingsIcon } from 'lucide-react';
 import * as React from 'react';
 import { CommandPaletteTrigger } from '@/components/CommandPalette';
 import { getNavSections } from '@/components/nav/config';
@@ -102,6 +102,9 @@ const AppHeader = ({ slot }: Props) => {
                 </DropdownMenuLabel>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link href="/settings" />}>
+                <SettingsIcon /> Settings
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={signOut}>
                 <LogOutIcon /> Sign out
               </DropdownMenuItem>

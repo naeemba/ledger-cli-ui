@@ -12,6 +12,7 @@ import {
   ListChecks,
   PiggyBank,
   PlusCircle,
+  Settings,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -176,6 +177,20 @@ export const getNavSections = (): NavSection[] => {
           description: 'Replace your journal from a file or .zip archive.',
           icon: FileUp,
           keywords: ['upload', 'replace', 'zip'],
+        },
+      ],
+    },
+    {
+      id: 'account',
+      title: 'Account',
+      items: [
+        {
+          id: 'settings',
+          title: 'Settings',
+          href: '/settings',
+          description: 'Personal preferences like base currency.',
+          icon: Settings,
+          keywords: ['preferences', 'currency', 'profile'],
         },
       ],
     },
