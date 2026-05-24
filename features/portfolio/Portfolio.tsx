@@ -5,6 +5,7 @@ import {
   mergePortfolio,
   type PortfolioRow,
 } from './parsePortfolio';
+import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -46,6 +47,7 @@ const Portfolio = async () => {
             Per-account holdings under <code>{prefix}</code> in their native
             commodities, plus the value converted to your default currency.
           </Help>
+          <ExportButton href="/api/portfolio/export" />
         </header>
         <Card className="flex flex-col items-center gap-4 p-10 text-center">
           <Briefcase className="h-6 w-6 opacity-50" />
@@ -78,6 +80,7 @@ const Portfolio = async () => {
               Prices come from your <code>price-db.ledger</code> if you have
               one; missing prices show a blank converted column.
             </Help>
+            <ExportButton href="/api/portfolio/export" />
           </div>
           <p className="mt-1 text-sm text-muted">
             <code>{prefix}</code>
