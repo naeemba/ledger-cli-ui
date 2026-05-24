@@ -1,8 +1,12 @@
 import { Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getOptionalUser } from '@/lib/auth/require-user';
 import { getBaseCurrency, getMissingRateCommodities } from '@/lib/settings';
 
 const BaseCurrencyBanner = async () => {
+  const user = await getOptionalUser();
+  if (!user) return null;
+
   const [base, { unconverted }] = await Promise.all([
     getBaseCurrency(),
     getMissingRateCommodities(),

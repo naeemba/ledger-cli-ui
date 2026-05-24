@@ -4,12 +4,12 @@ import { getOptionalUser } from '@/lib/auth/require-user';
 import { getAvailableCurrencies, userSettingRepository } from '@/lib/settings';
 
 const BaseCurrencyPickerSlot = async () => {
-  const [{ currencies, base }, user] = await Promise.all([
-    getAvailableCurrencies(),
-    getOptionalUser(),
-  ]);
+  const user = await getOptionalUser();
   if (!user) return null;
-  const row = await userSettingRepository.get(user.id);
+  const [{ currencies, base }, row] = await Promise.all([
+    getAvailableCurrencies(),
+    userSettingRepository.get(user.id),
+  ]);
   return (
     <BaseCurrencyPicker
       current={base}
