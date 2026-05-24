@@ -1,5 +1,7 @@
+import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { Card } from '@/components/ui/card';
+import { parseBalanceRows } from '@/lib/balance/parse';
 import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
 import runLedger from '@/utils/runLedger';
@@ -16,8 +18,11 @@ const Balance = async () => {
     '--format',
     '%A|%T\n',
   ]);
-  const result = stdout.split('\n').filter(Boolean);
-  const total = [...result].reverse()[0]?.split('|')[1] ?? '';
+  const rows = parseBalanceRows(stdout);
+  const total = rows.find((r) => r.account === 'Total')?.amount ?? '';
+  const result = rows
+    .filter((r) => r.account !== 'Total')
+    .map((r) => `${r.account}|${r.amount}`);
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -32,13 +37,16 @@ const Balance = async () => {
           </div>
           <p className="mt-1 text-sm text-muted">Assets & liabilities</p>
         </div>
-        <div className="text-right">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted">
-            Total
+        <div className="flex items-end gap-3">
+          <div className="text-right">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted">
+              Total
+            </div>
+            <div className="text-2xl font-semibold tracking-tight">
+              {formatAmount(total, true)}
+            </div>
           </div>
-          <div className="text-2xl font-semibold tracking-tight">
-            {formatAmount(total, true)}
-          </div>
+          <ExportButton href="/api/balance/export" />
         </div>
       </div>
 

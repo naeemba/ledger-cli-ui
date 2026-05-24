@@ -3,6 +3,7 @@ import {
   type TransactionFilters,
 } from '@/features/transactions/applyTransactionFilters';
 import { requireUser } from '@/lib/auth/require-user';
+import { csvDownload } from '@/lib/csv';
 import { journalService } from '@/lib/journal';
 import { transactionsToCsv } from '@/lib/transactions/csv';
 import { type NextRequest, NextResponse } from 'next/server';
@@ -25,16 +26,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     const filtered = applyTransactionFilters(transactions, filters).sort(
       (a, b) => b.date.localeCompare(a.date)
     );
-    const csv = transactionsToCsv(filtered);
-    const today = new Date().toISOString().slice(0, 10);
-    return new Response(csv, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="transactions-${today}.csv"`,
-        'Cache-Control': 'no-store',
-      },
-    });
+    return csvDownload(transactionsToCsv(filtered), 'transactions');
   } catch (e) {
     console.error('csv export failed', e);
     return NextResponse.json(

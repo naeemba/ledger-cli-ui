@@ -1,4 +1,5 @@
 import AccountsView from './AccountsView';
+import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import runLedger from '@/utils/runLedger';
 
@@ -29,6 +30,7 @@ const Accounts = async () => {
             <code>Assets:Bank:Checking</code>). Use the buttons next to a name
             to view its full transaction history or a monthly summary.
           </Help>
+          <ExportButton href="/api/accounts/export" />
         </div>
         <p className="mt-1 text-sm text-muted">
           {accounts.length} account{accounts.length === 1 ? '' : 's'}

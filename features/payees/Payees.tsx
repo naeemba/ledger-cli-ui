@@ -1,20 +1,15 @@
 import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
+import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import { parsePayeeRows } from '@/lib/payees/parse';
 import { getBaseCurrency } from '@/lib/settings';
 import { parseISODate, toISODate } from '@/utils/date';
 import formatDate, { Format } from '@/utils/formatDate';
 import runLedger from '@/utils/runLedger';
 
 const TOP_N = 15;
-
-const parseAmount = (raw: string): number => {
-  if (!raw) return 0;
-  const parts = raw.trim().split(/\s+/);
-  const numericPart = parts.length > 1 ? parts[1] : parts[0];
-  return Number(numericPart.replaceAll(',', '')) || 0;
-};
 
 const formatNumber = (n: number) =>
   n.toLocaleString(undefined, {
@@ -44,18 +39,7 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
     'NNN%P|%t\n',
   ]);
 
-  const totals = new Map<string, number>();
-  for (const line of stdout.split('NNN')) {
-    const [payee, amount] = line.split('|').map((s) => s.trim());
-    if (!payee || !amount) continue;
-    totals.set(payee, (totals.get(payee) ?? 0) + parseAmount(amount));
-  }
-  const sorted = Array.from(totals.entries())
-    .map(([payee, total]) => ({ payee, total }))
-    .filter((r) => r.total > 0)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, TOP_N);
-
+  const sorted = parsePayeeRows(stdout).slice(0, TOP_N);
   const grandTotal = sorted.reduce((acc, r) => acc + r.total, 0);
 
   return (
@@ -70,6 +54,9 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
               ranks them. Useful for &ldquo;where is the money actually
               going?&rdquo;
             </Help>
+            <ExportButton
+              href={`/api/payees/export?start=${fromParam}&end=${toParam}`}
+            />
           </div>
           <p className="mt-1 text-sm text-muted">
             {formatDate(from.toISOString(), Format.DATE)} –{' '}

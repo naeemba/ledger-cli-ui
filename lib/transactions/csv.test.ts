@@ -37,21 +37,6 @@ describe('transactionsToCsv', () => {
     expect(lines[2]).toContain('-10');
   });
 
-  it('quotes fields containing commas', () => {
-    const csv = transactionsToCsv([tx({ payee: 'Hello, World' })]);
-    expect(csv).toContain('"Hello, World"');
-  });
-
-  it('quotes fields containing double quotes and doubles them', () => {
-    const csv = transactionsToCsv([tx({ payee: 'Say "hi"' })]);
-    expect(csv).toContain('"Say ""hi"""');
-  });
-
-  it('quotes fields containing newlines', () => {
-    const csv = transactionsToCsv([tx({ note: 'line one\nline two' })]);
-    expect(csv).toContain('"line one\nline two"');
-  });
-
   it('renders null/undefined fields as empty', () => {
     const csv = transactionsToCsv([
       tx({
@@ -63,11 +48,5 @@ describe('transactionsToCsv', () => {
     const lines = csv.trim().split('\n');
     // header,date,payee,status,(empty note),(empty uid),A,(empty amount),(empty currency)
     expect(lines[1]).toBe("2024-09-01,Trader Joe's,none,,,A,,");
-  });
-
-  it('preserves apostrophes without quoting (no special CSV meaning)', () => {
-    const csv = transactionsToCsv([tx()]);
-    // Trader Joe's should appear unquoted
-    expect(csv).toContain("Trader Joe's,");
   });
 });

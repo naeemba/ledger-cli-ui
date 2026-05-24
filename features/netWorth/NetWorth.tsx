@@ -1,18 +1,14 @@
 import Chart from '@/components/Chart';
+import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import { parseNetWorthRows } from '@/lib/netWorth/parse';
 import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
 import runLedger from '@/utils/runLedger';
 
 const MONTHS_BACK = 36;
-
-const parseAmount = (raw: string): number => {
-  const parts = raw.trim().split(/\s+/);
-  const numericPart = parts.length > 1 ? parts[1] : parts[0];
-  return Number(numericPart.replaceAll(',', ''));
-};
 
 const NetWorth = async () => {
   const currency = await getBaseCurrency();
@@ -30,18 +26,18 @@ const NetWorth = async () => {
     { sortByDate: false }
   );
 
-  const allRows = stdout
+  const rows = parseNetWorthRows(stdout).slice(-MONTHS_BACK);
+  const labels = rows.map((r) => formatDate(r.date, Format.SHORT_MONTH_YEAR));
+  const data = rows.map((r) => r.value);
+
+  // Preserve the raw amount string (`"<CCY> <comma-grouped>"`) for the last
+  // row so `formatAmount` renders the "Current" total identically to before.
+  const rawAmounts = stdout
     .split('NNN')
     .map((line) => line.split('|').map((s) => s.trim()))
-    .filter(([date, amount]) => date && amount);
-  const rows = allRows.slice(-MONTHS_BACK);
-
-  const labels = rows.map(([date]) =>
-    formatDate(date, Format.SHORT_MONTH_YEAR)
-  );
-  const data = rows.map(([, amount]) => parseAmount(amount));
-
-  const latest = rows[rows.length - 1]?.[1] ?? '';
+    .filter(([date, amount]) => date && amount)
+    .map(([, amount]) => amount);
+  const latest = rawAmounts[rawAmounts.length - 1] ?? '';
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,6 +51,7 @@ const NetWorth = async () => {
               negative, so this number rises as you save and falls as you take
               on debt.
             </Help>
+            <ExportButton href="/api/net-worth/export" />
           </div>
           <p className="mt-1 text-sm text-muted">
             Trend over the last {MONTHS_BACK} months

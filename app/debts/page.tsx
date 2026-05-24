@@ -1,3 +1,4 @@
+import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
@@ -28,6 +29,7 @@ const Debts = async () => {
               <code> Assets:Credited</code>. A positive balance means someone
               owes you, a negative balance means you owe them.
             </Help>
+            <ExportButton href="/api/debts/export" />
           </div>
           <p className="mt-1 text-sm text-muted">Outstanding credit by payee</p>
         </div>
