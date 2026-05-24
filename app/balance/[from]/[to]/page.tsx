@@ -1,5 +1,6 @@
 import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
+import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
 import { getBaseCurrency } from '@/lib/settings';
@@ -67,13 +68,18 @@ const PeriodBalance = async ({
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 className="text-lg font-medium text-fg">Total Expenses</h2>
-        <div className="text-right">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted">
-            Total
+        <div className="flex items-end gap-3">
+          <div className="text-right">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted">
+              Total
+            </div>
+            <div className="text-2xl font-semibold tracking-tight">
+              {formatAmount(total, true)}
+            </div>
           </div>
-          <div className="text-2xl font-semibold tracking-tight">
-            {formatAmount(total, true)}
-          </div>
+          <ExportButton
+            href={`/api/balance/export?start=${fromParam}&end=${toParam}`}
+          />
         </div>
       </div>
 
