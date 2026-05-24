@@ -12,7 +12,12 @@ import { usePathname } from 'next/navigation';
 
 const AUTH_PATHS = new Set(['/login', '/signup']);
 
-const AppShell = ({ children }: { children: React.ReactNode }) => {
+type Props = {
+  children: React.ReactNode;
+  headerSlot?: React.ReactNode;
+};
+
+const AppShell = ({ children, headerSlot }: Props) => {
   const pathname = usePathname();
   const isAuthPage = AUTH_PATHS.has(pathname);
 
@@ -33,7 +38,7 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset>
-            <AppHeader />
+            <AppHeader slot={headerSlot} />
             <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
               {children}
             </div>

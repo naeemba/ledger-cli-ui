@@ -26,7 +26,9 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/lib/auth/use-auth';
 import Link from 'next/link';
 
-const AppHeader = () => {
+type Props = { slot?: React.ReactNode };
+
+const AppHeader = ({ slot }: Props) => {
   const sections = React.useMemo(() => getNavSections(), []);
   const { user, signOut } = useAuth();
   const userInitial = (user?.email?.[0] ?? 'U').toUpperCase();
@@ -68,6 +70,7 @@ const AppHeader = () => {
       </NavigationMenu>
 
       <div className="ml-auto flex items-center gap-2">
+        {slot}
         <CommandPaletteTrigger />
         {user && (
           <DropdownMenu>

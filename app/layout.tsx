@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import AppShell from '@/components/AppShell';
 import BaseCurrencyBanner from '@/components/BaseCurrencyBanner';
+import { BaseCurrencyPickerSlot } from '@/components/BaseCurrencyPicker';
 import { APP_NAME } from '@/lib/app';
 import { cn } from '@/lib/utils';
 import { Geist } from 'next/font/google';
@@ -21,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn('font-sans', geist.variable)}>
       <body>
-        <AppShell>
+        <AppShell headerSlot={<BaseCurrencyPickerSlot />}>
           <BaseCurrencyBanner />
           {children}
         </AppShell>
