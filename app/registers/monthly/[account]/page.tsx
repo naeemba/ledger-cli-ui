@@ -1,9 +1,9 @@
 import Chart from '@/components/Chart';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import parseAmountColumn from '@/utils/parseAmountColumn';
 import runLedger from '@/utils/runLedger';
 import isValidAccount from '@/utils/validateAccount';
@@ -14,7 +14,7 @@ const Monthly = async ({
 }: {
   params: Promise<{ account: string }>;
 }) => {
-  const defaultCurrency = getDefaultCurrency() ?? 'USD';
+  const defaultCurrency = await getBaseCurrency();
   const { account: accountParam } = await params;
   const account = decodeURIComponent(accountParam);
   if (!isValidAccount(account)) notFound();

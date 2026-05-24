@@ -1,9 +1,9 @@
 import Chart from '@/components/Chart';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 
 const MONTHS_BACK = 36;
@@ -15,7 +15,7 @@ const parseAmount = (raw: string): number => {
 };
 
 const NetWorth = async () => {
-  const currency = getDefaultCurrency() ?? 'USD';
+  const currency = await getBaseCurrency();
   const stdout = await runLedger(
     [
       'reg',

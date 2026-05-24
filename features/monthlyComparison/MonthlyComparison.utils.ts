@@ -1,4 +1,3 @@
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 
 const MONTHS_BACK = 36;
@@ -10,8 +9,10 @@ const parseAmount = (raw: string): number => {
   return Number(numericPart.replaceAll(',', '')) || 0;
 };
 
-const fetchMonthly = async (query: string): Promise<Map<string, number>> => {
-  const currency = getDefaultCurrency() ?? 'USD';
+const fetchMonthly = async (
+  query: string,
+  currency: string
+): Promise<Map<string, number>> => {
   const stdout = await runLedger(
     ['reg', query, '--monthly', '-X', currency, '--format', 'NNN%D|%t\n'],
     { sortByDate: false }
@@ -30,10 +31,10 @@ export type CashFlowRow = {
   expenses: number;
 };
 
-export const getCashFlow = async (): Promise<CashFlowRow[]> => {
+export const getCashFlow = async (currency: string): Promise<CashFlowRow[]> => {
   const [expensesMap, incomeMap] = await Promise.all([
-    fetchMonthly('^Expenses'),
-    fetchMonthly('^Income'),
+    fetchMonthly('^Expenses', currency),
+    fetchMonthly('^Income', currency),
   ]);
   const allDates = new Set([...expensesMap.keys(), ...incomeMap.keys()]);
   return Array.from(allDates)

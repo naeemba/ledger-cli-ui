@@ -2,10 +2,10 @@ import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import { getBaseCurrency } from '@/lib/settings';
 import { parseISODate, toISODate } from '@/utils/date';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 import Link from 'next/link';
 
@@ -17,7 +17,7 @@ const PeriodBalance = async ({
   const { from: fromParam, to: toParam } = await params;
   const from = parseISODate(fromParam);
   const to = parseISODate(toParam);
-  const defaultCurrency = getDefaultCurrency() ?? 'USD';
+  const defaultCurrency = await getBaseCurrency();
   const stdout = await runLedger([
     'bal',
     'Expenses',

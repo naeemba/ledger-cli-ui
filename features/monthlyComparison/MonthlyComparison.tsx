@@ -2,8 +2,8 @@ import { getCashFlow } from './MonthlyComparison.utils';
 import Chart from '@/components/Chart';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import { getBaseCurrency } from '@/lib/settings';
 import formatDate, { Format } from '@/utils/formatDate';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 
 const formatNumber = (n: number) =>
   n.toLocaleString(undefined, {
@@ -12,8 +12,8 @@ const formatNumber = (n: number) =>
   });
 
 const MonthlyComparison = async () => {
-  const rows = await getCashFlow();
-  const currency = (getDefaultCurrency() ?? 'USD').toUpperCase();
+  const currency = await getBaseCurrency();
+  const rows = await getCashFlow(currency);
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,9 +34,11 @@ const MonthlyComparison = async () => {
           <thead>
             <tr>
               <th>Month</th>
-              <th className="text-right">Income ({currency})</th>
-              <th className="text-right">Expenses ({currency})</th>
-              <th className="text-right">Net ({currency})</th>
+              <th className="text-right">Income ({currency.toUpperCase()})</th>
+              <th className="text-right">
+                Expenses ({currency.toUpperCase()})
+              </th>
+              <th className="text-right">Net ({currency.toUpperCase()})</th>
             </tr>
           </thead>
           <tbody>

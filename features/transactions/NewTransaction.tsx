@@ -3,13 +3,13 @@ import { createTransactionAction } from './actions';
 import Help from '@/components/Help';
 import TemplatePicker from '@/features/templates/TemplatePicker';
 import { requireUser } from '@/lib/auth/require-user';
+import { getBaseCurrency } from '@/lib/settings';
 import { templateRepository } from '@/lib/templates';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 import {
   getAccountSuggestions,
   getPayeeSuggestions,
 } from '@/lib/transactions/suggestions';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 
 type Props = { templateId?: string };
 
@@ -20,7 +20,7 @@ const NewTransaction = async ({ templateId }: Props) => {
     getPayeeSuggestions(),
     templateRepository.list(user.id),
   ]);
-  const defaultCurrency = getDefaultCurrency() ?? 'USD';
+  const defaultCurrency = await getBaseCurrency();
 
   // Note: we intentionally do NOT seed `date` here. The client computes today's
   // date in the user's local timezone (`TransactionForm` falls back to its own

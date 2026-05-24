@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOutIcon } from 'lucide-react';
+import { LogOutIcon, Settings as SettingsIcon } from 'lucide-react';
 import * as React from 'react';
 import { CommandPaletteTrigger } from '@/components/CommandPalette';
 import { getNavSections } from '@/components/nav/config';
@@ -26,7 +26,9 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/lib/auth/use-auth';
 import Link from 'next/link';
 
-const AppHeader = () => {
+type Props = { slot?: React.ReactNode };
+
+const AppHeader = ({ slot }: Props) => {
   const sections = React.useMemo(() => getNavSections(), []);
   const { user, signOut } = useAuth();
   const userInitial = (user?.email?.[0] ?? 'U').toUpperCase();
@@ -68,6 +70,7 @@ const AppHeader = () => {
       </NavigationMenu>
 
       <div className="ml-auto flex items-center gap-2">
+        {slot}
         <CommandPaletteTrigger />
         {user && (
           <DropdownMenu>
@@ -99,6 +102,9 @@ const AppHeader = () => {
                 </DropdownMenuLabel>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link href="/settings" />}>
+                <SettingsIcon /> Settings
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={signOut}>
                 <LogOutIcon /> Sign out
               </DropdownMenuItem>

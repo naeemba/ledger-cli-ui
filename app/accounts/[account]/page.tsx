@@ -1,7 +1,7 @@
 import Help from '@/components/Help';
+import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 import isValidAccount from '@/utils/validateAccount';
 import { notFound } from 'next/navigation';
@@ -11,7 +11,7 @@ const Account = async ({
 }: {
   params: Promise<{ account: string }>;
 }) => {
-  const defaultCurrency = getDefaultCurrency() ?? 'USD';
+  const defaultCurrency = await getBaseCurrency();
   const { account: accountParam } = await params;
   const account = decodeURIComponent(accountParam);
   if (!isValidAccount(account)) notFound();

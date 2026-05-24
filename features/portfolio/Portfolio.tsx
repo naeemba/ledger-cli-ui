@@ -9,14 +9,14 @@ import Help from '@/components/Help';
 import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { env } from '@/lib/env';
+import { getBaseCurrency } from '@/lib/settings';
 import { cn } from '@/lib/utils';
 import formatAmount from '@/utils/formatAmount';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 import Link from 'next/link';
 
 const Portfolio = async () => {
-  const defaultCurrency = getDefaultCurrency() ?? 'USD';
+  const defaultCurrency = await getBaseCurrency();
   const prefix = env.PORTFOLIO_ACCOUNT_PREFIX;
 
   // `--flat` keeps the rollup hierarchy from interleaving sub-account totals

@@ -1,12 +1,12 @@
 import Help from '@/components/Help';
 import { Card } from '@/components/ui/card';
+import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 import Link from 'next/link';
 
 const Balance = async () => {
-  const defaultCurrency = getDefaultCurrency() ?? 'USD';
+  const defaultCurrency = await getBaseCurrency();
   const stdout = await runLedger([
     'balance',
     'Assets',

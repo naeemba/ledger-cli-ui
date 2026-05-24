@@ -2,9 +2,9 @@ import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import { getBaseCurrency } from '@/lib/settings';
 import { parseISODate, toISODate } from '@/utils/date';
 import formatDate, { Format } from '@/utils/formatDate';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 
 const TOP_N = 15;
@@ -28,7 +28,7 @@ type Props = {
 };
 
 const Payees = async ({ from: fromParam, to: toParam }: Props) => {
-  const currency = (getDefaultCurrency() ?? 'USD').toUpperCase();
+  const currency = (await getBaseCurrency()).toUpperCase();
   const from = parseISODate(fromParam);
   const to = parseISODate(toParam);
   const stdout = await runLedger([
