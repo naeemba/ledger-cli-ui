@@ -1,15 +1,15 @@
 import { parseReconcileRows } from './Reconcile.utils';
 import Help from '@/components/Help';
+import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 import Link from 'next/link';
 
 const STALE_DAYS = 30;
 
 const Reconcile = async () => {
-  const currency = getDefaultCurrency() ?? 'USD';
+  const currency = await getBaseCurrency();
   const stdout = await runLedger(
     ['reg', '--uncleared', '-X', currency, '--format', 'NNN%D|%P|%A|%t\n'],
     { sortByDate: false }

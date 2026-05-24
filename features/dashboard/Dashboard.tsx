@@ -8,6 +8,7 @@ import Card from '@/components/Card';
 import Help from '@/components/Help';
 import { buttonVariants } from '@/components/ui/button';
 import { Card as ShadcnCard } from '@/components/ui/card';
+import { getBaseCurrency } from '@/lib/settings';
 import {
   endOfMonth,
   endOfYear,
@@ -17,7 +18,6 @@ import {
 } from '@/utils/date';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import runLedger from '@/utils/runLedger';
 import Link from 'next/link';
 
@@ -36,7 +36,7 @@ const Stat = ({ label, value }: { label: string; value: React.ReactNode }) => (
 );
 
 const Dashboard = async () => {
-  const currency = getDefaultCurrency() ?? 'USD';
+  const currency = await getBaseCurrency();
   const now = new Date();
   const monthRange = `${toISODate(startOfMonth(now))}/${toISODate(endOfMonth(now))}`;
   const yearRange = `${toISODate(startOfYear(now))}/${toISODate(endOfYear(now))}`;

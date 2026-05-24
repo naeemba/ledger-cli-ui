@@ -4,11 +4,11 @@ import { updateTransactionAction } from './actions';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { fingerprintDraft } from '@/lib/journal/fingerprint';
+import { getBaseCurrency } from '@/lib/settings';
 import {
   getAccountSuggestions,
   getPayeeSuggestions,
 } from '@/lib/transactions/suggestions';
-import getDefaultCurrency from '@/utils/getDefaultCurrency';
 import { notFound } from 'next/navigation';
 
 const EditTransaction = async ({ uid }: { uid: string }) => {
@@ -16,7 +16,7 @@ const EditTransaction = async ({ uid }: { uid: string }) => {
   const tx = await journalService.findTransaction(user.id, uid);
   if (!tx) notFound();
 
-  const defaultCurrency = getDefaultCurrency() ?? 'USD';
+  const defaultCurrency = await getBaseCurrency();
   const initialDraft = {
     date: tx.date,
     payee: tx.payee,
