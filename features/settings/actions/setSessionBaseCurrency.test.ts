@@ -18,6 +18,7 @@ vi.mock('@/lib/settings', () => ({
         ? { success: true, data: v.trim() }
         : { success: false, error: new Error('bad') },
   },
+  COOKIE_NAME: 'baseCurrency',
 }));
 
 beforeEach(() => {

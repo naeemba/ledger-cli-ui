@@ -1,6 +1,6 @@
 'use server';
 
-import { COOKIE_NAME } from '@/lib/settings/getBaseCurrency';
+import { COOKIE_NAME } from '@/lib/settings';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
