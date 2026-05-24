@@ -1,4 +1,5 @@
 import { parseReconcileRows } from './Reconcile.utils';
+import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
@@ -31,6 +32,7 @@ const Reconcile = async () => {
               journal. Stale entries often indicate a forgotten import or an
               unreconciled bank statement.
             </Help>
+            <ExportButton href="/api/reconcile/export" />
           </div>
           <p className="mt-1 text-sm text-muted">
             {rows.length} uncleared posting{rows.length === 1 ? '' : 's'}
