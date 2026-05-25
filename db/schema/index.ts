@@ -1,7 +1,7 @@
 export { account } from './account';
-export { commodityPrice } from './commodityPrice';
+export { commodityPrice, type CommodityPrice } from './commodityPrice';
 export { passkey } from './passkey';
-export { priceFetchRun } from './priceFetchRun';
+export { priceFetchRun, type PriceFetchRun } from './priceFetchRun';
 export { session } from './session';
 export { template } from './template';
 export { user } from './user';
