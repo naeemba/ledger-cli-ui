@@ -23,6 +23,13 @@ const envSchema = clientEnvSchema.extend({
   // Account prefix the /portfolio report aggregates. Matches whatever your
   // journal calls its investment account tree (e.g. "Assets:Brokerage").
   PORTFOLIO_ACCOUNT_PREFIX: z.string().default('Assets:Investments'),
+
+  // Prices
+  PRICE_REFRESH_HOUR: z.coerce.number().int().min(0).max(23).default(6),
+  PRICE_REFRESH_ENABLED: z
+    .union([z.literal('true'), z.literal('false')])
+    .default('true')
+    .transform((v) => v === 'true'),
 });
 
 const parsed = envSchema.safeParse(process.env);

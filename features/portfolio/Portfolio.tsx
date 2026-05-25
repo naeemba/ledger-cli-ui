@@ -1,5 +1,7 @@
 import { Briefcase } from 'lucide-react';
 import 'server-only';
+import PriceStatus from './PriceStatus';
+import RefreshPricesButton from './RefreshPricesButton';
 import {
   extractTotal,
   mergePortfolio,
@@ -41,13 +43,19 @@ const Portfolio = async () => {
   if (rows.length === 0) {
     return (
       <div className="flex flex-col gap-6">
-        <header className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold">Portfolio</h1>
-          <Help label="About portfolio">
-            Per-account holdings under <code>{prefix}</code> in their native
-            commodities, plus the value converted to your default currency.
-          </Help>
-          <ExportButton href="/api/portfolio/export" />
+        <header className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold">Portfolio</h1>
+            <Help label="About portfolio">
+              Per-account holdings under <code>{prefix}</code> in their native
+              commodities, plus the value converted to your default currency.
+            </Help>
+            <ExportButton href="/api/portfolio/export" />
+          </div>
+          <div className="flex items-start justify-between gap-4">
+            <PriceStatus />
+            <RefreshPricesButton />
+          </div>
         </header>
         <Card className="flex flex-col items-center gap-4 p-10 text-center">
           <Briefcase className="h-6 w-6 opacity-50" />
@@ -70,31 +78,39 @@ const Portfolio = async () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Portfolio</h1>
-            <Help label="About portfolio">
-              Per-account holdings under <code>{prefix}</code> in their native
-              commodities, plus the value converted to your default currency.
-              Prices come from your <code>price-db.ledger</code> if you have
-              one; missing prices show a blank converted column.
-            </Help>
-            <ExportButton href="/api/portfolio/export" />
+      <header className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Portfolio
+              </h1>
+              <Help label="About portfolio">
+                Per-account holdings under <code>{prefix}</code> in their native
+                commodities, plus the value converted to your default currency.
+                Prices come from your <code>price-db.ledger</code> if you have
+                one; missing prices show a blank converted column.
+              </Help>
+              <ExportButton href="/api/portfolio/export" />
+            </div>
+            <p className="mt-1 text-sm text-muted">
+              <code>{prefix}</code>
+            </p>
           </div>
-          <p className="mt-1 text-sm text-muted">
-            <code>{prefix}</code>
-          </p>
+          <div className="text-right">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted">
+              Total ({defaultCurrency.toUpperCase()})
+            </div>
+            <div className="text-2xl font-semibold tracking-tight">
+              {formatAmount(total, true)}
+            </div>
+          </div>
         </div>
-        <div className="text-right">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted">
-            Total ({defaultCurrency.toUpperCase()})
-          </div>
-          <div className="text-2xl font-semibold tracking-tight">
-            {formatAmount(total, true)}
-          </div>
+        <div className="flex items-start justify-between gap-4">
+          <PriceStatus />
+          <RefreshPricesButton />
         </div>
-      </div>
+      </header>
 
       <Card className="gap-0 overflow-hidden p-0">
         <table>
