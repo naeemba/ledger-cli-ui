@@ -64,7 +64,7 @@ export class PriceService {
     const target = path.join(layout.dir, PRICE_DB_NAME);
     await this.deps.journalRepo.writeFileAtomic(target, body);
     try {
-      revalidateTag(getJournalCacheTag(userId), 'default');
+      revalidateTag(getJournalCacheTag(userId), 'max');
     } catch {
       // revalidateTag throws outside a Next.js request context (e.g. cron, tests).
       // This is acceptable — the cache will be invalidated on the next request.
