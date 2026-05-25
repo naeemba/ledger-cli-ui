@@ -27,10 +27,10 @@ export type RefreshResult =
 const sanitize = (msg: string): string =>
   msg.replace(/\/[^\s]+/g, '<path>').slice(0, 500);
 
-const localDate = (d: Date): string => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+const utcDate = (d: Date): string => {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 };
 
@@ -82,13 +82,11 @@ export class PriceService {
       const users = await this.listUsers();
       await this.maybeMigrateLegacyFiles(users);
 
-      const perUser = new Map<string, { base: string; symbols: string[] }>();
       const pairs = new Map<string, QuotePair>(); // key: `${symbol}|${quote}`
       for (const userId of users) {
         const base = await this.resolveBaseCurrency(userId);
         const symbols = await this.listNormalizedSymbolsForUser(userId);
         const filtered = symbols.filter((s) => s !== base);
-        perUser.set(userId, { base, symbols: filtered });
         for (const s of filtered) {
           pairs.set(`${s}|${base}`, { symbol: s, quote: base });
         }
@@ -102,7 +100,7 @@ export class PriceService {
           quote: q.quote,
           price: q.price,
           fetchedAt: q.fetchedAt,
-          fetchedDate: localDate(q.fetchedAt),
+          fetchedDate: utcDate(q.fetchedAt),
         }))
       );
 
