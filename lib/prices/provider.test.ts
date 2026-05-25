@@ -114,12 +114,13 @@ describe('fetchPrices', () => {
   it('throws on second network error', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      .mockRejectedValue(new TypeError('network error'));
+      .mockRejectedValueOnce(new TypeError('network error'))
+      .mockRejectedValueOnce(new TypeError('network error'));
 
     const resultPromise = fetchPrices([{ symbol: 'BTC', quote: 'USD' }]);
+    const assertion = expect(resultPromise).rejects.toThrow('network error');
     await vi.advanceTimersByTimeAsync(1000);
-
-    await expect(resultPromise).rejects.toThrow('network error');
+    await assertion;
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });
