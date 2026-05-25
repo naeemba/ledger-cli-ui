@@ -33,14 +33,17 @@ const PriceStatus = async () => {
   let primary: string;
   if (!latest) {
     primary = 'Last refresh: never';
+  } else if (latest.completedAt == null) {
+    // Row was inserted as a 'failed' tombstone and has not been finalised yet,
+    // so the refresh is in flight.
+    primary = `Refreshing prices… (started ${formatRelative(latest.startedAt)})`;
   } else if (latest.status === 'failed') {
-    primary = `Refresh failed ${formatRelative(latest.startedAt)}${
+    primary = `Refresh failed ${formatRelative(latest.completedAt)}${
       latest.errorMessage ? ` — ${latest.errorMessage}` : ''
     }`;
   } else {
-    const completed = latest.completedAt ?? latest.startedAt;
     const total = latest.symbolsFetched + latest.symbolsFailed;
-    primary = `Last refresh: ${formatRelative(completed)} · ${latest.symbolsFetched}/${total || latest.symbolsFetched} symbols`;
+    primary = `Last refresh: ${formatRelative(latest.completedAt)} · ${latest.symbolsFetched}/${total || latest.symbolsFetched} symbols`;
   }
 
   return (
