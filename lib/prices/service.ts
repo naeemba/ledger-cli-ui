@@ -73,9 +73,12 @@ export class PriceService {
 
   private async runOnce(): Promise<RefreshResult> {
     const startedAt = new Date();
+    // Tombstone the run as 'failed' up front so a hard process termination
+    // (SIGKILL, OOM, host restart) between insert and final update leaves an
+    // honest record instead of a phantom successful row.
     const run = await this.deps.runRepo.insert({
       startedAt,
-      status: 'success',
+      status: 'failed',
     });
 
     try {
