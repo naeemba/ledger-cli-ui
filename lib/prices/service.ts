@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { eq } from 'drizzle-orm';
+import 'server-only';
 import { renderPriceDb, hasGeneratedBanner } from './formatter';
 import { withPriceLock } from './lock';
 import { parseLegacyPriceDb } from './migration';
@@ -26,7 +27,12 @@ export type RefreshResult =
 const sanitize = (msg: string): string =>
   msg.replace(/\/[^\s]+/g, '<path>').slice(0, 500);
 
-const isoDateUTC = (d: Date): string => d.toISOString().slice(0, 10);
+const localDate = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
 
 type Deps = {
   db: DbInstance;
@@ -56,9 +62,7 @@ export class PriceService {
     const filtered = all.filter((r) => userSymbols.has(r.symbol));
     const body = renderPriceDb(filtered);
     const target = path.join(layout.dir, PRICE_DB_NAME);
-    const tmp = target + '.tmp';
-    await fs.writeFile(tmp, body, 'utf-8');
-    await fs.rename(tmp, target);
+    await this.deps.journalRepo.writeFileAtomic(target, body);
     try {
       revalidateTag(getJournalCacheTag(userId), 'default');
     } catch {
@@ -98,7 +102,7 @@ export class PriceService {
           quote: q.quote,
           price: q.price,
           fetchedAt: q.fetchedAt,
-          fetchedDate: isoDateUTC(q.fetchedAt),
+          fetchedDate: localDate(q.fetchedAt),
         }))
       );
 

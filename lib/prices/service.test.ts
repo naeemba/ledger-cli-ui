@@ -213,6 +213,37 @@ describe('PriceService.refreshAll', () => {
     expect(file).toContain('60000');
   });
 
+  it('persists the price_fetch_run row with completion data', async () => {
+    await seedUser(
+      ctx,
+      'alice',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
+      'EUR'
+    );
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ BTC: { EUR: 60000 } }),
+    } as Response);
+
+    await service.refreshAll();
+
+    const rows = ctx.sqlite
+      .prepare('SELECT * FROM price_fetch_run ORDER BY id DESC')
+      .all() as Array<{
+      status: string;
+      completed_at: number | null;
+      symbols_fetched: number;
+      symbols_failed: number;
+    }>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('success');
+    expect(rows[0].completed_at).not.toBeNull();
+    expect(rows[0].symbols_fetched).toBe(1);
+    expect(rows[0].symbols_failed).toBe(0);
+  });
+
   it('coalesces concurrent calls into a single provider request', async () => {
     await seedUser(
       ctx,
