@@ -96,4 +96,30 @@ describe('fetchPrices', () => {
     expect(result.quotes).toEqual([]);
     expect(result.failed).toEqual([]);
   });
+
+  it('retries once on 5xx', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(json({}, 500))
+      .mockResolvedValueOnce(json({ BTC: { USD: 67000 } }));
+
+    const resultPromise = fetchPrices([{ symbol: 'BTC', quote: 'USD' }]);
+    await vi.advanceTimersByTimeAsync(1000);
+    const result = await resultPromise;
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(result.quotes).toHaveLength(1);
+  });
+
+  it('throws on second network error', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new TypeError('network error'));
+
+    const resultPromise = fetchPrices([{ symbol: 'BTC', quote: 'USD' }]);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(resultPromise).rejects.toThrow('network error');
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
 });
