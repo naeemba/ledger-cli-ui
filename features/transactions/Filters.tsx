@@ -6,6 +6,7 @@ import DateFilter from '@/components/DateFilter';
 import ExportButton from '@/components/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import SaveViewButton from '@/features/savedViews/SaveViewButton';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type Props = {
@@ -13,9 +14,16 @@ type Props = {
   accounts: string[];
   start?: string;
   end?: string;
+  existingViewNames: string[];
 };
 
-const Filters = ({ payees, accounts, start, end }: Props) => {
+const Filters = ({
+  payees,
+  accounts,
+  start,
+  end,
+  existingViewNames,
+}: Props) => {
   const router = useRouter();
   const params = useSearchParams();
   const [q, setQ] = useState(params.get('q') ?? '');
@@ -50,6 +58,9 @@ const Filters = ({ payees, accounts, start, end }: Props) => {
       '/api/transactions/export' + (u.toString() ? '?' + u.toString() : '')
     );
   })();
+
+  const search = params.toString();
+  const currentPath = '/transactions' + (search ? '?' + search : '');
 
   return (
     <div className="flex flex-col gap-4">
@@ -105,6 +116,10 @@ const Filters = ({ payees, accounts, start, end }: Props) => {
           </Button>
         )}
         <ExportButton href={exportHref} />
+        <SaveViewButton
+          targetPath={currentPath}
+          existingNames={existingViewNames}
+        />
       </div>
     </div>
   );

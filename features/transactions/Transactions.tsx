@@ -10,6 +10,7 @@ import { requireUser } from '@/lib/auth/require-user';
 import { journalRepository, journalService } from '@/lib/journal';
 import { getJournalCacheTag } from '@/lib/journal/layout';
 import { type Transaction } from '@/lib/journal/parser';
+import { savedViewService } from '@/lib/savedViews';
 import { unstable_cache } from 'next/cache';
 
 const buildLoader = (tag: string, mtimeMs: number) =>
@@ -34,7 +35,10 @@ const Transactions = async ({
 }) => {
   const user = await requireUser();
   const params = await searchParams;
-  const all = await loadTransactions(user.id);
+  const [all, existingViewNames] = await Promise.all([
+    loadTransactions(user.id),
+    savedViewService.list(user.id).then((views) => views.map((v) => v.name)),
+  ]);
   const filtered = applyTransactionFilters(all, params).sort((a, b) =>
     b.date.localeCompare(a.date)
   );
@@ -56,6 +60,7 @@ const Transactions = async ({
         accounts={accounts}
         start={params.start}
         end={params.end}
+        existingViewNames={existingViewNames}
       />
       <TransactionTable transactions={filtered} />
     </div>
