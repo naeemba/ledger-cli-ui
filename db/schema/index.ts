@@ -2,6 +2,7 @@ export { account } from './account';
 export { commodityPrice, type CommodityPrice } from './commodityPrice';
 export { passkey } from './passkey';
 export { priceFetchRun, type PriceFetchRun } from './priceFetchRun';
+export { savedView, type SavedView } from './savedView';
 export { session } from './session';
 export { template } from './template';
 export { user } from './user';
