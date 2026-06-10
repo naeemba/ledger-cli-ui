@@ -12,6 +12,8 @@
 
 **Deviation from spec (intentional alignment with `templates` pattern):** the service `SaveResult` is `{ ok: true; view } | { ok: false; reason: 'name-conflict' }` — no `existingId` or `invalid-path` / `invalid-name` variants. Validation lives in the server action (`safeParse` + `fieldErrors`) exactly as `saveTemplateAction` does today. The overwrite flow uses `opts: { overwrite?: boolean }`, not `overwriteId`. Spec section 3 ("Save view dialog renders Replace button") still works — the dialog detects `name-conflict`, swaps in a Replace button, and retries the action with `overwrite: true`.
 
+**Deviation from spec — no React Testing Library component tests.** The repo has no `.test.tsx` files, no `@testing-library/react`, and vitest is configured with `environment: 'node'`. Adding RTL infrastructure (jsdom, RTL, per-test env override) is its own sub-project and out of scope. Component correctness is covered by: the integration test (Task 18, exercises the service end-to-end), `pnpm type-check`, and manual verification (Task 19). This matches the project's existing test philosophy — `lib/` has heavy coverage, UI components don't.
+
 ---
 
 ## File map
