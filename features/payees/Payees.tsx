@@ -3,7 +3,10 @@ import DateFilter from '@/components/DateFilter';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import SaveViewButton from '@/features/savedViews/SaveViewButton';
+import { requireUser } from '@/lib/auth/require-user';
 import { parsePayeeRows } from '@/lib/payees/parse';
+import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency } from '@/lib/settings';
 import { parseISODate, toISODate } from '@/utils/date';
 import formatDate, { Format } from '@/utils/formatDate';
@@ -26,6 +29,11 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
   const currency = (await getBaseCurrency()).toUpperCase();
   const from = parseISODate(fromParam);
   const to = parseISODate(toParam);
+  const user = await requireUser();
+  const existingViewNames = (await savedViewService.list(user.id)).map(
+    (v) => v.name
+  );
+  const currentPath = `/payees/${fromParam}/${toParam}`;
   const stdout = await runLedger([
     'reg',
     '^Expenses',
@@ -78,6 +86,12 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
         urlPattern="/payees/{from}/{to}"
         from={fromParam}
         to={toParam}
+        saveViewSlot={
+          <SaveViewButton
+            targetPath={currentPath}
+            existingNames={existingViewNames}
+          />
+        }
       />
 
       <Card className="gap-0 overflow-hidden p-0">

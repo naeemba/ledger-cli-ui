@@ -3,6 +3,9 @@ import DateFilter from '@/components/DateFilter';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import SaveViewButton from '@/features/savedViews/SaveViewButton';
+import { requireUser } from '@/lib/auth/require-user';
+import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency } from '@/lib/settings';
 import { parseISODate, toISODate } from '@/utils/date';
 import formatAmount from '@/utils/formatAmount';
@@ -18,6 +21,11 @@ const PeriodBalance = async ({
   const { from: fromParam, to: toParam } = await params;
   const from = parseISODate(fromParam);
   const to = parseISODate(toParam);
+  const user = await requireUser();
+  const existingViewNames = (await savedViewService.list(user.id)).map(
+    (v) => v.name
+  );
+  const currentPath = `/balance/${fromParam}/${toParam}`;
   const defaultCurrency = await getBaseCurrency();
   const stdout = await runLedger([
     'bal',
@@ -64,6 +72,12 @@ const PeriodBalance = async ({
         urlPattern="/balance/{from}/{to}"
         from={fromParam}
         to={toParam}
+        saveViewSlot={
+          <SaveViewButton
+            targetPath={currentPath}
+            existingNames={existingViewNames}
+          />
+        }
       />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
