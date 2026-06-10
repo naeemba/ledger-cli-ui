@@ -1,6 +1,8 @@
 import Chart from '@/components/Chart';
-import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import RegisterHeader from '@/features/registers/monthly/RegisterHeader';
+import { requireUser } from '@/lib/auth/require-user';
+import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
@@ -18,6 +20,10 @@ const Monthly = async ({
   const { account: accountParam } = await params;
   const account = decodeURIComponent(accountParam);
   if (!isValidAccount(account)) notFound();
+  const user = await requireUser();
+  const existingViewNames = (await savedViewService.list(user.id)).map(
+    (v) => v.name
+  );
 
   const stdout = await runLedger([
     'register',
@@ -37,30 +43,11 @@ const Monthly = async ({
   const results = stdout.split('NNN').filter(Boolean);
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="text-xs font-medium uppercase tracking-wider text-muted">
-              Monthly report
-            </div>
-            <Help label="About monthly report">
-              Aggregated balance for this account, grouped by month. Useful for
-              spotting trends or seasonality on a single account.
-            </Help>
-          </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight break-all">
-            {account}
-          </h1>
-        </div>
-        <div className="text-right">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted">
-            Balance
-          </div>
-          <div className="text-2xl font-semibold tracking-tight">
-            {formatAmount(balance, true)}
-          </div>
-        </div>
-      </div>
+      <RegisterHeader
+        account={account}
+        balance={balance}
+        existingViewNames={existingViewNames}
+      />
 
       <Card className="gap-0 overflow-hidden p-0">
         <table>
