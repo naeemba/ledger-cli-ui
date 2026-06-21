@@ -1,14 +1,15 @@
 import { sql } from 'drizzle-orm';
-import { user } from './user';
+import { user } from '@naeemba/next-starter/schema';
 import type { TemplateDraft } from '@/lib/templates/schema';
 import {
-  integer,
-  sqliteTable,
+  jsonb,
+  pgTable,
   text,
+  timestamp,
   uniqueIndex,
-} from 'drizzle-orm/sqlite-core';
+} from 'drizzle-orm/pg-core';
 
-export const template = sqliteTable(
+export const template = pgTable(
   'template',
   {
     id: text('id').primaryKey(),
@@ -16,17 +17,11 @@ export const template = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
-    draft: text('draft', { mode: 'json' }).notNull().$type<TemplateDraft>(),
-    createdAt: integer('createdAt', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    draft: jsonb('draft').notNull().$type<TemplateDraft>(),
+    createdAt: timestamp('createdAt').notNull().default(sql`now()`),
+    updatedAt: timestamp('updatedAt').notNull().default(sql`now()`),
   },
-  (t) => ({
-    uniqueNamePerUser: uniqueIndex('template_user_name').on(t.userId, t.name),
-  })
+  (t) => [uniqueIndex('template_user_name').on(t.userId, t.name)]
 );
 
 export type Template = typeof template.$inferSelect;

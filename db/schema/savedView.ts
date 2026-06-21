@@ -1,13 +1,8 @@
 import { sql } from 'drizzle-orm';
-import { user } from './user';
-import {
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from 'drizzle-orm/sqlite-core';
+import { user } from '@naeemba/next-starter/schema';
+import { pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
-export const savedView = sqliteTable(
+export const savedView = pgTable(
   'savedView',
   {
     id: text('id').primaryKey(),
@@ -16,16 +11,14 @@ export const savedView = sqliteTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     targetPath: text('targetPath').notNull(),
-    createdAt: integer('createdAt', { mode: 'timestamp' })
+    createdAt: timestamp('createdAt')
       .notNull()
-      .default(sql`(unixepoch())`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp' })
+      .default(sql`now()`),
+    updatedAt: timestamp('updatedAt')
       .notNull()
-      .default(sql`(unixepoch())`),
+      .default(sql`now()`),
   },
-  (t) => ({
-    uniqueNamePerUser: uniqueIndex('savedView_user_name').on(t.userId, t.name),
-  })
+  (t) => [uniqueIndex('savedView_user_name').on(t.userId, t.name)]
 );
 
 export type SavedView = typeof savedView.$inferSelect;
