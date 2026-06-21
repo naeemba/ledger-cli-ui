@@ -1,12 +1,12 @@
-import Database from 'better-sqlite3';
 import * as schema from '@/db/schema';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 
-export type DbInstance = ReturnType<typeof drizzle<typeof schema>>;
+export type DbInstance = PostgresJsDatabase<typeof schema>;
 
 export const createDbConnection = (url: string): DbInstance => {
-  const sqlite = new Database(url);
-  sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('foreign_keys = ON');
-  return drizzle(sqlite, { schema });
+  // postgres.js connects lazily on first query, so constructing the client here
+  // opens no socket — safe to call without a reachable database (e.g. at build).
+  const client = postgres(url);
+  return drizzle(client, { schema });
 };
