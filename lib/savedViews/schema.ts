@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SAVED_VIEW_ROUTES } from './routes';
 
 const NAME_MAX = 80;
 const PATH_MAX = 2000;
@@ -10,33 +11,29 @@ export const savedViewNameSchema = z
   .max(NAME_MAX, 'Name is too long')
   .refine((v) => !/[\x00-\x1F]/.test(v), 'Name contains control characters');
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const ACCOUNT_SEGMENT = /^[A-Za-z0-9:_\- ]+$/;
+const matchesAllowlist = (pathname: string): boolean =>
+  SAVED_VIEW_ROUTES.some((route) => route.match(pathname));
 
-const matchesAllowlist = (pathname: string): boolean => {
-  if (pathname === '/transactions') return true;
-  if (pathname === '/balance') return true;
-  const balanceRange = pathname.match(
-    /^\/balance\/(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})$/
-  );
-  if (balanceRange)
-    return ISO_DATE.test(balanceRange[1]) && ISO_DATE.test(balanceRange[2]);
-  const payeeRange = pathname.match(
-    /^\/payees\/(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})$/
-  );
-  if (payeeRange)
-    return ISO_DATE.test(payeeRange[1]) && ISO_DATE.test(payeeRange[2]);
-  const register = pathname.match(/^\/registers\/monthly\/(.+)$/);
-  if (register) return ACCOUNT_SEGMENT.test(decodeURIComponent(register[1]));
-  const account = pathname.match(/^\/accounts\/(.+)$/);
-  if (account) return ACCOUNT_SEGMENT.test(decodeURIComponent(account[1]));
-  return false;
+const decodeSegment = (segment: string): string => {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
 };
 
+/**
+ * Reject `..` path traversal. Each segment is decoded first so encoded forms
+ * (`..%2Fetc` → `../etc`) are caught, while a legitimately encoded slash inside
+ * a single segment (e.g. an account named `Assets:A/B` → `Assets%3AA%2FB`) is
+ * not — once decoded it never introduces a standalone `..` component.
+ */
 const hasTraversalSegment = (pathname: string): boolean =>
-  pathname
-    .split('/')
-    .some((seg) => seg === '..' || /%2e%2e/i.test(seg) || /%2f/i.test(seg));
+  pathname.split('/').some((seg) =>
+    decodeSegment(seg)
+      .split('/')
+      .some((part) => part === '..')
+  );
 
 export const canonicalizeTargetPath = (raw: string): string => {
   if (typeof raw !== 'string' || raw.length === 0) {

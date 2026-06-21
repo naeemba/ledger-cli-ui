@@ -92,6 +92,29 @@ describe('canonicalizeTargetPath', () => {
       canonicalizeTargetPath('/balance/2026-01-01/not-a-date')
     ).toThrow();
   });
+
+  it('accepts accounts with the full routable character set', () => {
+    expect(
+      canonicalizeTargetPath(
+        '/accounts/' + encodeURIComponent('Expenses:Food & Dining')
+      )
+    ).toBe('/accounts/' + encodeURIComponent('Expenses:Food & Dining'));
+    expect(
+      canonicalizeTargetPath('/accounts/' + encodeURIComponent('Assets:Café'))
+    ).toBe('/accounts/' + encodeURIComponent('Assets:Café'));
+    expect(
+      canonicalizeTargetPath(
+        '/registers/monthly/' + encodeURIComponent('Liabilities:Loan (2024)')
+      )
+    ).toBe(
+      '/registers/monthly/' + encodeURIComponent('Liabilities:Loan (2024)')
+    );
+  });
+
+  it('accepts an account whose name contains a slash', () => {
+    const path = '/accounts/' + encodeURIComponent('Assets:A/B');
+    expect(canonicalizeTargetPath(path)).toBe(path);
+  });
 });
 
 describe('savedViewInputSchema', () => {
