@@ -15,6 +15,13 @@ export const clientEnvSchema = z.object({
     emptyToUndefined,
     z.enum(['local', 'test', 'stage', 'production']).optional()
   ),
+
+  // Set to "1" in lockstep with the Google OAuth credentials so the sign-in
+  // page knows to render the Google button.
+  NEXT_PUBLIC_ENABLE_GOOGLE: z.preprocess(
+    emptyToUndefined,
+    z.literal('1').optional()
+  ),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
@@ -26,6 +33,7 @@ export type AppEnv = NonNullable<ClientEnv['NEXT_PUBLIC_APP_ENV']>;
 const parsed = clientEnvSchema.safeParse({
   NODE_ENV: process.env.NODE_ENV,
   NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+  NEXT_PUBLIC_ENABLE_GOOGLE: process.env.NEXT_PUBLIC_ENABLE_GOOGLE,
 });
 
 if (!parsed.success) {
