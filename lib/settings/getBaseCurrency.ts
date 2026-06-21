@@ -19,7 +19,7 @@ export const getBaseCurrency = cache(async (): Promise<string> => {
   const user = await getOptionalUser();
   if (user) {
     const row = await userSettingRepository.get(user.id);
-    if (row) return row.baseCurrency;
+    if (row?.baseCurrency) return row.baseCurrency;
   }
 
   return env.DEFAULT_CURRENCY;
