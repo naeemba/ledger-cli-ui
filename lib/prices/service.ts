@@ -11,7 +11,8 @@ import {
   type PriceFetchRunRepository,
 } from './repository';
 import { normalizeCommoditySymbol } from './symbols';
-import { user as userTable, userSetting } from '@/db/schema';
+import { userSetting } from '@/db/schema';
+import { user as userTable } from '@naeemba/next-starter/schema';
 import type { DbInstance } from '@/lib/db/connection';
 import { env } from '@/lib/env';
 import { PRICE_DB_NAME, getJournalCacheTag } from '@/lib/journal/layout';
@@ -145,20 +146,19 @@ export class PriceService {
   }
 
   private async listUsers(): Promise<string[]> {
-    const rows = this.deps.db
+    const rows = await this.deps.db
       .select({ id: userTable.id })
-      .from(userTable)
-      .all();
+      .from(userTable);
     return rows.map((r) => r.id);
   }
 
   private async resolveBaseCurrency(userId: string): Promise<string> {
-    const row = this.deps.db
+    const rows = await this.deps.db
       .select({ baseCurrency: userSetting.baseCurrency })
       .from(userSetting)
       .where(eq(userSetting.userId, userId))
-      .get();
-    return row?.baseCurrency ?? env.DEFAULT_CURRENCY;
+      .limit(1);
+    return rows[0]?.baseCurrency ?? env.DEFAULT_CURRENCY;
   }
 
   private async listNormalizedSymbolsForUser(

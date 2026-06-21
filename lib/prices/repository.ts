@@ -22,7 +22,7 @@ export class CommodityPriceRepository {
   async insert(rows: CommodityPriceInput[]): Promise<void> {
     if (rows.length === 0) return;
     for (const r of rows) {
-      this.db
+      await this.db
         .insert(commodityPrice)
         .values(r)
         .onConflictDoUpdate({
@@ -35,8 +35,7 @@ export class CommodityPriceRepository {
             price: sql`excluded.price`,
             fetchedAt: sql`excluded.fetched_at`,
           },
-        })
-        .run();
+        });
     }
   }
 
@@ -45,17 +44,15 @@ export class CommodityPriceRepository {
       .select()
       .from(commodityPrice)
       .where(eq(commodityPrice.quote, quote))
-      .orderBy(commodityPrice.fetchedAt)
-      .all();
+      .orderBy(commodityPrice.fetchedAt);
   }
 
   /** Distinct symbols already fetched against the given quote. */
   async knownSymbolsForQuote(quote: string): Promise<string[]> {
-    const rows = this.db
+    const rows = await this.db
       .selectDistinct({ symbol: commodityPrice.symbol })
       .from(commodityPrice)
-      .where(eq(commodityPrice.quote, quote))
-      .all();
+      .where(eq(commodityPrice.quote, quote));
     return rows.map((r) => r.symbol);
   }
 }
@@ -77,25 +74,26 @@ export class PriceFetchRunRepository {
   constructor(private readonly db: DbInstance) {}
 
   async insert(input: PriceFetchRunInsert): Promise<PriceFetchRun> {
-    const row = this.db.insert(priceFetchRun).values(input).returning().get();
-    return row!;
+    const rows = await this.db
+      .insert(priceFetchRun)
+      .values(input)
+      .returning();
+    return rows[0]!;
   }
 
   async update(id: number, patch: PriceFetchRunUpdate): Promise<void> {
-    this.db
+    await this.db
       .update(priceFetchRun)
       .set(patch)
-      .where(eq(priceFetchRun.id, id))
-      .run();
+      .where(eq(priceFetchRun.id, id));
   }
 
   async latest(): Promise<PriceFetchRun | null> {
-    const row = this.db
+    const rows = await this.db
       .select()
       .from(priceFetchRun)
       .orderBy(desc(priceFetchRun.id))
-      .limit(1)
-      .get();
-    return row ?? null;
+      .limit(1);
+    return rows[0] ?? null;
   }
 }

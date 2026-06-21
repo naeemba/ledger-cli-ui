@@ -8,7 +8,7 @@ import {
   type ParsedJournal,
   type Transaction,
 } from './parser';
-import { user as userTable } from '@/db/schema';
+import { userSetting } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 
 export type JournalLayout = {
@@ -28,12 +28,12 @@ export class JournalRepository {
 
   /** Resolves journal layout from the user row + filesystem. */
   async getLayout(userId: string): Promise<JournalLayout> {
-    const row = this.db
-      .select({ journalMain: userTable.journalMain })
-      .from(userTable)
-      .where(eq(userTable.id, userId))
-      .get();
-    const mainFile = row?.journalMain ?? DEFAULT_MAIN;
+    const rows = await this.db
+      .select({ journalMain: userSetting.journalMain })
+      .from(userSetting)
+      .where(eq(userSetting.userId, userId))
+      .limit(1);
+    const mainFile = rows[0]?.journalMain ?? DEFAULT_MAIN;
     const dir = getJournalDir(userId);
     return {
       dir,
@@ -58,11 +58,10 @@ export class JournalRepository {
 
   /** Updates the user's journalMain pointer. */
   async setMainFile(userId: string, mainFile: string): Promise<void> {
-    this.db
-      .update(userTable)
+    await this.db
+      .update(userSetting)
       .set({ journalMain: mainFile })
-      .where(eq(userTable.id, userId))
-      .run();
+      .where(eq(userSetting.userId, userId));
   }
 
   /** Wipes the journal directory and recreates it empty. Used by the import flow. */

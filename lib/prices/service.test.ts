@@ -8,41 +8,14 @@ import {
   PriceFetchRunRepository,
 } from './repository';
 import { PriceService } from './service';
-import * as schema from '@/db/schema';
 import { getJournalDir } from '@/lib/journal/layout';
 import { JournalRepository } from '@/lib/journal/repository';
+import { UserSettingRepository } from '@/lib/settings/repository';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-
-const PRICE_TABLE = `
-  CREATE TABLE IF NOT EXISTS "commodity_price" (
-    "id" integer PRIMARY KEY AUTOINCREMENT,
-    "symbol" text NOT NULL,
-    "quote" text NOT NULL,
-    "price" real NOT NULL,
-    "fetched_at" integer NOT NULL,
-    "fetched_date" text NOT NULL,
-    CONSTRAINT "commodity_price_unique_per_day" UNIQUE ("symbol","quote","fetched_date")
-  );
-  CREATE TABLE IF NOT EXISTS "price_fetch_run" (
-    "id" integer PRIMARY KEY AUTOINCREMENT,
-    "started_at" integer NOT NULL,
-    "completed_at" integer,
-    "status" text NOT NULL,
-    "symbols_fetched" integer NOT NULL DEFAULT 0,
-    "symbols_failed" integer NOT NULL DEFAULT 0,
-    "error_message" text
-  );
-  CREATE TABLE IF NOT EXISTS "userSetting" (
-    "userId" text PRIMARY KEY,
-    "baseCurrency" text NOT NULL,
-    "updatedAt" integer NOT NULL DEFAULT (unixepoch())
-  );
-`;
 
 const seedUser = async (
   ctx: TestDbContext,
@@ -50,12 +23,8 @@ const seedUser = async (
   postings: string,
   baseCurrency: string
 ) => {
-  ctx.sqlite
-    .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-    .run(id, id, `${id}@example.com`);
-  ctx.sqlite
-    .prepare(`INSERT INTO "userSetting" ("userId","baseCurrency") VALUES (?,?)`)
-    .run(id, baseCurrency);
+  await ctx.insertUser(id, id, `${id}@example.com`);
+  await new UserSettingRepository(ctx.db).upsertBaseCurrency(id, baseCurrency);
   const dir = getJournalDir(id);
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(path.join(dir, 'main.ledger'), postings, 'utf-8');
@@ -68,14 +37,12 @@ describe('PriceService.refreshAll', () => {
   beforeEach(async () => {
     __resetPriceLockForTests();
     ctx = await setupTestDb('prices-svc-');
-    ctx.sqlite.exec(PRICE_TABLE);
 
-    const db = drizzle(ctx.sqlite, { schema });
     service = new PriceService({
-      db,
-      commodityRepo: new CommodityPriceRepository(db),
-      runRepo: new PriceFetchRunRepository(db),
-      journalRepo: new JournalRepository(db),
+      db: ctx.db,
+      commodityRepo: new CommodityPriceRepository(ctx.db),
+      runRepo: new PriceFetchRunRepository(ctx.db),
+      journalRepo: new JournalRepository(ctx.db),
     });
   });
 
@@ -229,14 +196,13 @@ describe('PriceService.refreshAll', () => {
 
     await service.refreshAll();
 
-    const rows = ctx.sqlite
-      .prepare('SELECT * FROM price_fetch_run ORDER BY id DESC')
-      .all() as Array<{
+    const result = await ctx.client.query<{
       status: string;
-      completed_at: number | null;
+      completed_at: Date | null;
       symbols_fetched: number;
       symbols_failed: number;
-    }>;
+    }>('SELECT * FROM price_fetch_run ORDER BY id DESC');
+    const rows = result.rows;
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('success');
     expect(rows[0].completed_at).not.toBeNull();
