@@ -53,7 +53,11 @@ const SavedViewRowActions = ({ viewId, currentName }: Props) => {
 
   const onDelete = () => {
     startTransition(async () => {
-      await deleteSavedViewAction(viewId);
+      const result = await deleteSavedViewAction(viewId);
+      if (!result.ok) {
+        toast.error(result.message ?? 'Could not delete view');
+        return;
+      }
       toast.success('View deleted');
       router.refresh();
     });

@@ -26,8 +26,18 @@ describe('deleteSavedViewAction', () => {
   });
 
   it('delegates to the service and revalidates', async () => {
-    await deleteSavedViewAction('V1');
+    const result = await deleteSavedViewAction('V1');
     expect(savedViewService.delete).toHaveBeenCalledWith('alice', 'V1');
     expect(revalidatePath).toHaveBeenCalledWith('/', 'layout');
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('returns an error result and skips revalidation when the delete throws', async () => {
+    vi.mocked(savedViewService.delete).mockRejectedValue(
+      new Error('db exploded')
+    );
+    const result = await deleteSavedViewAction('V1');
+    expect(result).toEqual({ ok: false, message: 'db exploded' });
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 });
