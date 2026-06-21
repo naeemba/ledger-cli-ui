@@ -56,12 +56,15 @@ export class JournalRepository {
     return layout;
   }
 
-  /** Updates the user's journalMain pointer. */
+  /** Updates the user's journalMain pointer, creating the setting row if needed. */
   async setMainFile(userId: string, mainFile: string): Promise<void> {
     await this.db
-      .update(userSetting)
-      .set({ journalMain: mainFile })
-      .where(eq(userSetting.userId, userId));
+      .insert(userSetting)
+      .values({ userId, journalMain: mainFile })
+      .onConflictDoUpdate({
+        target: userSetting.userId,
+        set: { journalMain: mainFile, updatedAt: new Date() },
+      });
   }
 
   /** Wipes the journal directory and recreates it empty. Used by the import flow. */
