@@ -37,7 +37,7 @@ const Transactions = async ({
   const params = await searchParams;
   const [all, existingViewNames] = await Promise.all([
     loadTransactions(user.id),
-    savedViewService.list(user.id).then((views) => views.map((v) => v.name)),
+    savedViewService.listNames(user.id),
   ]);
   const filtered = applyTransactionFilters(all, params).sort((a, b) =>
     b.date.localeCompare(a.date)

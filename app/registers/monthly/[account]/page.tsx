@@ -21,9 +21,7 @@ const Monthly = async ({
   const account = decodeURIComponent(accountParam);
   if (!isValidAccount(account)) notFound();
   const user = await requireUser();
-  const existingViewNames = (await savedViewService.list(user.id)).map(
-    (v) => v.name
-  );
+  const existingViewNames = await savedViewService.listNames(user.id);
 
   const stdout = await runLedger([
     'register',

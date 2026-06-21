@@ -22,9 +22,7 @@ const PeriodBalance = async ({
   const from = parseISODate(fromParam);
   const to = parseISODate(toParam);
   const user = await requireUser();
-  const existingViewNames = (await savedViewService.list(user.id)).map(
-    (v) => v.name
-  );
+  const existingViewNames = await savedViewService.listNames(user.id);
   const currentPath = `/balance/${fromParam}/${toParam}`;
   const defaultCurrency = await getBaseCurrency();
   const stdout = await runLedger([

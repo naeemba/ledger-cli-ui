@@ -21,6 +21,16 @@ export class SavedViewService {
   }
 
   /**
+   * Names of a user's saved views. Used by render paths that only need the
+   * `name` set (e.g. to detect conflicts in the Save dialog) so the projection
+   * lives here instead of being re-spelled at every call site.
+   */
+  async listNames(userId: string): Promise<string[]> {
+    const views = await this.repo.list(userId);
+    return views.map((v) => v.name);
+  }
+
+  /**
    * Create a new saved view. If a row with the same name exists, return
    * `name-conflict` unless `overwrite` is true — in which case the existing
    * row is updated in place (same id and createdAt, new targetPath, bumped

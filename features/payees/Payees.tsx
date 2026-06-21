@@ -30,9 +30,7 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
   const from = parseISODate(fromParam);
   const to = parseISODate(toParam);
   const user = await requireUser();
-  const existingViewNames = (await savedViewService.list(user.id)).map(
-    (v) => v.name
-  );
+  const existingViewNames = await savedViewService.listNames(user.id);
   const currentPath = `/payees/${fromParam}/${toParam}`;
   const stdout = await runLedger([
     'reg',

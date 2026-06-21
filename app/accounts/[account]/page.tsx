@@ -14,9 +14,7 @@ const Account = async ({
   params: Promise<{ account: string }>;
 }) => {
   const user = await requireUser();
-  const existingViewNames = (await savedViewService.list(user.id)).map(
-    (v) => v.name
-  );
+  const existingViewNames = await savedViewService.listNames(user.id);
   const defaultCurrency = await getBaseCurrency();
   const { account: accountParam } = await params;
   const account = decodeURIComponent(accountParam);
