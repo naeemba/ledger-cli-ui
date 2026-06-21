@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -19,6 +20,7 @@ type Props = {
   urlPattern: string;
   from?: string;
   to?: string;
+  saveViewSlot?: ReactNode;
 };
 
 const sectionLabel =
@@ -46,7 +48,7 @@ const Section = ({
 );
 
 const DateFilter = (props: Props) => {
-  const { urlPattern, from: fromProp, to: toProp } = props;
+  const { urlPattern, from: fromProp, to: toProp, saveViewSlot } = props;
   const [from, setFrom] = useState(fromProp ?? toISODate(startOfMonth()));
   const [to, setTo] = useState(toProp ?? toISODate(endOfMonth()));
 
@@ -99,6 +101,7 @@ const DateFilter = (props: Props) => {
         <Button onClick={handleSubmit} size="sm" className="ml-auto">
           Apply
         </Button>
+        {saveViewSlot}
       </div>
 
       <div className="mt-5 space-y-4">

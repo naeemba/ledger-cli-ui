@@ -4,10 +4,13 @@ import {
   getRecentTransactions,
 } from './Dashboard.utils';
 import EmptyJournal from './EmptyJournal';
+import SavedViewsCard from './SavedViewsCard';
 import Card from '@/components/Card';
 import Help from '@/components/Help';
 import { buttonVariants } from '@/components/ui/button';
 import { Card as ShadcnCard } from '@/components/ui/card';
+import { requireUser } from '@/lib/auth/require-user';
+import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency } from '@/lib/settings';
 import {
   endOfMonth,
@@ -37,6 +40,7 @@ const Stat = ({ label, value }: { label: string; value: React.ReactNode }) => (
 
 const Dashboard = async () => {
   const currency = await getBaseCurrency();
+  const user = await requireUser();
   const now = new Date();
   const monthRange = `${toISODate(startOfMonth(now))}/${toISODate(endOfMonth(now))}`;
   const yearRange = `${toISODate(startOfYear(now))}/${toISODate(endOfYear(now))}`;
@@ -47,6 +51,7 @@ const Dashboard = async () => {
     expensesMonthly,
     recent,
     stats,
+    savedViews,
   ] = await Promise.all([
     runLedger([
       'reg',
@@ -83,6 +88,7 @@ const Dashboard = async () => {
     ]),
     getRecentTransactions(RECENT_LIMIT),
     getJournalStats(),
+    savedViewService.list(user.id),
   ]);
 
   const currentMonthBalance = lastNonEmptyLine(currentMonthBalanceRaw);
@@ -145,6 +151,14 @@ const Dashboard = async () => {
           action={{ title: 'More details', href: `/balance/${monthRange}` }}
         />
       </div>
+
+      <SavedViewsCard
+        views={savedViews.map(({ id, name, targetPath }) => ({
+          id,
+          name,
+          targetPath,
+        }))}
+      />
 
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-2">
