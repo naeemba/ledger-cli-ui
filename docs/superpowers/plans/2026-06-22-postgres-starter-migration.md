@@ -436,7 +436,7 @@ git commit -m "feat(db): lazy postgres.js drizzle connection"
 - Modify: `lib/test-utils/db.ts`
 
 **Interfaces:**
-- Produces: `setupTestDb(prefix?): Promise<TestDbContext>`, `teardownTestDb(ctx): Promise<void>`. `TestDbContext = { client: PGlite; db: DbInstance; insertUser(id, name?, email?): Promise<void> }`. The harness creates a minimal `user` table plus all four app tables.
+- Produces: `setupTestDb(prefix?): Promise<TestDbContext>`, `teardownTestDb(ctx): Promise<void>`. `TestDbContext = { client: PGlite; db: DbInstance; insertUser(id, name?, email?): Promise<void> }`. The harness creates a minimal `user` table plus all five app tables (`userSetting`, `template`, `savedView`, `commodity_price`, `price_fetch_run`).
 
 - [ ] **Step 1: Rewrite `lib/test-utils/db.ts`**
 
@@ -480,6 +480,15 @@ const SCHEMA_SQL = `
     "updatedAt" timestamp NOT NULL DEFAULT now()
   );
   CREATE UNIQUE INDEX IF NOT EXISTS "template_user_name" ON "template"("userId","name");
+  CREATE TABLE IF NOT EXISTS "savedView" (
+    "id" text PRIMARY KEY NOT NULL,
+    "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+    "name" text NOT NULL,
+    "targetPath" text NOT NULL,
+    "createdAt" timestamp NOT NULL DEFAULT now(),
+    "updatedAt" timestamp NOT NULL DEFAULT now()
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS "savedView_user_name" ON "savedView"("userId","name");
   CREATE TABLE IF NOT EXISTS "commodity_price" (
     "id" serial PRIMARY KEY,
     "symbol" text NOT NULL,
@@ -1069,10 +1078,10 @@ Replace `setMainFile` with an upsert (a user may have no `userSetting` row yet):
 Run: `pnpm exec vitest run lib/journal/repository.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Run the full suite**
+- [ ] **Step 5: Run the journal suite**
 
-Run: `pnpm test`
-Expected: all suites PASS. Fix any remaining `.get()/.run()/.all()` or `drizzle-orm/better-sqlite3` import the suite surfaces.
+Run: `pnpm exec vitest run lib/journal/repository.test.ts`
+Expected: PASS. (The full-suite-green checkpoint lives in Task 12, the last repository conversion.)
 
 - [ ] **Step 6: Commit**
 
@@ -1343,6 +1352,155 @@ Update `PLAN.md` if it tracks infra phases, and mark this plan complete. Commit:
 ```bash
 git add -A
 git commit -m "docs: mark postgres + next-starter migration complete"
+```
+
+---
+
+## Task 12: Saved-views repository → async
+
+> Added after implementation began: the plan originally missed the `savedView`
+> feature (merged from an earlier phase). Its schema was migrated in Task 2; this
+> task converts its repository. **Execute this immediately after Task 8** — it is
+> the last repository conversion, so it carries the full-suite-green checkpoint.
+
+**Files:**
+- Modify: `lib/savedViews/repository.ts`
+- Test: `lib/savedViews/repository.test.ts`
+
+**Interfaces:**
+- Consumes: `DbInstance`, `savedView` schema, `TestDbContext` (`ctx.db`, `ctx.insertUser`).
+- Produces: `SavedViewRepository.find/findByName/list/create/update/delete` — all async, postgres-backed. `delete` returns `boolean`.
+
+- [ ] **Step 1: Update `lib/savedViews/repository.test.ts` setup + assertions**
+
+1. Remove `import * as schema from '@/db/schema'`, the `import { drizzle } from 'drizzle-orm/better-sqlite3'` line, and the `SAVED_VIEW_TABLE` constant.
+2. Replace the `beforeEach` body with:
+
+```ts
+  beforeEach(async () => {
+    ctx = await setupTestDb('saved-views-');
+    await ctx.insertUser('alice', 'Alice', 'alice@example.com');
+    await ctx.insertUser('bob', 'Bob', 'bob@example.com');
+    repo = new SavedViewRepository(ctx.db);
+  });
+```
+
+3. Change both UNIQUE-violation assertions from `/UNIQUE constraint failed/i` to `/duplicate key value/i` (the `create throws…` and `update throws on UNIQUE conflict…` tests).
+4. In the cascade test, replace the raw sqlite delete with:
+
+```ts
+    await ctx.client.query('DELETE FROM "user" WHERE id = $1', ['alice']);
+```
+
+5. In the `update patches name and bumps updatedAt` test, reduce the sleep from `1100` to `10` ms (Postgres `timestamp`/`now()` has sub-second precision, so the whole-second wait is no longer needed):
+
+```ts
+    await new Promise((r) => setTimeout(r, 10));
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `pnpm exec vitest run lib/savedViews/repository.test.ts`
+Expected: FAIL — `.get()`/`.all()`/`.run()` invalid on postgres.js drizzle.
+
+- [ ] **Step 3: Rewrite `lib/savedViews/repository.ts`**
+
+```ts
+import { and, eq, sql } from 'drizzle-orm';
+import type { SavedViewInput } from './schema';
+import { savedView, type SavedView } from '@/db/schema/savedView';
+import type { DbInstance } from '@/lib/db/connection';
+import { generateUid } from '@/lib/journal/uid';
+
+export type SavedViewPatch = Partial<{ name: string; targetPath: string }>;
+
+export class SavedViewRepository {
+  constructor(private readonly db: DbInstance) {}
+
+  async find(userId: string, id: string): Promise<SavedView | null> {
+    const rows = await this.db
+      .select()
+      .from(savedView)
+      .where(and(eq(savedView.userId, userId), eq(savedView.id, id)))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  async findByName(userId: string, name: string): Promise<SavedView | null> {
+    const rows = await this.db
+      .select()
+      .from(savedView)
+      .where(and(eq(savedView.userId, userId), eq(savedView.name, name)))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  async list(userId: string): Promise<SavedView[]> {
+    return this.db
+      .select()
+      .from(savedView)
+      .where(eq(savedView.userId, userId))
+      .orderBy(sql`lower(${savedView.name})`);
+  }
+
+  /** Inserts a new row. Throws on UNIQUE (userId, name) conflict. */
+  async create(userId: string, input: SavedViewInput): Promise<SavedView> {
+    const rows = await this.db
+      .insert(savedView)
+      .values({
+        id: generateUid(),
+        userId,
+        name: input.name,
+        targetPath: input.targetPath,
+      })
+      .returning();
+    return rows[0];
+  }
+
+  /** Returns null if no row matches; throws on UNIQUE rename conflict. */
+  async update(
+    userId: string,
+    id: string,
+    patch: SavedViewPatch
+  ): Promise<SavedView | null> {
+    const updates: SavedViewPatch & { updatedAt: Date } = {
+      updatedAt: new Date(),
+    };
+    if (patch.name !== undefined) updates.name = patch.name;
+    if (patch.targetPath !== undefined) updates.targetPath = patch.targetPath;
+    const rows = await this.db
+      .update(savedView)
+      .set(updates)
+      .where(and(eq(savedView.userId, userId), eq(savedView.id, id)))
+      .returning();
+    return rows[0] ?? null;
+  }
+
+  async delete(userId: string, id: string): Promise<boolean> {
+    const rows = await this.db
+      .delete(savedView)
+      .where(and(eq(savedView.userId, userId), eq(savedView.id, id)))
+      .returning({ id: savedView.id });
+    return rows.length > 0;
+  }
+}
+```
+
+- [ ] **Step 4: Run the saved-views test to verify it passes**
+
+Run: `pnpm exec vitest run lib/savedViews/repository.test.ts`
+Expected: PASS.
+
+- [ ] **Step 5: Run the full suite (green checkpoint for all repository conversions)**
+
+Run: `pnpm test`
+Expected: all suites PASS. Fix any remaining `.get()/.run()/.all()` or `drizzle-orm/better-sqlite3` import the suite surfaces.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add lib/savedViews/repository.ts lib/savedViews/repository.test.ts
+git commit -m "refactor(saved-views): async postgres repository"
 ```
 
 ---
