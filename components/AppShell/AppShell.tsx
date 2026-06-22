@@ -1,5 +1,6 @@
 'use client';
 
+import { isAuthPath } from './authPaths';
 import CommandPalette, {
   CommandPaletteProvider,
 } from '@/components/CommandPalette';
@@ -10,8 +11,6 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { usePathname } from 'next/navigation';
 
-const AUTH_PATHS = new Set(['/login', '/signup']);
-
 type Props = {
   children: React.ReactNode;
   headerSlot?: React.ReactNode;
@@ -19,7 +18,7 @@ type Props = {
 
 const AppShell = ({ children, headerSlot }: Props) => {
   const pathname = usePathname();
-  const isAuthPage = AUTH_PATHS.has(pathname);
+  const isAuthPage = isAuthPath(pathname);
 
   if (isAuthPage) {
     return (
