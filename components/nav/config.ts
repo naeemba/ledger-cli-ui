@@ -47,7 +47,7 @@ export const getNavSections = (): NavSection[] => {
         {
           id: 'dashboard',
           title: 'Dashboard',
-          href: '/',
+          href: '/dashboard',
           match: 'exact',
           description: 'Snapshot of this month and year-to-date totals.',
           icon: Gauge,

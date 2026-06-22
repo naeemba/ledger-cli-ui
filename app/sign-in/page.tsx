@@ -9,7 +9,7 @@ export default function Page() {
   return (
     <SignInPage
       authClient={authClient}
-      callbackUrl="/"
+      callbackUrl="/dashboard"
       errorCallbackUrl="/sign-in/error"
       passkey
       {...(googleEnabled && { google: true })}

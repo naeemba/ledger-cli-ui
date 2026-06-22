@@ -28,7 +28,7 @@ const AppSidebar = () => {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <Link
-          href="/"
+          href="/dashboard"
           className="flex items-center gap-2.5 px-2 py-1"
           aria-label={`${APP_NAME} home`}
         >
