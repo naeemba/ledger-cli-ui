@@ -15,6 +15,12 @@ const envSchema = clientEnvSchema.extend({
   // Storage — Postgres connection string (postgres://user:pass@host:5432/db)
   DATABASE_URL: z.string().url(),
 
+  // Root directory for persistent journals (one subdir per user). Validated
+  // here so an empty/missing value fails fast at startup rather than silently
+  // writing journals under ./data. Read at runtime via process.env in
+  // lib/journal/layout.ts (so tests can override it per-case).
+  DATA_DIR: z.string().min(1).default('./data'),
+
   // Email (magic link). Required for Resend delivery in production; in dev the
   // link is logged to stdout when RESEND_API_KEY is unset.
   EMAIL_FROM: z.string().default('auth@example.com'),
