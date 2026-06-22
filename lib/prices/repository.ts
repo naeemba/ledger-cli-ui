@@ -18,25 +18,26 @@ export type CommodityPriceInput = {
 export class CommodityPriceRepository {
   constructor(private readonly db: DbInstance) {}
 
-  /** Upsert rows by (symbol, quote, fetched_date). */
+  /** Upsert rows by (symbol, quote, fetched_date) in a single statement. */
   async insert(rows: CommodityPriceInput[]): Promise<void> {
     if (rows.length === 0) return;
-    for (const r of rows) {
-      await this.db
-        .insert(commodityPrice)
-        .values(r)
-        .onConflictDoUpdate({
-          target: [
-            commodityPrice.symbol,
-            commodityPrice.quote,
-            commodityPrice.fetchedDate,
-          ],
-          set: {
-            price: sql`excluded.price`,
-            fetchedAt: sql`excluded.fetched_at`,
-          },
-        });
-    }
+    // One batched upsert rather than N round-trips: a single statement is
+    // atomic, so the set lands all-or-nothing instead of partially committing
+    // on a mid-loop failure.
+    await this.db
+      .insert(commodityPrice)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: [
+          commodityPrice.symbol,
+          commodityPrice.quote,
+          commodityPrice.fetchedDate,
+        ],
+        set: {
+          price: sql`excluded.price`,
+          fetchedAt: sql`excluded.fetched_at`,
+        },
+      });
   }
 
   async listForQuote(quote: string): Promise<CommodityPrice[]> {
