@@ -1,6 +1,7 @@
 'use client';
 
 import { isAuthPath } from './authPaths';
+import { isPublicPath } from './publicPaths';
 import CommandPalette, {
   CommandPaletteProvider,
 } from '@/components/CommandPalette';
@@ -24,9 +25,10 @@ const AppShell = ({ children, headerSlot, bannerSlot }: Props) => {
   const pathname = usePathname();
   const isAuthPage = isAuthPath(pathname);
 
-  // The marketing landing at `/` owns its own full-bleed chrome — no sidebar,
-  // header, or app-only banners.
-  if (pathname === '/') {
+  // Public marketing pages own their own full-bleed chrome — no sidebar,
+  // header, or app-only banners. Centralized in publicPaths.ts (tested) so the
+  // bare-landing decision isn't a magic literal duplicated with the proxy.
+  if (isPublicPath(pathname)) {
     return <>{children}</>;
   }
 
