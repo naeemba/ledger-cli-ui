@@ -55,7 +55,9 @@ export class SavedViewRepository {
     id: string,
     patch: SavedViewPatch
   ): Promise<SavedView | null> {
-    const updates: SavedViewPatch & { updatedAt: Date | ReturnType<typeof sql> } = {
+    const updates: SavedViewPatch & {
+      updatedAt: Date | ReturnType<typeof sql>;
+    } = {
       updatedAt: sql`now()`,
     };
     if (patch.name !== undefined) updates.name = patch.name;

@@ -1,28 +1,26 @@
-import { getSessionCookie } from 'better-auth/cookies';
-import { NextResponse, type NextRequest } from 'next/server';
+import { getSessionCookie } from '@naeemba/next-starter/proxy';
+import { type NextRequest, NextResponse } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/signup'];
-
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  if (
-    pathname.startsWith('/api/auth') ||
-    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
-  ) {
-    return NextResponse.next();
+export function proxy(req: NextRequest) {
+  if (!getSessionCookie(req)) {
+    const target = req.nextUrl.clone();
+    target.pathname = '/sign-in';
+    target.search = '';
+    target.searchParams.set(
+      'callbackUrl',
+      req.nextUrl.pathname + req.nextUrl.search
+    );
+    return NextResponse.redirect(target);
   }
-
-  const sessionCookie = getSessionCookie(request);
-  if (!sessionCookie) {
-    const url = new URL('/login', request.url);
-    url.searchParams.set('next', pathname);
-    return NextResponse.redirect(url);
-  }
-
   return NextResponse.next();
 }
 
+// Run on every request except:
+//   /sign-in and /sign-in/error  — the auth UI itself
+//   /api/auth/*                  — better-auth's own handlers
+//   _next/* internals, favicon, static assets
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!sign-in|api/auth|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
 };

@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import { user } from '@naeemba/next-starter/schema';
 import type { TemplateDraft } from '@/lib/templates/schema';
+import { user } from '@naeemba/next-starter/schema';
 import {
   jsonb,
   pgTable,
@@ -18,8 +18,12 @@ export const template = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     draft: jsonb('draft').notNull().$type<TemplateDraft>(),
-    createdAt: timestamp('createdAt').notNull().default(sql`now()`),
-    updatedAt: timestamp('updatedAt').notNull().default(sql`now()`),
+    createdAt: timestamp('createdAt')
+      .notNull()
+      .default(sql`now()`),
+    updatedAt: timestamp('updatedAt')
+      .notNull()
+      .default(sql`now()`),
   },
   (t) => [uniqueIndex('template_user_name').on(t.userId, t.name)]
 );

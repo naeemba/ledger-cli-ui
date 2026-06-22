@@ -1,6 +1,6 @@
-import { PGlite } from '@electric-sql/pglite';
 import * as schema from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
+import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 
 export type TestDbContext = {

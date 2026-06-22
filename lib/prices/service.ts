@@ -12,12 +12,12 @@ import {
 } from './repository';
 import { normalizeCommoditySymbol } from './symbols';
 import { userSetting } from '@/db/schema';
-import { user as userTable } from '@naeemba/next-starter/schema';
 import type { DbInstance } from '@/lib/db/connection';
 import { env } from '@/lib/env';
 import { PRICE_DB_NAME, getJournalCacheTag } from '@/lib/journal/layout';
 import type { JournalRepository } from '@/lib/journal/repository';
 import { runLedgerForUser } from '@/utils/runLedgerForUser';
+import { user as userTable } from '@naeemba/next-starter/schema';
 import { revalidateTag } from 'next/cache';
 
 export type RefreshResult =

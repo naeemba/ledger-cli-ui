@@ -74,10 +74,7 @@ export class PriceFetchRunRepository {
   constructor(private readonly db: DbInstance) {}
 
   async insert(input: PriceFetchRunInsert): Promise<PriceFetchRun> {
-    const rows = await this.db
-      .insert(priceFetchRun)
-      .values(input)
-      .returning();
+    const rows = await this.db.insert(priceFetchRun).values(input).returning();
     return rows[0]!;
   }
 
