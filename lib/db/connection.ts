@@ -1,12 +1,9 @@
-import postgres from 'postgres';
-import * as schema from '@/db/schema';
-import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { createDb } from '@naeemba/next-starter/db';
 
-export type DbInstance = PostgresJsDatabase<typeof schema>;
+// DbInstance is the package's drizzle handle. Repositories take it as a
+// constructor arg so tests can inject a PGlite-backed instance. Deriving the
+// type (and the factory) from the package keeps the app from carrying a second
+// postgres.js + drizzle bootstrap that could drift from the package's.
+export type DbInstance = ReturnType<typeof createDb>;
 
-export const createDbConnection = (url: string): DbInstance => {
-  // postgres.js connects lazily on first query, so constructing the client here
-  // opens no socket — safe to call without a reachable database (e.g. at build).
-  const client = postgres(url);
-  return drizzle(client, { schema });
-};
+export { createDb as createDbConnection } from '@naeemba/next-starter/db';

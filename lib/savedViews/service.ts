@@ -1,6 +1,7 @@
 import type { SavedViewRepository } from './repository';
 import type { SavedViewInput } from './schema';
 import type { SavedView } from '@/db/schema/savedView';
+import { isUniqueConflict } from '@/lib/db/isUniqueConflict';
 
 export type SaveResult =
   | { ok: true; view: SavedView }
@@ -9,23 +10,6 @@ export type SaveResult =
 export type RenameResult =
   | { ok: true; view: SavedView }
   | { ok: false; reason: 'name-conflict' | 'not-found' };
-
-const isUniqueConflict = (e: unknown): boolean => {
-  if (!(e instanceof Error)) return false;
-  // SQLite: "UNIQUE constraint failed: ..."
-  if (/UNIQUE constraint failed/i.test(e.message)) return true;
-  // Postgres / PGlite: error code 23505 or message in cause
-  const cause = (e as { cause?: unknown }).cause;
-  if (cause instanceof Error && /duplicate key value/i.test(cause.message))
-    return true;
-  if (
-    cause != null &&
-    typeof cause === 'object' &&
-    (cause as { code?: string }).code === '23505'
-  )
-    return true;
-  return false;
-};
 
 export class SavedViewService {
   constructor(private readonly repo: SavedViewRepository) {}

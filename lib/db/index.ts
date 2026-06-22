@@ -1,19 +1,9 @@
-import { createDbConnection, type DbInstance } from './connection';
-import { env } from '@/lib/env';
-
-let instance: DbInstance | undefined;
-
-// Connect lazily on first property access, never at import time, so `next build`
-// can evaluate route modules without a database connection being established.
-const getDb = (): DbInstance => {
-  if (!instance) instance = createDbConnection(env.DATABASE_URL);
-  return instance;
-};
-
-export const db = new Proxy({} as DbInstance, {
-  get: (_target, prop, receiver) =>
-    Reflect.get(getDb() as object, prop, receiver),
-});
-
+// Re-export the package's lazy `db` proxy: it connects on first query (reading
+// process.env.DATABASE_URL, never at import) so `next build` stays DB-free, and
+// it applies the package's env-driven pool tuning (DATABASE_PREPARE / POOL_MAX /
+// IDLE_TIMEOUT) via createDbOptionsFromEnv. Re-exporting it — rather than
+// hand-rolling a second postgres()+drizzle() — means the app and package share
+// one bootstrap that can't drift.
+export { db } from '@naeemba/next-starter/db';
 export { createDbConnection } from './connection';
 export type { DbInstance } from './connection';
