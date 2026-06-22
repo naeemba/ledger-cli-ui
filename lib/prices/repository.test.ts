@@ -63,6 +63,31 @@ describe('CommodityPriceRepository', () => {
     expect(rows[0].price).toBe(61000);
   });
 
+  it('dedupes same-day duplicate conflict keys in one batch (last-wins)', async () => {
+    // Mirrors the legacy-import path, which emits one row per `P` directive and
+    // can carry several same-day entries for one commodity. Without deduping,
+    // the single ON CONFLICT DO UPDATE statement throws Postgres 21000.
+    await repo.insert([
+      {
+        symbol: 'BTC',
+        quote: 'EUR',
+        price: 60000,
+        fetchedAt: new Date('2026-05-25T06:00:00Z'),
+        fetchedDate: '2026-05-25',
+      },
+      {
+        symbol: 'BTC',
+        quote: 'EUR',
+        price: 61000,
+        fetchedAt: new Date('2026-05-25T18:00:00Z'),
+        fetchedDate: '2026-05-25',
+      },
+    ]);
+    const rows = await repo.listForQuote('EUR');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].price).toBe(61000);
+  });
+
   it('returns rows ordered by fetchedAt ascending', async () => {
     const day1 = new Date('2026-05-24T06:00:00Z');
     const day2 = new Date('2026-05-25T06:00:00Z');

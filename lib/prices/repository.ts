@@ -21,12 +21,22 @@ export class CommodityPriceRepository {
   /** Upsert rows by (symbol, quote, fetched_date) in a single statement. */
   async insert(rows: CommodityPriceInput[]): Promise<void> {
     if (rows.length === 0) return;
+    // Collapse duplicate conflict keys before the batched upsert: a single
+    // `ON CONFLICT DO UPDATE` statement that targets the same row twice throws
+    // Postgres 21000. The legacy-import path (one row per `P` directive) can
+    // carry several same-day entries for one commodity, so dedupe last-wins to
+    // match the upsert's intent.
+    const deduped = [
+      ...new Map(
+        rows.map((r) => [`${r.symbol}|${r.quote}|${r.fetchedDate}`, r])
+      ).values(),
+    ];
     // One batched upsert rather than N round-trips: a single statement is
     // atomic, so the set lands all-or-nothing instead of partially committing
     // on a mid-loop failure.
     await this.db
       .insert(commodityPrice)
-      .values(rows)
+      .values(deduped)
       .onConflictDoUpdate({
         target: [
           commodityPrice.symbol,
