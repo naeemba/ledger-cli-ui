@@ -4,6 +4,7 @@ import path from 'path';
 import * as schema from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 import { PGlite } from '@electric-sql/pglite';
+import { resolveMigrationsFolder } from '@naeemba/next-starter/db';
 import { drizzle } from 'drizzle-orm/pglite';
 
 export type TestDbContext = {
@@ -13,62 +14,23 @@ export type TestDbContext = {
   tmpDir: string;
 };
 
-// Minimal stand-in for the package-owned auth `user` table plus the app tables.
-// Postgres DDL mirrors db/schema and @naeemba/next-starter/schema closely enough
-// for repository tests (FKs, uniqueness, defaults).
-const SCHEMA_SQL = `
-  CREATE TABLE IF NOT EXISTS "user" (
-    "id" text PRIMARY KEY NOT NULL,
-    "name" text NOT NULL DEFAULT '',
-    "email" text NOT NULL UNIQUE,
-    "emailVerified" boolean NOT NULL DEFAULT false,
-    "image" text,
-    "createdAt" timestamp NOT NULL DEFAULT now(),
-    "updatedAt" timestamp NOT NULL DEFAULT now()
-  );
-  CREATE TABLE IF NOT EXISTS "userSetting" (
-    "userId" text PRIMARY KEY NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-    "baseCurrency" text,
-    "journalMain" text NOT NULL DEFAULT 'main.ledger',
-    "updatedAt" timestamp NOT NULL DEFAULT now()
-  );
-  CREATE TABLE IF NOT EXISTS "template" (
-    "id" text PRIMARY KEY NOT NULL,
-    "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-    "name" text NOT NULL,
-    "draft" jsonb NOT NULL,
-    "createdAt" timestamp NOT NULL DEFAULT now(),
-    "updatedAt" timestamp NOT NULL DEFAULT now()
-  );
-  CREATE UNIQUE INDEX IF NOT EXISTS "template_user_name" ON "template"("userId","name");
-  CREATE TABLE IF NOT EXISTS "savedView" (
-    "id" text PRIMARY KEY NOT NULL,
-    "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-    "name" text NOT NULL,
-    "targetPath" text NOT NULL,
-    "createdAt" timestamp NOT NULL DEFAULT now(),
-    "updatedAt" timestamp NOT NULL DEFAULT now()
-  );
-  CREATE UNIQUE INDEX IF NOT EXISTS "savedView_user_name" ON "savedView"("userId","name");
-  CREATE TABLE IF NOT EXISTS "commodity_price" (
-    "id" serial PRIMARY KEY,
-    "symbol" text NOT NULL,
-    "quote" text NOT NULL,
-    "price" real NOT NULL,
-    "fetched_at" timestamp NOT NULL,
-    "fetched_date" text NOT NULL,
-    CONSTRAINT "commodity_price_unique_per_day" UNIQUE ("symbol","quote","fetched_date")
-  );
-  CREATE TABLE IF NOT EXISTS "price_fetch_run" (
-    "id" serial PRIMARY KEY,
-    "started_at" timestamp NOT NULL,
-    "completed_at" timestamp,
-    "status" text NOT NULL,
-    "symbols_fetched" integer NOT NULL DEFAULT 0,
-    "symbols_failed" integer NOT NULL DEFAULT 0,
-    "error_message" text
-  );
-`;
+// Apply every `.sql` file in a drizzle migrations folder to the PGlite client,
+// in filename order, splitting on drizzle's statement-breakpoint markers.
+const applyMigrations = async (
+  client: PGlite,
+  folder: string
+): Promise<void> => {
+  const files = (await fs.readdir(folder))
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+  for (const file of files) {
+    const sql = await fs.readFile(path.join(folder, file), 'utf-8');
+    for (const statement of sql.split('--> statement-breakpoint')) {
+      const trimmed = statement.trim();
+      if (trimmed) await client.exec(trimmed);
+    }
+  }
+};
 
 export const setupTestDb = async (
   prefix = 'ledger-test-'
@@ -77,7 +39,11 @@ export const setupTestDb = async (
   process.env.DATA_DIR = tmpDir;
 
   const client = new PGlite();
-  await client.exec(SCHEMA_SQL);
+  // Run the REAL migrations so tests exercise the same schema that ships: the
+  // package-owned auth track first (creates `user`, which app FKs reference),
+  // then the app's own drizzle-kit migrations. No hand-written DDL to drift.
+  await applyMigrations(client, resolveMigrationsFolder());
+  await applyMigrations(client, path.join(process.cwd(), 'db/migrations'));
   const db = drizzle(client, { schema }) as unknown as DbInstance;
 
   process.env.BETTER_AUTH_SECRET = 'x'.repeat(32);
