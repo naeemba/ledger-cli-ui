@@ -21,9 +21,12 @@ export const template = pgTable(
     createdAt: timestamp('createdAt')
       .notNull()
       .default(sql`now()`),
+    // Bumped automatically on every `.update()` so the repo never spells it.
+    // Uses the DB clock (sql`now()`) to match createdAt's clock source.
     updatedAt: timestamp('updatedAt')
       .notNull()
-      .default(sql`now()`),
+      .default(sql`now()`)
+      .$onUpdate(() => sql`now()`),
   },
   (t) => [uniqueIndex('template_user_name').on(t.userId, t.name)]
 );

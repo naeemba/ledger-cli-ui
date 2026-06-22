@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { DEFAULT_MAIN, PRICE_DB_NAME, getJournalDir } from './layout';
 import {
   parseJournal,
@@ -63,7 +63,8 @@ export class JournalRepository {
       .values({ userId, journalMain: mainFile })
       .onConflictDoUpdate({
         target: userSetting.userId,
-        set: { journalMain: mainFile, updatedAt: new Date() },
+        // sql`now()` (DB clock) to match the createdAt/updatedAt convention.
+        set: { journalMain: mainFile, updatedAt: sql`now()` },
       });
   }
 

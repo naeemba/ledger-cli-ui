@@ -55,14 +55,10 @@ export class TemplateRepository {
     id: string,
     patch: TemplateUpdate
   ): Promise<Template | null> {
-    const updates: { name?: string; draft?: TemplateDraft; updatedAt: Date } = {
-      updatedAt: new Date(),
-    };
-    if (patch.name !== undefined) updates.name = patch.name;
-    if (patch.draft !== undefined) updates.draft = patch.draft;
+    // updatedAt is bumped by the schema's $onUpdate, so it's left out here.
     const rows = await this.db
       .update(template)
-      .set(updates)
+      .set(patch)
       .where(and(eq(template.userId, userId), eq(template.id, id)))
       .returning();
     return rows[0] ?? null;

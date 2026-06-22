@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { userSetting, type UserSetting } from '@/db/schema/userSetting';
 import type { DbInstance } from '@/lib/db/connection';
 
@@ -20,7 +20,8 @@ export class UserSettingRepository {
       .values({ userId, baseCurrency: value })
       .onConflictDoUpdate({
         target: userSetting.userId,
-        set: { baseCurrency: value, updatedAt: new Date() },
+        // sql`now()` (DB clock) to match the createdAt/updatedAt convention.
+        set: { baseCurrency: value, updatedAt: sql`now()` },
       });
   }
 }

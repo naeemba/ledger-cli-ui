@@ -55,16 +55,10 @@ export class SavedViewRepository {
     id: string,
     patch: SavedViewPatch
   ): Promise<SavedView | null> {
-    const updates: SavedViewPatch & {
-      updatedAt: Date | ReturnType<typeof sql>;
-    } = {
-      updatedAt: sql`now()`,
-    };
-    if (patch.name !== undefined) updates.name = patch.name;
-    if (patch.targetPath !== undefined) updates.targetPath = patch.targetPath;
+    // updatedAt is bumped by the schema's $onUpdate, so it's left out here.
     const rows = await this.db
       .update(savedView)
-      .set(updates)
+      .set(patch)
       .where(and(eq(savedView.userId, userId), eq(savedView.id, id)))
       .returning();
     return rows[0] ?? null;
