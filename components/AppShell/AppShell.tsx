@@ -1,6 +1,7 @@
 'use client';
 
 import { isAuthPath } from './authPaths';
+import { isPublicPath } from './publicPaths';
 import CommandPalette, {
   CommandPaletteProvider,
 } from '@/components/CommandPalette';
@@ -14,11 +15,22 @@ import { usePathname } from 'next/navigation';
 type Props = {
   children: React.ReactNode;
   headerSlot?: React.ReactNode;
+  // Server-rendered banner element, passed from the root layout so this client
+  // shell never imports the server-only currency module directly. Rendered only
+  // inside the app chrome — never on the landing or auth pages.
+  bannerSlot?: React.ReactNode;
 };
 
-const AppShell = ({ children, headerSlot }: Props) => {
+const AppShell = ({ children, headerSlot, bannerSlot }: Props) => {
   const pathname = usePathname();
   const isAuthPage = isAuthPath(pathname);
+
+  // Public marketing pages own their own full-bleed chrome — no sidebar,
+  // header, or app-only banners. Centralized in publicPaths.ts (tested) so the
+  // bare-landing decision isn't a magic literal duplicated with the proxy.
+  if (isPublicPath(pathname)) {
+    return <>{children}</>;
+  }
 
   if (isAuthPage) {
     return (
@@ -39,6 +51,7 @@ const AppShell = ({ children, headerSlot }: Props) => {
           <SidebarInset>
             <AppHeader slot={headerSlot} />
             <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
+              {bannerSlot}
               {children}
             </div>
           </SidebarInset>

@@ -22,8 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn('font-sans', geist.variable)}>
       <body>
-        <AppShell headerSlot={<BaseCurrencyPickerSlot />}>
-          <BaseCurrencyBanner />
+        <AppShell
+          headerSlot={<BaseCurrencyPickerSlot />}
+          bannerSlot={<BaseCurrencyBanner />}
+        >
           {children}
         </AppShell>
       </body>
