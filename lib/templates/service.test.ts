@@ -2,25 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TemplateRepository } from './repository';
 import type { TemplateInput } from './schema';
 import { TemplateService } from './service';
-import * as schema from '@/db/schema';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-
-const TEMPLATE_TABLE = `
-  CREATE TABLE IF NOT EXISTS "template" (
-    "id" text PRIMARY KEY NOT NULL,
-    "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-    "name" text NOT NULL,
-    "draft" text NOT NULL,
-    "createdAt" integer NOT NULL DEFAULT (unixepoch()),
-    "updatedAt" integer NOT NULL DEFAULT (unixepoch())
-  );
-  CREATE UNIQUE INDEX IF NOT EXISTS "template_user_name" ON "template"("userId", "name");
-`;
 
 describe('TemplateService', () => {
   let ctx: TestDbContext;
@@ -29,11 +15,8 @@ describe('TemplateService', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('templates-svc-');
-    ctx.sqlite.exec(TEMPLATE_TABLE);
-    ctx.sqlite
-      .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-      .run('alice', 'Alice', 'alice@example.com');
-    repo = new TemplateRepository(drizzle(ctx.sqlite, { schema }));
+    await ctx.insertUser('alice', 'Alice', 'alice@example.com');
+    repo = new TemplateRepository(ctx.db);
     service = new TemplateService(repo);
   });
 

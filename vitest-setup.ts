@@ -11,3 +11,5 @@ process.env.BETTER_AUTH_SECRET =
 process.env.DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://localhost/test';
 process.env.DATA_DIR = process.env.DATA_DIR ?? '/tmp/ledger-cli-ui-tests';
+process.env.BETTER_AUTH_URL =
+  process.env.BETTER_AUTH_URL ?? 'http://localhost:3000';

@@ -1,3 +1,6 @@
+import { promises as fs } from 'fs';
+import os from 'os';
+import path from 'path';
 import * as schema from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 import { PGlite } from '@electric-sql/pglite';
@@ -7,6 +10,7 @@ export type TestDbContext = {
   client: PGlite;
   db: DbInstance;
   insertUser: (id: string, name?: string, email?: string) => Promise<void>;
+  tmpDir: string;
 };
 
 // Minimal stand-in for the package-owned auth `user` table plus the app tables.
@@ -69,7 +73,9 @@ const SCHEMA_SQL = `
 export const setupTestDb = async (
   prefix = 'ledger-test-'
 ): Promise<TestDbContext> => {
-  void prefix; // each PGlite() is an isolated in-memory database
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
+  process.env.DATA_DIR = tmpDir;
+
   const client = new PGlite();
   await client.exec(SCHEMA_SQL);
   const db = drizzle(client, { schema }) as unknown as DbInstance;
@@ -88,9 +94,10 @@ export const setupTestDb = async (
     );
   };
 
-  return { client, db, insertUser };
+  return { client, db, insertUser, tmpDir };
 };
 
 export const teardownTestDb = async (ctx: TestDbContext): Promise<void> => {
   await ctx.client.close();
+  await fs.rm(ctx.tmpDir, { recursive: true, force: true });
 };

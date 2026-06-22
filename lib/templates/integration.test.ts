@@ -4,14 +4,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TemplateRepository } from './repository';
 import type { TemplateInput } from './schema';
 import { TemplateService } from './service';
-import * as schema from '@/db/schema';
 import { findUidInBlock } from '@/lib/journal/uid';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 describe('Phase 4.2 integration', () => {
   let ctx: TestDbContext;
@@ -20,21 +18,8 @@ describe('Phase 4.2 integration', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('tpl-int-');
-    ctx.sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS "template" (
-        "id" text PRIMARY KEY NOT NULL,
-        "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-        "name" text NOT NULL,
-        "draft" text NOT NULL,
-        "createdAt" integer NOT NULL DEFAULT (unixepoch()),
-        "updatedAt" integer NOT NULL DEFAULT (unixepoch())
-      );
-      CREATE UNIQUE INDEX IF NOT EXISTS "template_user_name" ON "template"("userId", "name");
-    `);
-    ctx.sqlite
-      .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-      .run('test-user', 'Test', 'test@example.com');
-    repo = new TemplateRepository(drizzle(ctx.sqlite, { schema }));
+    await ctx.insertUser('test-user', 'Test', 'test@example.com');
+    repo = new TemplateRepository(ctx.db);
     service = new TemplateService(repo);
   });
 
@@ -71,9 +56,7 @@ describe('Phase 4.2 integration', () => {
     const { JournalRepository } = await import('@/lib/journal/repository');
     const { JournalService } = await import('@/lib/journal/service');
     const { getJournalDir } = await import('@/lib/journal/layout');
-    const journalService = new JournalService(
-      new JournalRepository(drizzle(ctx.sqlite, { schema }))
-    );
+    const journalService = new JournalService(new JournalRepository(ctx.db));
     await fs.mkdir(getJournalDir(userId), { recursive: true });
 
     const todayISO = new Date().toISOString().slice(0, 10);

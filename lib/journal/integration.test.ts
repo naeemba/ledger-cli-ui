@@ -5,9 +5,7 @@ import { getJournalDir } from './layout';
 import { parseJournal } from './parser';
 import { JournalRepository } from './repository';
 import { JournalService } from './service';
-import * as schema from '@/db/schema';
 import { setupTestDb, teardownTestDb } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 describe('Phase 4.1 integration', () => {
   it('parses → backfills → edits → deletes a real fixture', async () => {
@@ -15,11 +13,12 @@ describe('Phase 4.1 integration', () => {
     const ctx = await setupTestDb('integration-');
 
     try {
-      ctx.sqlite
-        .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-        .run('integration-user', 'Integration', 'integration@example.com');
-      const db = drizzle(ctx.sqlite, { schema });
-      const service = new JournalService(new JournalRepository(db));
+      await ctx.insertUser(
+        'integration-user',
+        'Integration',
+        'integration@example.com'
+      );
+      const service = new JournalService(new JournalRepository(ctx.db));
 
       const userId = 'integration-user';
       const dir = getJournalDir(userId);
