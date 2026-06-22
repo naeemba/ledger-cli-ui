@@ -1,3 +1,4 @@
+import 'server-only';
 import { APP_NAME } from '@/lib/app';
 import { createAuth } from '@naeemba/next-starter/auth';
 

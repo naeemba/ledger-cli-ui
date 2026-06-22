@@ -1,3 +1,4 @@
+import 'server-only';
 import { auth } from './auth';
 import { createServer } from '@naeemba/next-starter/server';
 
