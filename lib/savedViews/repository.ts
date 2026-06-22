@@ -10,21 +10,21 @@ export class SavedViewRepository {
   constructor(private readonly db: DbInstance) {}
 
   async find(userId: string, id: string): Promise<SavedView | null> {
-    const row = this.db
+    const rows = await this.db
       .select()
       .from(savedView)
       .where(and(eq(savedView.userId, userId), eq(savedView.id, id)))
-      .get();
-    return row ?? null;
+      .limit(1);
+    return rows[0] ?? null;
   }
 
   async findByName(userId: string, name: string): Promise<SavedView | null> {
-    const row = this.db
+    const rows = await this.db
       .select()
       .from(savedView)
       .where(and(eq(savedView.userId, userId), eq(savedView.name, name)))
-      .get();
-    return row ?? null;
+      .limit(1);
+    return rows[0] ?? null;
   }
 
   async list(userId: string): Promise<SavedView[]> {
@@ -32,13 +32,12 @@ export class SavedViewRepository {
       .select()
       .from(savedView)
       .where(eq(savedView.userId, userId))
-      .orderBy(sql`lower(${savedView.name})`)
-      .all();
+      .orderBy(sql`lower(${savedView.name})`);
   }
 
   /** Inserts a new row. Throws on UNIQUE (userId, name) conflict. */
   async create(userId: string, input: SavedViewInput): Promise<SavedView> {
-    return this.db
+    const rows = await this.db
       .insert(savedView)
       .values({
         id: generateUid(),
@@ -46,8 +45,8 @@ export class SavedViewRepository {
         name: input.name,
         targetPath: input.targetPath,
       })
-      .returning()
-      .get();
+      .returning();
+    return rows[0];
   }
 
   /** Returns null if no row matches; throws on UNIQUE rename conflict. */
@@ -56,26 +55,24 @@ export class SavedViewRepository {
     id: string,
     patch: SavedViewPatch
   ): Promise<SavedView | null> {
-    const updates: SavedViewPatch & { updatedAt: Date } = {
-      updatedAt: new Date(),
+    const updates: SavedViewPatch & { updatedAt: Date | ReturnType<typeof sql> } = {
+      updatedAt: sql`now()`,
     };
     if (patch.name !== undefined) updates.name = patch.name;
     if (patch.targetPath !== undefined) updates.targetPath = patch.targetPath;
-    const row = this.db
+    const rows = await this.db
       .update(savedView)
       .set(updates)
       .where(and(eq(savedView.userId, userId), eq(savedView.id, id)))
-      .returning()
-      .get();
-    return row ?? null;
+      .returning();
+    return rows[0] ?? null;
   }
 
   async delete(userId: string, id: string): Promise<boolean> {
-    const row = this.db
+    const rows = await this.db
       .delete(savedView)
       .where(and(eq(savedView.userId, userId), eq(savedView.id, id)))
-      .returning({ id: savedView.id })
-      .get();
-    return !!row;
+      .returning({ id: savedView.id });
+    return rows.length > 0;
   }
 }
