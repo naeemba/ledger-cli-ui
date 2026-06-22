@@ -378,12 +378,14 @@ export default function Landing() {
       >
         <Reveal>
           <div className="lp-card lp-card--lit relative overflow-hidden">
-            {/* unsplash texture — degrades to the gradient underneath if it fails */}
+            {/* self-hosted texture (public/) — degrades to the gradient
+                underneath if it fails. Kept local rather than hotlinked so the
+                conversion-critical page has no uncontrolled third-party request
+                and works offline / behind a strict CSP. */}
             <div
               className="absolute inset-0 opacity-[0.16]"
               style={{
-                backgroundImage:
-                  "url('https://images.unsplash.com/photo-1554260570-e9689a3418b8?auto=format&fit=crop&w=1600&q=70')",
+                backgroundImage: "url('/landing-texture.jpg')",
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
