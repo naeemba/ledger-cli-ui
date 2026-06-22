@@ -1,15 +1,6 @@
 import 'server-only';
-import { auth } from './index';
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { getSession, requireSession } from '@/lib/auth-server';
 
-export const requireUser = async () => {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect('/login');
-  return session.user;
-};
+export const requireUser = async () => (await requireSession()).user;
 
-export const getOptionalUser = async () => {
-  const session = await auth.api.getSession({ headers: await headers() });
-  return session?.user ?? null;
-};
+export const getOptionalUser = async () => (await getSession())?.user ?? null;

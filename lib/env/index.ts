@@ -12,16 +12,28 @@ const envSchema = clientEnvSchema.extend({
     ),
   BETTER_AUTH_URL: z.string().url().default('http://localhost:3000'),
 
-  // Storage
-  DATA_DIR: z.string().default('./data'),
-  DATABASE_URL: z.string().optional(),
+  // Storage — Postgres connection string (postgres://user:pass@host:5432/db)
+  DATABASE_URL: z.string().url(),
+
+  // Root directory for persistent journals (one subdir per user). Validated
+  // here so an empty/missing value fails fast at startup rather than silently
+  // writing journals under ./data. Read at runtime via process.env in
+  // lib/journal/layout.ts (so tests can override it per-case).
+  DATA_DIR: z.string().min(1).default('./data'),
+
+  // Email (magic link). Required for Resend delivery in production; in dev the
+  // link is logged to stdout when RESEND_API_KEY is unset.
+  EMAIL_FROM: z.string().default('auth@example.com'),
+  RESEND_API_KEY: z.string().optional(),
+
+  // Google OAuth (optional)
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
 
   // Ledger
   DEFAULT_CURRENCY: z.string().default('USD'),
   LEDGER_PRICE_DB: z.string().optional(),
   DATE_LOCALE: z.string().default('en-US'),
-  // Account prefix the /portfolio report aggregates. Matches whatever your
-  // journal calls its investment account tree (e.g. "Assets:Brokerage").
   PORTFOLIO_ACCOUNT_PREFIX: z.string().default('Assets:Investments'),
 
   // Prices

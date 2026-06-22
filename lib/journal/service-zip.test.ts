@@ -5,19 +5,11 @@ import AdmZip from 'adm-zip';
 import { getJournalDir } from './layout';
 import { JournalRepository } from './repository';
 import { JournalService } from './service';
-import * as schema from '@/db/schema';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-
-const insertTestUser = (ctx: TestDbContext) => {
-  ctx.sqlite
-    .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-    .run('test-user', 'Test', 'test@example.com');
-};
 
 const buildZip = (
   entries: Array<{ name: string; content: string }>
@@ -35,9 +27,8 @@ describe('JournalService.replaceFromZip', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('zip-');
-    insertTestUser(ctx);
-    const db = drizzle(ctx.sqlite, { schema });
-    service = new JournalService(new JournalRepository(db));
+    await ctx.insertUser('test-user', 'Test', 'test@example.com');
+    service = new JournalService(new JournalRepository(ctx.db));
   });
 
   afterEach(async () => {

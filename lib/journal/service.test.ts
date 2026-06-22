@@ -5,19 +5,15 @@ import { fingerprintDraft } from './fingerprint';
 import { getJournalDir } from './layout';
 import { JournalRepository } from './repository';
 import { JournalService } from './service';
-import * as schema from '@/db/schema';
 import { findUidInBlock } from '@/lib/journal/uid';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 
-const insertTestUser = (ctx: TestDbContext) => {
-  ctx.sqlite
-    .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-    .run('test-user', 'Test', 'test@example.com');
+const insertTestUser = async (ctx: TestDbContext) => {
+  await ctx.insertUser('test-user', 'Test', 'test@example.com');
 };
 
 describe('JournalService.addTransaction', () => {
@@ -26,9 +22,8 @@ describe('JournalService.addTransaction', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('journal-add-');
-    insertTestUser(ctx);
-    const db = drizzle(ctx.sqlite, { schema });
-    service = new JournalService(new JournalRepository(db));
+    await insertTestUser(ctx);
+    service = new JournalService(new JournalRepository(ctx.db));
   });
 
   afterEach(async () => {
@@ -76,9 +71,8 @@ describe('JournalService.editTransaction', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('journal-edit-');
-    insertTestUser(ctx);
-    const db = drizzle(ctx.sqlite, { schema });
-    service = new JournalService(new JournalRepository(db));
+    await insertTestUser(ctx);
+    service = new JournalService(new JournalRepository(ctx.db));
   });
 
   afterEach(async () => {
@@ -198,9 +192,8 @@ describe('JournalService.deleteTransaction', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('journal-del-');
-    insertTestUser(ctx);
-    const db = drizzle(ctx.sqlite, { schema });
-    service = new JournalService(new JournalRepository(db));
+    await insertTestUser(ctx);
+    service = new JournalService(new JournalRepository(ctx.db));
   });
 
   afterEach(async () => {
@@ -294,9 +287,8 @@ describe('JournalService.backfillUids', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('journal-bf-');
-    insertTestUser(ctx);
-    const db = drizzle(ctx.sqlite, { schema });
-    service = new JournalService(new JournalRepository(db));
+    await insertTestUser(ctx);
+    service = new JournalService(new JournalRepository(ctx.db));
   });
 
   afterEach(async () => {

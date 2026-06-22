@@ -1,26 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SavedViewRepository } from './repository';
 import type { SavedViewInput } from './schema';
-import * as schema from '@/db/schema';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-
-const SAVED_VIEW_TABLE = `
-  CREATE TABLE IF NOT EXISTS "savedView" (
-    "id" text PRIMARY KEY NOT NULL,
-    "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-    "name" text NOT NULL,
-    "targetPath" text NOT NULL,
-    "createdAt" integer NOT NULL DEFAULT (unixepoch()),
-    "updatedAt" integer NOT NULL DEFAULT (unixepoch())
-  );
-  CREATE UNIQUE INDEX IF NOT EXISTS "savedView_user_name"
-    ON "savedView"("userId", "name");
-`;
 
 const sample: SavedViewInput = {
   name: 'Food',
@@ -33,14 +18,9 @@ describe('SavedViewRepository', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('saved-views-');
-    ctx.sqlite.exec(SAVED_VIEW_TABLE);
-    ctx.sqlite
-      .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-      .run('alice', 'Alice', 'alice@example.com');
-    ctx.sqlite
-      .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-      .run('bob', 'Bob', 'bob@example.com');
-    repo = new SavedViewRepository(drizzle(ctx.sqlite, { schema }));
+    await ctx.insertUser('alice', 'Alice', 'alice@example.com');
+    await ctx.insertUser('bob', 'Bob', 'bob@example.com');
+    repo = new SavedViewRepository(ctx.db);
   });
 
   afterEach(async () => {
@@ -57,9 +37,9 @@ describe('SavedViewRepository', () => {
 
   it('create throws on UNIQUE (userId, name) conflict', async () => {
     await repo.create('alice', sample);
-    await expect(repo.create('alice', sample)).rejects.toThrow(
-      /UNIQUE constraint failed/i
-    );
+    await expect(repo.create('alice', sample)).rejects.toMatchObject({
+      cause: { message: /duplicate key value/i },
+    });
   });
 
   it('create succeeds for the same name owned by a different user', async () => {
@@ -106,7 +86,7 @@ describe('SavedViewRepository', () => {
   it('update patches name and bumps updatedAt', async () => {
     const created = await repo.create('alice', sample);
     const before = created.updatedAt.getTime();
-    await new Promise((r) => setTimeout(r, 1100)); // unixepoch() = whole seconds
+    await new Promise((r) => setTimeout(r, 10));
     const updated = await repo.update('alice', created.id, {
       name: 'Groceries',
     });
@@ -127,7 +107,9 @@ describe('SavedViewRepository', () => {
     });
     await expect(
       repo.update('alice', second.id, { name: 'Food' })
-    ).rejects.toThrow(/UNIQUE constraint failed/i);
+    ).rejects.toMatchObject({
+      cause: { message: /duplicate key value/i },
+    });
   });
 
   it('delete returns true then false for the same id', async () => {
@@ -138,7 +120,7 @@ describe('SavedViewRepository', () => {
 
   it('cascades when the parent user is deleted', async () => {
     await repo.create('alice', sample);
-    ctx.sqlite.prepare('DELETE FROM "user" WHERE id = ?').run('alice');
+    await ctx.client.query('DELETE FROM "user" WHERE id = $1', ['alice']);
     expect(await repo.list('alice')).toEqual([]);
   });
 });

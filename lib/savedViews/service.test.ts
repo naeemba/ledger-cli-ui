@@ -1,26 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SavedViewRepository } from './repository';
 import { SavedViewService } from './service';
-import * as schema from '@/db/schema';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-
-const SAVED_VIEW_TABLE = `
-  CREATE TABLE IF NOT EXISTS "savedView" (
-    "id" text PRIMARY KEY NOT NULL,
-    "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-    "name" text NOT NULL,
-    "targetPath" text NOT NULL,
-    "createdAt" integer NOT NULL DEFAULT (unixepoch()),
-    "updatedAt" integer NOT NULL DEFAULT (unixepoch())
-  );
-  CREATE UNIQUE INDEX IF NOT EXISTS "savedView_user_name"
-    ON "savedView"("userId", "name");
-`;
 
 describe('SavedViewService', () => {
   let ctx: TestDbContext;
@@ -28,11 +13,8 @@ describe('SavedViewService', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('saved-views-svc-');
-    ctx.sqlite.exec(SAVED_VIEW_TABLE);
-    ctx.sqlite
-      .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-      .run('alice', 'Alice', 'alice@example.com');
-    const repo = new SavedViewRepository(drizzle(ctx.sqlite, { schema }));
+    await ctx.insertUser('alice', 'Alice', 'alice@example.com');
+    const repo = new SavedViewRepository(ctx.db);
     service = new SavedViewService(repo);
   });
 

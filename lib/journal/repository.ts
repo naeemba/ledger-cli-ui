@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { DEFAULT_MAIN, PRICE_DB_NAME, getJournalDir } from './layout';
 import {
   parseJournal,
@@ -8,7 +8,7 @@ import {
   type ParsedJournal,
   type Transaction,
 } from './parser';
-import { user as userTable } from '@/db/schema';
+import { userSetting } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 
 export type JournalLayout = {
@@ -28,12 +28,12 @@ export class JournalRepository {
 
   /** Resolves journal layout from the user row + filesystem. */
   async getLayout(userId: string): Promise<JournalLayout> {
-    const row = this.db
-      .select({ journalMain: userTable.journalMain })
-      .from(userTable)
-      .where(eq(userTable.id, userId))
-      .get();
-    const mainFile = row?.journalMain ?? DEFAULT_MAIN;
+    const rows = await this.db
+      .select({ journalMain: userSetting.journalMain })
+      .from(userSetting)
+      .where(eq(userSetting.userId, userId))
+      .limit(1);
+    const mainFile = rows[0]?.journalMain ?? DEFAULT_MAIN;
     const dir = getJournalDir(userId);
     return {
       dir,
@@ -56,13 +56,16 @@ export class JournalRepository {
     return layout;
   }
 
-  /** Updates the user's journalMain pointer. */
+  /** Updates the user's journalMain pointer, creating the setting row if needed. */
   async setMainFile(userId: string, mainFile: string): Promise<void> {
-    this.db
-      .update(userTable)
-      .set({ journalMain: mainFile })
-      .where(eq(userTable.id, userId))
-      .run();
+    await this.db
+      .insert(userSetting)
+      .values({ userId, journalMain: mainFile })
+      .onConflictDoUpdate({
+        target: userSetting.userId,
+        // sql`now()` (DB clock) to match the createdAt/updatedAt convention.
+        set: { journalMain: mainFile, updatedAt: sql`now()` },
+      });
   }
 
   /** Wipes the journal directory and recreates it empty. Used by the import flow. */

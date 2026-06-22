@@ -1,6 +1,7 @@
 import type { TemplateRepository } from './repository';
 import type { TemplateInput } from './schema';
 import type { Template } from '@/db/schema/template';
+import { isUniqueConflict } from '@/lib/db/isUniqueConflict';
 
 export type SaveResult =
   | { ok: true; template: Template }
@@ -9,9 +10,6 @@ export type SaveResult =
 export type RenameResult =
   | { ok: true; template: Template }
   | { ok: false; reason: 'name-conflict' | 'not-found' };
-
-const isUniqueConflict = (e: unknown): boolean =>
-  e instanceof Error && /UNIQUE constraint failed/i.test(e.message);
 
 export class TemplateService {
   constructor(private readonly repo: TemplateRepository) {}

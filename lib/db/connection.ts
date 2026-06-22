@@ -1,12 +1,9 @@
-import Database from 'better-sqlite3';
-import * as schema from '@/db/schema';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { createDb } from '@naeemba/next-starter/db';
 
-export type DbInstance = ReturnType<typeof drizzle<typeof schema>>;
+// DbInstance is the package's drizzle handle. Repositories take it as a
+// constructor arg so tests can inject a PGlite-backed instance. Deriving the
+// type (and the factory) from the package keeps the app from carrying a second
+// postgres.js + drizzle bootstrap that could drift from the package's.
+export type DbInstance = ReturnType<typeof createDb>;
 
-export const createDbConnection = (url: string): DbInstance => {
-  const sqlite = new Database(url);
-  sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('foreign_keys = ON');
-  return drizzle(sqlite, { schema });
-};
+export { createDb as createDbConnection } from '@naeemba/next-starter/db';

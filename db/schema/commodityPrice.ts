@@ -1,19 +1,20 @@
 import {
-  integer,
+  pgTable,
   real,
-  sqliteTable,
+  serial,
   text,
+  timestamp,
   unique,
-} from 'drizzle-orm/sqlite-core';
+} from 'drizzle-orm/pg-core';
 
-export const commodityPrice = sqliteTable(
+export const commodityPrice = pgTable(
   'commodity_price',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: serial('id').primaryKey(),
     symbol: text('symbol').notNull(),
     quote: text('quote').notNull(),
     price: real('price').notNull(),
-    fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
+    fetchedAt: timestamp('fetched_at').notNull(),
     fetchedDate: text('fetched_date').notNull(),
   },
   (t) => [

@@ -3,19 +3,11 @@ import path from 'path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getJournalDir } from './layout';
 import { JournalRepository } from './repository';
-import * as schema from '@/db/schema';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-
-const insertTestUser = (ctx: TestDbContext) => {
-  ctx.sqlite
-    .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-    .run('test-user', 'Test', 'test@example.com');
-};
 
 describe('JournalRepository.getMaxMtime', () => {
   let ctx: TestDbContext;
@@ -23,13 +15,15 @@ describe('JournalRepository.getMaxMtime', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('repo-mtime-');
-    insertTestUser(ctx);
-    const db = drizzle(ctx.sqlite, { schema });
-    repo = new JournalRepository(db);
+    await ctx.insertUser('test-user', 'Test', 'test@example.com');
+    repo = new JournalRepository(ctx.db);
+    // Wipe journal dir so each test starts with a clean filesystem state.
+    await fs.rm(getJournalDir('test-user'), { recursive: true, force: true });
   });
 
   afterEach(async () => {
     await teardownTestDb(ctx);
+    await fs.rm(getJournalDir('test-user'), { recursive: true, force: true });
   });
 
   it('returns the stub file mtime for a brand-new user (calls ensureLayout)', async () => {
@@ -102,5 +96,35 @@ describe('JournalRepository.getMaxMtime', () => {
       new Date(later)
     );
     expect(await repo.getMaxMtime(userId)).toBe(later);
+  });
+});
+
+describe('JournalRepository.setMainFile', () => {
+  let ctx: TestDbContext;
+  let repo: JournalRepository;
+
+  beforeEach(async () => {
+    ctx = await setupTestDb('repo-setmain-');
+    await ctx.insertUser('test-user', 'Test', 'test@example.com');
+    repo = new JournalRepository(ctx.db);
+  });
+
+  afterEach(async () => {
+    await teardownTestDb(ctx);
+  });
+
+  it('creates the userSetting row when none exists (upsert insert path)', async () => {
+    // Fresh user: no userSetting row yet — plain UPDATE would silently no-op,
+    // leaving mainFile as the default 'main.ledger'. Upsert must CREATE the row.
+    await repo.setMainFile('test-user', 'custom.ledger');
+    const layout = await repo.getLayout('test-user');
+    expect(layout.mainFile).toBe('custom.ledger');
+  });
+
+  it('updates the userSetting row when one already exists (upsert update path)', async () => {
+    await repo.setMainFile('test-user', 'custom.ledger');
+    await repo.setMainFile('test-user', 'other.ledger');
+    const layout = await repo.getLayout('test-user');
+    expect(layout.mainFile).toBe('other.ledger');
   });
 });

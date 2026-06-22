@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { userSetting, type UserSetting } from '@/db/schema/userSetting';
 import type { DbInstance } from '@/lib/db/connection';
 
@@ -6,22 +6,22 @@ export class UserSettingRepository {
   constructor(private readonly db: DbInstance) {}
 
   async get(userId: string): Promise<UserSetting | null> {
-    const row = this.db
+    const rows = await this.db
       .select()
       .from(userSetting)
       .where(eq(userSetting.userId, userId))
-      .get();
-    return row ?? null;
+      .limit(1);
+    return rows[0] ?? null;
   }
 
   async upsertBaseCurrency(userId: string, value: string): Promise<void> {
-    this.db
+    await this.db
       .insert(userSetting)
       .values({ userId, baseCurrency: value })
       .onConflictDoUpdate({
         target: userSetting.userId,
-        set: { baseCurrency: value, updatedAt: new Date() },
-      })
-      .run();
+        // sql`now()` (DB clock) to match the createdAt/updatedAt convention.
+        set: { baseCurrency: value, updatedAt: sql`now()` },
+      });
   }
 }

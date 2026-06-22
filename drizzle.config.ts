@@ -1,12 +1,20 @@
 import { defineConfig } from 'drizzle-kit';
 
-const DATA_DIR = process.env.DATA_DIR ?? './data';
-
 export default defineConfig({
   schema: './db/schema',
   out: './db/migrations',
-  dialect: 'sqlite',
+  dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? `${DATA_DIR}/db.sqlite`,
+    url: process.env.DATABASE_URL!,
   },
+  // Auth tables are package-owned (applied via `next-starter migrate`). Keep
+  // drizzle-kit scoped to the app's own tables so it never tries to create or
+  // drop the auth schema.
+  tablesFilter: [
+    'userSetting',
+    'template',
+    'commodity_price',
+    'price_fetch_run',
+    'savedView',
+  ],
 });

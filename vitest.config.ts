@@ -11,7 +11,15 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['**/*.test.ts', '**/*.test.tsx'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', '.claude/**'],
     setupFiles: ['./vitest-setup.ts'],
+    server: {
+      deps: {
+        // @naeemba/next-starter/server is ESM and imports 'next/headers' without
+        // a .js extension — inlining it through Vite resolves the CJS interop.
+        inline: ['@naeemba/next-starter'],
+      },
+    },
     coverage: {
       provider: 'v8',
       include: ['lib/journal/**/*.ts'],

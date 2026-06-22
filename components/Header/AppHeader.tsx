@@ -23,15 +23,24 @@ import {
   NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { useAuth } from '@/lib/auth/use-auth';
+import { authClient } from '@/lib/auth-client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 type Props = { slot?: React.ReactNode };
 
 const AppHeader = ({ slot }: Props) => {
   const sections = React.useMemo(() => getNavSections(), []);
-  const { user, signOut } = useAuth();
+  const router = useRouter();
+  const { data } = authClient.useSession();
+  const user = data?.user ?? null;
   const userInitial = (user?.email?.[0] ?? 'U').toUpperCase();
+
+  const signOut = async () => {
+    await authClient.signOut();
+    router.push('/sign-in');
+    router.refresh();
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-bg/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-bg/60 sm:px-6 lg:px-8">

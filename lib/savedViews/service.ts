@@ -1,6 +1,7 @@
 import type { SavedViewRepository } from './repository';
 import type { SavedViewInput } from './schema';
 import type { SavedView } from '@/db/schema/savedView';
+import { isUniqueConflict } from '@/lib/db/isUniqueConflict';
 
 export type SaveResult =
   | { ok: true; view: SavedView }
@@ -9,9 +10,6 @@ export type SaveResult =
 export type RenameResult =
   | { ok: true; view: SavedView }
   | { ok: false; reason: 'name-conflict' | 'not-found' };
-
-const isUniqueConflict = (e: unknown): boolean =>
-  e instanceof Error && /UNIQUE constraint failed/i.test(e.message);
 
 export class SavedViewService {
   constructor(private readonly repo: SavedViewRepository) {}

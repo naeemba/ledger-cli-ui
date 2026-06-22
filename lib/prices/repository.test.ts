@@ -3,37 +3,11 @@ import {
   CommodityPriceRepository,
   PriceFetchRunRepository,
 } from './repository';
-import * as schema from '@/db/schema';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-
-const PRICE_TABLE = `
-  CREATE TABLE IF NOT EXISTS "commodity_price" (
-    "id" integer PRIMARY KEY AUTOINCREMENT,
-    "symbol" text NOT NULL,
-    "quote" text NOT NULL,
-    "price" real NOT NULL,
-    "fetched_at" integer NOT NULL,
-    "fetched_date" text NOT NULL,
-    CONSTRAINT "commodity_price_unique_per_day" UNIQUE ("symbol","quote","fetched_date")
-  );
-`;
-
-const RUN_TABLE = `
-  CREATE TABLE IF NOT EXISTS "price_fetch_run" (
-    "id" integer PRIMARY KEY AUTOINCREMENT,
-    "started_at" integer NOT NULL,
-    "completed_at" integer,
-    "status" text NOT NULL,
-    "symbols_fetched" integer NOT NULL DEFAULT 0,
-    "symbols_failed" integer NOT NULL DEFAULT 0,
-    "error_message" text
-  );
-`;
 
 describe('CommodityPriceRepository', () => {
   let ctx: TestDbContext;
@@ -41,8 +15,7 @@ describe('CommodityPriceRepository', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('prices-repo-');
-    ctx.sqlite.exec(PRICE_TABLE);
-    repo = new CommodityPriceRepository(drizzle(ctx.sqlite, { schema }));
+    repo = new CommodityPriceRepository(ctx.db);
   });
 
   afterEach(async () => {
@@ -82,6 +55,31 @@ describe('CommodityPriceRepository', () => {
         quote: 'EUR',
         price: 61000,
         fetchedAt,
+        fetchedDate: '2026-05-25',
+      },
+    ]);
+    const rows = await repo.listForQuote('EUR');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].price).toBe(61000);
+  });
+
+  it('dedupes same-day duplicate conflict keys in one batch (last-wins)', async () => {
+    // Mirrors the legacy-import path, which emits one row per `P` directive and
+    // can carry several same-day entries for one commodity. Without deduping,
+    // the single ON CONFLICT DO UPDATE statement throws Postgres 21000.
+    await repo.insert([
+      {
+        symbol: 'BTC',
+        quote: 'EUR',
+        price: 60000,
+        fetchedAt: new Date('2026-05-25T06:00:00Z'),
+        fetchedDate: '2026-05-25',
+      },
+      {
+        symbol: 'BTC',
+        quote: 'EUR',
+        price: 61000,
+        fetchedAt: new Date('2026-05-25T18:00:00Z'),
         fetchedDate: '2026-05-25',
       },
     ]);
@@ -145,8 +143,7 @@ describe('PriceFetchRunRepository', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('runs-repo-');
-    ctx.sqlite.exec(RUN_TABLE);
-    repo = new PriceFetchRunRepository(drizzle(ctx.sqlite, { schema }));
+    repo = new PriceFetchRunRepository(ctx.db);
   });
 
   afterEach(async () => {

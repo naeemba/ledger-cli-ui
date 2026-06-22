@@ -1,25 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TemplateRepository } from './repository';
 import type { TemplateInput } from './schema';
-import * as schema from '@/db/schema';
 import {
   setupTestDb,
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-
-const TEMPLATE_TABLE = `
-  CREATE TABLE IF NOT EXISTS "template" (
-    "id" text PRIMARY KEY NOT NULL,
-    "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-    "name" text NOT NULL,
-    "draft" text NOT NULL,
-    "createdAt" integer NOT NULL DEFAULT (unixepoch()),
-    "updatedAt" integer NOT NULL DEFAULT (unixepoch())
-  );
-  CREATE UNIQUE INDEX IF NOT EXISTS "template_user_name" ON "template"("userId", "name");
-`;
 
 describe('TemplateRepository', () => {
   let ctx: TestDbContext;
@@ -27,14 +13,9 @@ describe('TemplateRepository', () => {
 
   beforeEach(async () => {
     ctx = await setupTestDb('templates-');
-    ctx.sqlite.exec(TEMPLATE_TABLE);
-    ctx.sqlite
-      .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-      .run('alice', 'Alice', 'alice@example.com');
-    ctx.sqlite
-      .prepare(`INSERT INTO "user" ("id","name","email") VALUES (?,?,?)`)
-      .run('bob', 'Bob', 'bob@example.com');
-    repo = new TemplateRepository(drizzle(ctx.sqlite, { schema }));
+    await ctx.insertUser('alice', 'Alice', 'alice@example.com');
+    await ctx.insertUser('bob', 'Bob', 'bob@example.com');
+    repo = new TemplateRepository(ctx.db);
   });
 
   afterEach(async () => {
@@ -63,9 +44,9 @@ describe('TemplateRepository', () => {
 
   it('save throws on UNIQUE (userId, name) conflict', async () => {
     await repo.save('alice', sampleInput);
-    await expect(repo.save('alice', sampleInput)).rejects.toThrow(
-      /UNIQUE constraint failed/i
-    );
+    await expect(repo.save('alice', sampleInput)).rejects.toMatchObject({
+      cause: { message: /duplicate key value/i },
+    });
   });
 
   it('find returns the row by id for the user', async () => {
@@ -114,7 +95,7 @@ describe('TemplateRepository', () => {
     const second = await repo.save('alice', { ...sampleInput, name: 'B' });
     await expect(
       repo.update('alice', second.id, { name: 'A' })
-    ).rejects.toThrow(/UNIQUE constraint failed/i);
+    ).rejects.toMatchObject({ cause: { message: /duplicate key value/i } });
   });
 
   it('delete removes the row', async () => {

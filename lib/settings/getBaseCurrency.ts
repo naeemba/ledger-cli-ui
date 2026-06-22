@@ -18,8 +18,14 @@ export const getBaseCurrency = cache(async (): Promise<string> => {
 
   const user = await getOptionalUser();
   if (user) {
-    const row = await userSettingRepository.get(user.id);
-    if (row) return row.baseCurrency;
+    try {
+      const row = await userSettingRepository.get(user.id);
+      if (row?.baseCurrency) return row.baseCurrency;
+    } catch (e) {
+      // ~20 pages read the base currency, mostly outside a try/catch. A DB
+      // hiccup here shouldn't 500 every one of them — degrade to the default.
+      console.error('getBaseCurrency: failed to read user setting', e);
+    }
   }
 
   return env.DEFAULT_CURRENCY;
