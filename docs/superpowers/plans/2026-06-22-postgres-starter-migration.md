@@ -1385,7 +1385,15 @@ git commit -m "docs: mark postgres + next-starter migration complete"
   });
 ```
 
-3. Change both UNIQUE-violation assertions from `/UNIQUE constraint failed/i` to `/duplicate key value/i` (the `create throws…` and `update throws on UNIQUE conflict…` tests).
+3. Change both UNIQUE-violation assertions (the `create throws…` and `update throws on UNIQUE conflict…` tests). drizzle-orm/pglite wraps the Postgres error in `error.cause`, NOT `error.message`, so `rejects.toThrow(/…/)` does not match. Use:
+
+```ts
+await expect(repo.create('alice', sample)).rejects.toMatchObject({
+  cause: { message: /duplicate key value/i },
+});
+```
+
+(Apply the same `toMatchObject({ cause: { message: /duplicate key value/i } })` form to the rename-conflict assertion. This matches the pattern established in Task 6 / templates.)
 4. In the cascade test, replace the raw sqlite delete with:
 
 ```ts
@@ -1491,16 +1499,75 @@ export class SavedViewRepository {
 Run: `pnpm exec vitest run lib/savedViews/repository.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Run the full suite (green checkpoint for all repository conversions)**
+- [ ] **Step 5: Run the saved-views suite**
 
-Run: `pnpm test`
-Expected: all suites PASS. Fix any remaining `.get()/.run()/.all()` or `drizzle-orm/better-sqlite3` import the suite surfaces.
+Run: `pnpm exec vitest run lib/savedViews/repository.test.ts`
+Expected: PASS. (The whole-suite green gate is Task 13, after all remaining test files are migrated.)
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add lib/savedViews/repository.ts lib/savedViews/repository.test.ts
 git commit -m "refactor(saved-views): async postgres repository"
+```
+
+---
+
+## Task 13: Migrate remaining test suites to PGlite + exclude worktrees
+
+> Added after implementation began: the plan originally scoped only the
+> `repository.test.ts` files, but several `service.test.ts` / `integration.test.ts`
+> suites (and a `features/savedViews/` tree) still use the old SQLite harness.
+> This task converts all of them following the now-established pattern and carries
+> the whole-suite green gate. **Execute this AFTER Task 9 (auth)** so any
+> auth-related test fallout is resolved in the same green pass.
+
+**Files (all test files; convert each to the PGlite harness):**
+- Modify: `lib/journal/service.test.ts`, `lib/journal/service-zip.test.ts`, `lib/journal/integration.test.ts`
+- Modify: `lib/settings/service.test.ts`
+- Modify: `lib/templates/service.test.ts`, `lib/templates/integration.test.ts`
+- Modify: `lib/savedViews/service.test.ts`
+- Modify: `features/savedViews/integration.test.ts` (and any `features/savedViews/actions/*.test.ts` still on the old harness)
+- Modify: `utils/runLedgerForUser.test.ts`
+- Modify: `vitest.config.ts` (add `exclude`)
+
+**The established conversion pattern (proven in Tasks 5–8, 12):**
+- Remove `import { drizzle } from 'drizzle-orm/better-sqlite3'` and `import * as schema from '@/db/schema'` where only used for the old harness.
+- Remove any raw `CREATE TABLE …` DDL string constants — the PGlite harness (`lib/test-utils/db.ts`) already provisions `user` + all five app tables.
+- Replace `ctx.sqlite.exec(...)` / `ctx.sqlite.prepare(...).run(...)` with `ctx.db`, `ctx.insertUser(id, name?, email?)`, and `ctx.client.query('… $1 …', [..])` for any other raw inserts/deletes.
+- Build repositories/services with `ctx.db`.
+- Seed `userSetting` via `new UserSettingRepository(ctx.db).upsertBaseCurrency(userId, cur)` or `ctx.client.query`.
+- UNIQUE-violation assertions: `rejects.toMatchObject({ cause: { message: /duplicate key value/i } })` (pglite wraps the error in `.cause`).
+- **Preserve every assertion and test intent.** Mocks of the ledger CLI / filesystem / auth stay as-is. If a suite needs more than a mechanical harness swap to pass, STOP and report it — do not weaken assertions.
+
+- [ ] **Step 1: Exclude stray worktrees from the vitest glob**
+
+In `vitest.config.ts`, add an `exclude` to the `test` block so sibling git worktrees and build output are not collected:
+
+```ts
+    include: ['**/*.test.ts', '**/*.test.tsx'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', '.claude/**'],
+```
+
+- [ ] **Step 2: Convert each listed test file to the harness**
+
+Apply the established pattern (above) to every file in the Files list. Work one file at a time; after each, run that file: `pnpm exec vitest run <path>` and confirm PASS before moving on.
+
+- [ ] **Step 3: Whole-suite green gate**
+
+Run: `pnpm test`
+Expected: ALL suites PASS, output pristine. (This is the single source of truth that every repository/service/integration suite runs on Postgres/PGlite.) If a suite fails, fix it under the pattern above; if it needs intent changes, STOP and report.
+
+- [ ] **Step 4: Type-check**
+
+Run: `pnpm type-check`
+Expected: 0 errors across the whole project (all source + tests migrated by now; auth shims from Task 9 in place).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add -A
+git commit -m "test: migrate remaining suites to pglite harness; exclude worktrees"
 ```
 
 ---
