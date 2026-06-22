@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "dotenv -e .env -- next dev",
+    "prebuild": "next-starter migrate",
     "build": "next build",
+    "prestart": "next-starter migrate && drizzle-kit migrate",
     "start": "next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
@@ -12,6 +14,7 @@
     "test:watch": "vitest",
     "shadcn:add": "f() { shadcn add -y \"$@\" && prettier --write 'components/ui/**/*.{ts,tsx}'; }; f",
     "db:generate": "drizzle-kit generate",
+    "db:migrate:auth": "next-starter migrate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "prepare": "husky"
