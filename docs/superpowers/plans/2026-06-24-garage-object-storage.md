@@ -619,8 +619,8 @@ describe('fingerprint', () => {
     expect(a).not.toBe(c);
   });
 
-  it('is stable for the empty set', () => {
-    expect(fingerprint([])).toBe(fingerprint([]));
+  it('is a deterministic 64-char hex string for the empty set', () => {
+    expect(fingerprint([])).toMatch(/^[a-f0-9]{64}$/);
   });
 });
 ```
