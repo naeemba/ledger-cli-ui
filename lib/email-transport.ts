@@ -36,7 +36,6 @@ export const postalTransport: EmailTransport = async ({
   // Postal returns 200 with { status: 'success' | 'error' | 'parameter-error' }
   const body = (await res.json().catch(() => null)) as {
     status?: string;
-    data?: unknown;
   } | null;
 
   if (!res.ok || body?.status !== 'success') {
