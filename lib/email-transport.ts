@@ -1,4 +1,5 @@
 import 'server-only';
+import { env } from '@/lib/env';
 import type { EmailTransport } from '@naeemba/next-starter/email';
 
 /**
@@ -17,19 +18,11 @@ export const postalTransport: EmailTransport = async ({
   html,
   text,
 }) => {
-  const baseUrl = process.env.POSTAL_API_URL;
-  const apiKey = process.env.POSTAL_API_KEY;
-  if (!baseUrl || !apiKey) {
-    throw new Error(
-      '[email] POSTAL_API_URL and POSTAL_API_KEY must be set to send mail.'
-    );
-  }
-
-  const res = await fetch(`${baseUrl}/api/v1/send/message`, {
+  const res = await fetch(`${env.POSTAL_API_URL}/api/v1/send/message`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Server-API-Key': apiKey,
+      'X-Server-API-Key': env.POSTAL_API_KEY,
     },
     body: JSON.stringify({
       to: [to],
