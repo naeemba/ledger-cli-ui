@@ -1,0 +1,6 @@
+# The app shells out to the `ledger` CLI (ledger-cli 3.x) to compute
+# balances/stats from journal files (see lib/journal/*). Nixpacks installs
+# Node deps but not system binaries, so install `ledger` via apt here or the
+# production container fails at runtime with `spawn ledger ENOENT`.
+[phases.setup]
+aptPkgs = ["ledger"]
