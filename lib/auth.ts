@@ -1,5 +1,6 @@
 import 'server-only';
 import { APP_NAME } from '@/lib/app';
+import { postalTransport } from '@/lib/email-transport';
 import { createAuth } from '@naeemba/next-starter/auth';
 
 const googleConfigured =
@@ -8,5 +9,6 @@ const googleConfigured =
 export const auth = await createAuth({
   singleAdmin: 'sharp.fk@gmail.com',
   passkey: { rpName: APP_NAME },
+  transport: postalTransport,
   ...(googleConfigured && { google: {} }),
 });
