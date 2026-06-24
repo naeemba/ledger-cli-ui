@@ -1,15 +1,24 @@
+import { cache } from 'react';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { eq, sql } from 'drizzle-orm';
 import { DEFAULT_MAIN, PRICE_DB_NAME, getJournalDir } from './layout';
-import {
-  parseJournal,
-  resolveIncludes,
-  type ParsedJournal,
-  type Transaction,
-} from './parser';
+import { parseJournal, type ParsedJournal, type Transaction } from './parser';
 import { userSetting } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
+import { pullLocked, manifestRelName } from '@/lib/storage';
+
+/**
+ * Request-scoped dedup of the read-path pull. A single render fires ~8
+ * concurrent reads (7× runLedger + recent-tx/stats), each of which needs the
+ * canonical journal pulled into the local cache. Without this, the read-path
+ * lock serializes them into N back-to-back ListObjectsV2 round-trips that all
+ * return identical data. React's `cache()` coalesces same-userId callers in one
+ * request to a single pull. Keyed by userId so distinct users don't collide.
+ */
+const cachedPull = cache(
+  (userId: string): Promise<{ fingerprint: string }> => pullLocked(userId)
+);
 
 export type JournalLayout = {
   dir: string;
@@ -68,15 +77,22 @@ export class JournalRepository {
       });
   }
 
-  /** Wipes the journal directory and recreates it empty. Used by the import flow. */
-  async emptyJournalDir(userId: string): Promise<void> {
+  /** Removes the user's journal files locally but PRESERVES the storage manifest
+   * (.manifest.json), so a subsequent push can diff against canonical and replace
+   * it atomically (upload new + delete orphans) without first wiping canonical. */
+  async resetLocalJournal(userId: string): Promise<void> {
     const dir = getJournalDir(userId);
-    try {
-      await fs.rm(dir, { recursive: true, force: true });
-    } catch {
-      // ignore
-    }
     await fs.mkdir(dir, { recursive: true });
+    const entries = await fs
+      .readdir(dir, { withFileTypes: true })
+      .catch(() => []);
+    await Promise.all(
+      entries
+        .filter((e) => e.name !== manifestRelName)
+        .map((e) =>
+          fs.rm(path.join(dir, e.name), { recursive: true, force: true })
+        )
+    );
   }
 
   /** Reads a file by absolute path. */
@@ -108,14 +124,13 @@ export class JournalRepository {
     return transactions.find((t) => t.uid === uid) ?? null;
   }
 
-  /** Returns max mtimeMs across the user's include graph. Used as a cache-key
-   * input so any file change (internal or external) invalidates `unstable_cache`. */
-  async getMaxMtime(userId: string): Promise<number> {
-    const { mainPath } = await this.ensureLayout(userId);
-    const files = await resolveIncludes(mainPath);
-    if (files.length === 0) return 0;
-    const stats = await Promise.all(files.map((f) => fs.stat(f)));
-    return Math.max(...stats.map((s) => s.mtimeMs));
+  /** Pulls the canonical journal into the local cache and returns the content
+   * fingerprint. Used as the query cache-key input so any change (local or in
+   * Garage) invalidates `unstable_cache`. Also guarantees the local stub exists. */
+  async getFingerprint(userId: string): Promise<string> {
+    const { fingerprint } = await cachedPull(userId);
+    await this.ensureLayout(userId);
+    return fingerprint;
   }
 
   private async findPriceDb(dir: string): Promise<string | null> {

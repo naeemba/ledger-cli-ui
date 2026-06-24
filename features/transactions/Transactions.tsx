@@ -7,25 +7,28 @@ import {
 } from './applyTransactionFilters';
 import Help from '@/components/Help';
 import { requireUser } from '@/lib/auth/require-user';
-import { journalRepository, journalService } from '@/lib/journal';
+import { journalRepository } from '@/lib/journal';
 import { getJournalCacheTag } from '@/lib/journal/layout';
 import { type Transaction } from '@/lib/journal/parser';
 import { savedViewService } from '@/lib/savedViews';
 import { unstable_cache } from 'next/cache';
 
-const buildLoader = (tag: string, mtimeMs: number) =>
+const buildLoader = (tag: string, fingerprint: string) =>
   unstable_cache(
     async (userId: string): Promise<Transaction[]> => {
-      const journal = await journalService.listTransactions(userId);
+      // getFingerprint (below) already pulled the canonical journal into the
+      // local cache, so read straight from the repository — going through
+      // journalService.listTransactions would pull a second time.
+      const journal = await journalRepository.list(userId);
       return journal.transactions;
     },
-    ['journal-transactions', tag, String(mtimeMs)],
+    ['journal-transactions', tag, fingerprint],
     { revalidate: 60, tags: [tag] }
   );
 
 const loadTransactions = async (userId: string) => {
-  const mtimeMs = await journalRepository.getMaxMtime(userId);
-  return buildLoader(getJournalCacheTag(userId), mtimeMs)(userId);
+  const fingerprint = await journalRepository.getFingerprint(userId);
+  return buildLoader(getJournalCacheTag(userId), fingerprint)(userId);
 };
 
 const Transactions = async ({
