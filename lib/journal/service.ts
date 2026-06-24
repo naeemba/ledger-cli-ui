@@ -230,7 +230,17 @@ export class JournalService {
     // No rollback on parse failure for imports — too much state to undo.
     // Surface the error so the user can re-upload a clean journal.
     const verify = await verifyJournalParseable(mainPath);
-    await push(userId);
+    try {
+      await push(userId);
+    } catch (e) {
+      return {
+        uidsAdded: backfill.uidsAdded,
+        parseFailure:
+          e instanceof StorageConflictError
+            ? e.message
+            : 'Failed to save journal to storage.',
+      };
+    }
     return {
       uidsAdded: backfill.uidsAdded,
       ...(verify.ok ? {} : { parseFailure: verify.firstLine }),
@@ -279,7 +289,19 @@ export class JournalService {
     // No rollback on parse failure for imports — too much state to undo.
     // Surface the error so the user can re-upload a clean journal.
     const verify = await verifyJournalParseable(path.join(dir, mainFile));
-    await push(userId);
+    try {
+      await push(userId);
+    } catch (e) {
+      return {
+        mainFile,
+        fileCount: entries.length,
+        uidsAdded: backfill.uidsAdded,
+        parseFailure:
+          e instanceof StorageConflictError
+            ? e.message
+            : 'Failed to save journal to storage.',
+      };
+    }
     return {
       mainFile,
       fileCount: entries.length,
