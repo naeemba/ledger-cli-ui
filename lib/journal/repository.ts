@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { eq, sql } from 'drizzle-orm';
@@ -6,6 +7,18 @@ import { parseJournal, type ParsedJournal, type Transaction } from './parser';
 import { userSetting } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 import { pullLocked, manifestRelName } from '@/lib/storage';
+
+/**
+ * Request-scoped dedup of the read-path pull. A single render fires ~8
+ * concurrent reads (7× runLedger + recent-tx/stats), each of which needs the
+ * canonical journal pulled into the local cache. Without this, the read-path
+ * lock serializes them into N back-to-back ListObjectsV2 round-trips that all
+ * return identical data. React's `cache()` coalesces same-userId callers in one
+ * request to a single pull. Keyed by userId so distinct users don't collide.
+ */
+const cachedPull = cache(
+  (userId: string): Promise<{ fingerprint: string }> => pullLocked(userId)
+);
 
 export type JournalLayout = {
   dir: string;
@@ -115,7 +128,7 @@ export class JournalRepository {
    * fingerprint. Used as the query cache-key input so any change (local or in
    * Garage) invalidates `unstable_cache`. Also guarantees the local stub exists. */
   async getFingerprint(userId: string): Promise<string> {
-    const { fingerprint } = await pullLocked(userId);
+    const { fingerprint } = await cachedPull(userId);
     await this.ensureLayout(userId);
     return fingerprint;
   }
