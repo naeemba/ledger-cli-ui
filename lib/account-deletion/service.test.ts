@@ -46,6 +46,24 @@ describe('AccountDeletionService', () => {
     expect(sent[0].code).toMatch(/^\d{6}$/);
   });
 
+  it('issueCode rolls back the challenge when the email send fails', async () => {
+    const svc = new AccountDeletionService(repo, {
+      sendCode: async () => {
+        throw new Error('smtp down');
+      },
+      purge: async () => {},
+      now: () => nowMs,
+    });
+    await expect(svc.issueCode('alice', 'alice@example.com')).rejects.toThrow(
+      'smtp down'
+    );
+    // The throttle must not be armed by a failed send: a retry can issue again.
+    expect(await repo.get('alice')).toBeNull();
+    const retry = await makeService().issueCode('alice', 'alice@example.com');
+    expect(retry).toEqual({ ok: true });
+    expect(sent).toHaveLength(1);
+  });
+
   it('issueCode throttles a re-send within 30s', async () => {
     const svc = makeService();
     await svc.issueCode('alice', 'alice@example.com');

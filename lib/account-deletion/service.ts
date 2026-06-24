@@ -52,7 +52,15 @@ export class AccountDeletionService {
     const expiresAt = new Date(nowTime + CODE_TTL_MS);
     const createdAt = new Date(nowTime);
     await this.repo.upsert(userId, hashCode(code), expiresAt, createdAt);
-    await this.deps.sendCode(email, code);
+    try {
+      await this.deps.sendCode(email, code);
+    } catch (err) {
+      // The upsert above armed the resend throttle. If the email never went
+      // out, roll the challenge back so the user can retry immediately rather
+      // than being locked out for the throttle window with no code in hand.
+      await this.repo.delete(userId);
+      throw err;
+    }
     return { ok: true };
   }
 
