@@ -6,7 +6,6 @@ import { SentNotice } from './SentNotice';
 import { getAuthCopy, type AuthMode } from './authCopy';
 import {
   authReducer,
-  canResend,
   initialAuthState,
   RESEND_COOLDOWN_MS,
   type Method,
@@ -31,14 +30,20 @@ export function AuthForm({ mode }: AuthFormProps) {
   const copy = getAuthCopy(mode);
   const [email, setEmail] = useState('');
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
-  const [resendAllowed, setResendAllowed] = useState(true);
+  const [resendAllowed, setResendAllowed] = useState(false);
 
   useEffect(() => {
     if (state.lastSentAt === null) return;
-    const elapsed = Date.now() - state.lastSentAt;
-    const delay = Math.max(0, RESEND_COOLDOWN_MS - elapsed);
-    const id = setTimeout(() => setResendAllowed(true), delay);
-    return () => clearTimeout(id);
+    const remaining = Math.max(
+      0,
+      RESEND_COOLDOWN_MS - (Date.now() - state.lastSentAt)
+    );
+    const disableId = setTimeout(() => setResendAllowed(false), 0);
+    const enableId = setTimeout(() => setResendAllowed(true), remaining);
+    return () => {
+      clearTimeout(disableId);
+      clearTimeout(enableId);
+    };
   }, [state.lastSentAt]);
 
   async function runAttempt(
