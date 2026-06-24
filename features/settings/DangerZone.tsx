@@ -31,6 +31,10 @@ const DangerZone = () => {
       }
       setPhase('code-sent');
       toast.success('Verification code sent to your email.');
+    } catch {
+      // The server logs the real cause (e.g. email transport down); surface a
+      // generic failure so the user knows the request did not go through.
+      toast.error('Could not send a verification code. Please try again.');
     } finally {
       setPending(false);
     }
@@ -52,6 +56,10 @@ const DangerZone = () => {
       }
       switch (res.reason) {
         case 'no-code':
+          setError('Request a new code.');
+          setPhase('idle');
+          setCode('');
+          break;
         case 'expired':
           setError('That code expired. Request a new one.');
           setPhase('idle');
@@ -70,6 +78,11 @@ const DangerZone = () => {
           );
           break;
       }
+    } catch {
+      // Deletion is irreversible and may partially complete server-side (e.g.
+      // remote-storage cleanup failing mid-purge). Never fail silently — the
+      // server logs the real cause; surface a generic error so the user knows.
+      setError('Something went wrong. Please try again.');
     } finally {
       setPending(false);
     }
