@@ -42,7 +42,11 @@ const DangerZone = () => {
     try {
       const res = await deleteAccountAction(code);
       if (res.ok) {
-        await authClient.signOut();
+        try {
+          await authClient.signOut();
+        } catch {
+          // account is already deleted server-side; the session is invalid regardless
+        }
         router.push('/account/deleted');
         return;
       }
