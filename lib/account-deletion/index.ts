@@ -5,12 +5,10 @@ import { AccountDeletionService } from './service';
 import { APP_NAME } from '@/lib/app';
 import { db } from '@/lib/db';
 import { postalTransport } from '@/lib/email-transport';
+import { env } from '@/lib/env';
 
 const sendCode = async (email: string, code: string): Promise<void> => {
-  const from = process.env.EMAIL_FROM;
-  if (!from) {
-    throw new Error('[account-deletion] EMAIL_FROM is not configured.');
-  }
+  const from = env.EMAIL_FROM;
   const subject = `${APP_NAME}: confirm account deletion`;
   const text = [
     `Your account deletion code is ${code}.`,
