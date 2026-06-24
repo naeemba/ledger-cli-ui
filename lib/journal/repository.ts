@@ -5,7 +5,7 @@ import { DEFAULT_MAIN, PRICE_DB_NAME, getJournalDir } from './layout';
 import { parseJournal, type ParsedJournal, type Transaction } from './parser';
 import { userSetting } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
-import { pull, manifestRelName } from '@/lib/storage';
+import { pullLocked, manifestRelName } from '@/lib/storage';
 
 export type JournalLayout = {
   dir: string;
@@ -115,7 +115,7 @@ export class JournalRepository {
    * fingerprint. Used as the query cache-key input so any change (local or in
    * Garage) invalidates `unstable_cache`. Also guarantees the local stub exists. */
   async getFingerprint(userId: string): Promise<string> {
-    const { fingerprint } = await pull(userId);
+    const { fingerprint } = await pullLocked(userId);
     await this.ensureLayout(userId);
     return fingerprint;
   }

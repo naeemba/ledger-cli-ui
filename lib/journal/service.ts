@@ -19,7 +19,7 @@ import {
 import { JournalRepository } from './repository';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
 import { verifyJournalParseable } from './verify';
-import { pull, push, StorageConflictError } from '@/lib/storage';
+import { pull, pullLocked, push, StorageConflictError } from '@/lib/storage';
 import {
   formatTransaction,
   transactionDraftSchema,
@@ -116,7 +116,7 @@ export class JournalService {
   // ---- read passthroughs ----------------------------------------------------
 
   async listTransactions(userId: string): Promise<ParsedJournal> {
-    await pull(userId);
+    await pullLocked(userId);
     return this.repo.list(userId);
   }
 
@@ -124,7 +124,7 @@ export class JournalService {
     userId: string,
     uid: string
   ): Promise<Transaction | null> {
-    await pull(userId);
+    await pullLocked(userId);
     return this.repo.find(userId, uid);
   }
 
