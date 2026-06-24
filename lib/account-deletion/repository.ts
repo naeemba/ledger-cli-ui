@@ -11,14 +11,30 @@ export class AccountDeletionChallengeRepository {
   async upsert(
     userId: string,
     codeHash: string,
-    expiresAt: Date
+    expiresAt: Date,
+    createdAt?: Date
   ): Promise<void> {
+    const insertValues = {
+      userId,
+      codeHash,
+      expiresAt,
+      attempts: 0,
+      ...(createdAt && { createdAt }),
+    };
+
+    const updateSet = {
+      codeHash,
+      expiresAt,
+      attempts: 0,
+      ...(createdAt && { createdAt }),
+    };
+
     await this.db
       .insert(accountDeletionChallenge)
-      .values({ userId, codeHash, expiresAt, attempts: 0 })
+      .values(insertValues)
       .onConflictDoUpdate({
         target: accountDeletionChallenge.userId,
-        set: { codeHash, expiresAt, attempts: 0, createdAt: sql`now()` },
+        set: updateSet,
       });
   }
 
