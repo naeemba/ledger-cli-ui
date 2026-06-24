@@ -16,6 +16,7 @@
 - **Object key layout:** `journals/<userId>/<relPath>` mirrors the local layout `${DATA_DIR}/journals/<userId>/<relPath>`.
 - **ETag is opaque per backend.** The manifest and fingerprint store/compare whatever string the store returns; never assume MD5.
 - **Conflict detection lives in the sync layer** (compare remote ETags to the pulled manifest), not via `If-Match` (Garage support is not assumed).
+- **Path-traversal safety (security):** a relPath derived from an object key must never escape the user's journal dir. `relPathFromKey` rejects any `rel` that is absolute or contains a `..` segment (mirror `service.ts`'s `PATH_TRAVERSAL = /(^|[/\\])\.\.([/\\]|$)/` + `path.isAbsolute`), and every filesystem write/delete in the storage layer verifies `path.resolve(abs).startsWith(path.resolve(dir) + path.sep)` before touching disk.
 - **Failure policy:** reads serve stale local cache + warn when Garage is unreachable but a manifest exists, else fail loudly; writes roll back the local mutation and throw on any pull/verify/push failure.
 - **Patterns:** follow existing repo/service split; tests colocated as `*.test.ts`; use `setupTestDb`/`teardownTestDb` from `@/lib/test-utils/db` where a DB is needed. DRY, YAGNI, TDD, frequent commits.
 - **Commands:** test `pnpm test`, single file `pnpm vitest run <path>`, type-check `pnpm type-check`, lint `pnpm lint`.
