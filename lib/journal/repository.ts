@@ -2,14 +2,10 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { eq, sql } from 'drizzle-orm';
 import { DEFAULT_MAIN, PRICE_DB_NAME, getJournalDir } from './layout';
-import {
-  parseJournal,
-  resolveIncludes,
-  type ParsedJournal,
-  type Transaction,
-} from './parser';
+import { parseJournal, type ParsedJournal, type Transaction } from './parser';
 import { userSetting } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
+import { pull } from '@/lib/storage';
 
 export type JournalLayout = {
   dir: string;
@@ -108,14 +104,13 @@ export class JournalRepository {
     return transactions.find((t) => t.uid === uid) ?? null;
   }
 
-  /** Returns max mtimeMs across the user's include graph. Used as a cache-key
-   * input so any file change (internal or external) invalidates `unstable_cache`. */
-  async getMaxMtime(userId: string): Promise<number> {
-    const { mainPath } = await this.ensureLayout(userId);
-    const files = await resolveIncludes(mainPath);
-    if (files.length === 0) return 0;
-    const stats = await Promise.all(files.map((f) => fs.stat(f)));
-    return Math.max(...stats.map((s) => s.mtimeMs));
+  /** Pulls the canonical journal into the local cache and returns the content
+   * fingerprint. Used as the query cache-key input so any change (local or in
+   * Garage) invalidates `unstable_cache`. Also guarantees the local stub exists. */
+  async getFingerprint(userId: string): Promise<string> {
+    const { fingerprint } = await pull(userId);
+    await this.ensureLayout(userId);
+    return fingerprint;
   }
 
   private async findPriceDb(dir: string): Promise<string | null> {

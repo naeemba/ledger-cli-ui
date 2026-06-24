@@ -13,19 +13,19 @@ import { type Transaction } from '@/lib/journal/parser';
 import { savedViewService } from '@/lib/savedViews';
 import { unstable_cache } from 'next/cache';
 
-const buildLoader = (tag: string, mtimeMs: number) =>
+const buildLoader = (tag: string, fingerprint: string) =>
   unstable_cache(
     async (userId: string): Promise<Transaction[]> => {
       const journal = await journalService.listTransactions(userId);
       return journal.transactions;
     },
-    ['journal-transactions', tag, String(mtimeMs)],
+    ['journal-transactions', tag, fingerprint],
     { revalidate: 60, tags: [tag] }
   );
 
 const loadTransactions = async (userId: string) => {
-  const mtimeMs = await journalRepository.getMaxMtime(userId);
-  return buildLoader(getJournalCacheTag(userId), mtimeMs)(userId);
+  const fingerprint = await journalRepository.getFingerprint(userId);
+  return buildLoader(getJournalCacheTag(userId), fingerprint)(userId);
 };
 
 const Transactions = async ({
