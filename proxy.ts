@@ -1,14 +1,25 @@
-import { isPublicPath } from '@/components/AppShell/publicPaths';
+import {
+  bouncesSignedInToDashboard,
+  isPublicPath,
+} from '@/components/AppShell/publicPaths';
 import { getSessionCookie } from '@naeemba/next-starter/proxy';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export function proxy(req: NextRequest) {
-  // The marketing landing at `/` is public — logged-out visitors are its whole
-  // audience, so it stays reachable without a session. Signed-in visitors have
-  // no use for it, so send them straight to their dashboard. This is a cheap
-  // cookie check (no DB), which keeps the landing fully decoupled from auth.
+  // Public paths are reachable without a session. A subset (the marketing
+  // landing at `/`) also bounces signed-in visitors to their dashboard via a
+  // cheap cookie check (no DB), since logged-in users have no use for it.
+  //
+  // `/account/deleted` is public but NOT a bounce path: the deletion flow can
+  // leave a stale session cookie behind when signOut() fails, and bouncing on a
+  // presence-only cookie check would strand the just-deleted user on
+  // `/dashboard` instead of the goodbye page (defeating commit 9352138). It
+  // must stay reachable even with a stale cookie present.
   if (isPublicPath(req.nextUrl.pathname)) {
-    if (getSessionCookie(req)) {
+    if (
+      bouncesSignedInToDashboard(req.nextUrl.pathname) &&
+      getSessionCookie(req)
+    ) {
       const target = req.nextUrl.clone();
       target.pathname = '/dashboard';
       target.search = '';
