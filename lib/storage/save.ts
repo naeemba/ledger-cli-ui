@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import {
   keyFor,
-  manifestRelName,
+  listLocalRelPaths,
   readManifest,
   relPathFromKey,
   userPrefix,
@@ -19,26 +19,6 @@ export class StorageConflictError extends Error {
     this.name = 'StorageConflictError';
   }
 }
-
-const listLocalRelPaths = async (dir: string): Promise<string[]> => {
-  const out: string[] = [];
-  const walk = async (abs: string, rel: string): Promise<void> => {
-    let entries: import('fs').Dirent[];
-    try {
-      entries = await fs.readdir(abs, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      const childRel = rel ? path.join(rel, e.name) : e.name;
-      if (e.isDirectory()) await walk(path.join(abs, e.name), childRel);
-      else if (e.name !== manifestRelName && !e.name.endsWith('.tmp'))
-        out.push(childRel);
-    }
-  };
-  await walk(dir, '');
-  return out;
-};
 
 /**
  * Mirrors the local journal dir up to the remote prefix. First confirms the

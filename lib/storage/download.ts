@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import {
   fingerprint,
-  manifestRelName,
+  listLocalRelPaths,
   readManifest,
   relPathFromKey,
   userPrefix,
@@ -11,30 +11,6 @@ import {
 } from './manifest';
 import type { ObjectStore } from './objectStore';
 import { getJournalDir } from '@/lib/journal/layout';
-
-/** Lists the local journal dir recursively, returning relPaths (excludes the
- * manifest file and any *.tmp scratch files from atomic writes). */
-const listLocalRelPaths = async (dir: string): Promise<string[]> => {
-  const out: string[] = [];
-  const walk = async (abs: string, rel: string): Promise<void> => {
-    let entries: import('fs').Dirent[];
-    try {
-      entries = await fs.readdir(abs, { withFileTypes: true });
-    } catch {
-      return; // dir does not exist yet
-    }
-    for (const e of entries) {
-      const childRel = rel ? path.join(rel, e.name) : e.name;
-      if (e.isDirectory()) {
-        await walk(path.join(abs, e.name), childRel);
-      } else if (e.name !== manifestRelName && !e.name.endsWith('.tmp')) {
-        out.push(childRel);
-      }
-    }
-  };
-  await walk(dir, '');
-  return out;
-};
 
 /**
  * Mirrors the user's remote prefix into the local journal dir. Downloads only

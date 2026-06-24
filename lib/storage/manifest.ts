@@ -46,7 +46,38 @@ export const writeManifest = async (
   m: Manifest
 ): Promise<void> => {
   await fs.mkdir(getJournalDir(userId), { recursive: true });
-  await fs.writeFile(manifestPath(userId), JSON.stringify(m, null, 2), 'utf-8');
+  // Atomic write (tmp + rename on the same filesystem) so a crash or a
+  // concurrent reader never sees a half-written manifest — a torn manifest
+  // would fail JSON.parse, reset to {}, and silently disable the conflict guard.
+  const dest = manifestPath(userId);
+  const tmp = dest + '.tmp';
+  await fs.writeFile(tmp, JSON.stringify(m, null, 2), 'utf-8');
+  await fs.rename(tmp, dest);
+};
+
+/** Lists the local journal dir recursively, returning relPaths (excludes the
+ * manifest file and any *.tmp scratch files from atomic writes). Returns an
+ * empty list if the dir does not exist yet. */
+export const listLocalRelPaths = async (dir: string): Promise<string[]> => {
+  const out: string[] = [];
+  const walk = async (abs: string, rel: string): Promise<void> => {
+    let entries: import('fs').Dirent[];
+    try {
+      entries = await fs.readdir(abs, { withFileTypes: true });
+    } catch {
+      return; // dir does not exist yet
+    }
+    for (const e of entries) {
+      const childRel = rel ? path.join(rel, e.name) : e.name;
+      if (e.isDirectory()) {
+        await walk(path.join(abs, e.name), childRel);
+      } else if (e.name !== manifestRelName && !e.name.endsWith('.tmp')) {
+        out.push(childRel);
+      }
+    }
+  };
+  await walk(dir, '');
+  return out;
 };
 
 /** Order-independent content fingerprint of a set of (key, etag) pairs. */
