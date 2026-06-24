@@ -5,6 +5,7 @@ import AdmZip from 'adm-zip';
 import { getJournalDir } from './layout';
 import { JournalRepository } from './repository';
 import { JournalService } from './service';
+import { resetObjectStore } from '@/lib/storage';
 import {
   setupTestDb,
   teardownTestDb,
@@ -26,6 +27,7 @@ describe('JournalService.replaceFromZip', () => {
   let service: JournalService;
 
   beforeEach(async () => {
+    resetObjectStore();
     ctx = await setupTestDb('zip-');
     await ctx.insertUser('test-user', 'Test', 'test@example.com');
     service = new JournalService(new JournalRepository(ctx.db));
@@ -33,6 +35,7 @@ describe('JournalService.replaceFromZip', () => {
 
   afterEach(async () => {
     await teardownTestDb(ctx);
+    resetObjectStore();
   });
 
   describe('detectMain', () => {

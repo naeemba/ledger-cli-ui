@@ -1,13 +1,22 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getJournalDir } from './layout';
 import { parseJournal } from './parser';
 import { JournalRepository } from './repository';
 import { JournalService } from './service';
+import { resetObjectStore, push } from '@/lib/storage';
 import { setupTestDb, teardownTestDb } from '@/lib/test-utils/db';
 
 describe('Phase 4.1 integration', () => {
+  beforeEach(() => {
+    resetObjectStore();
+  });
+
+  afterEach(() => {
+    resetObjectStore();
+  });
+
   it('parses → backfills → edits → deletes a real fixture', async () => {
     const src = path.resolve(__dirname, '__fixtures__/integration');
     const ctx = await setupTestDb('integration-');
@@ -27,6 +36,9 @@ describe('Phase 4.1 integration', () => {
       for (const name of ['main.ledger', 'q1.ledger']) {
         await fs.copyFile(path.join(src, name), path.join(dir, name));
       }
+      // Seed canonical storage so pull() in edit/delete does not wipe the
+      // locally-copied fixtures.
+      await push(userId);
 
       const q1Content = await fs.readFile(path.join(dir, 'q1.ledger'));
       expect(Buffer.from(q1Content).includes(0x09)).toBe(true);

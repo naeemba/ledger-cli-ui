@@ -6,6 +6,7 @@ import { getJournalDir } from './layout';
 import { JournalRepository } from './repository';
 import { JournalService } from './service';
 import { findUidInBlock } from '@/lib/journal/uid';
+import { getObjectStore, resetObjectStore, push } from '@/lib/storage';
 import {
   setupTestDb,
   teardownTestDb,
@@ -21,6 +22,7 @@ describe('JournalService.addTransaction', () => {
   let service: JournalService;
 
   beforeEach(async () => {
+    resetObjectStore();
     ctx = await setupTestDb('journal-add-');
     await insertTestUser(ctx);
     service = new JournalService(new JournalRepository(ctx.db));
@@ -28,6 +30,7 @@ describe('JournalService.addTransaction', () => {
 
   afterEach(async () => {
     await teardownTestDb(ctx);
+    resetObjectStore();
   });
 
   it('stamps a ULID on the new block', async () => {
@@ -63,6 +66,23 @@ describe('JournalService.addTransaction', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.fieldErrors.date).toBeDefined();
   });
+
+  it('persists an added transaction to canonical storage', async () => {
+    const userId = 'test-user';
+    await fs.mkdir(getJournalDir(userId), { recursive: true });
+    const res = await service.addTransaction(userId, {
+      date: '2024-03-01',
+      payee: 'Coffee',
+      postings: [
+        { account: 'Expenses:Food', amount: '3', currency: 'USD' },
+        { account: 'Assets:Cash', amount: '-3', currency: 'USD' },
+      ],
+    });
+    expect(res.ok).toBe(true);
+    const store = getObjectStore();
+    const remote = await store.list(`journals/${userId}/`);
+    expect(remote.length).toBeGreaterThan(0);
+  });
 });
 
 describe('JournalService.editTransaction', () => {
@@ -70,6 +90,7 @@ describe('JournalService.editTransaction', () => {
   let service: JournalService;
 
   beforeEach(async () => {
+    resetObjectStore();
     ctx = await setupTestDb('journal-edit-');
     await insertTestUser(ctx);
     service = new JournalService(new JournalRepository(ctx.db));
@@ -77,6 +98,7 @@ describe('JournalService.editTransaction', () => {
 
   afterEach(async () => {
     await teardownTestDb(ctx);
+    resetObjectStore();
   });
 
   it('rewrites only the target block; rest byte-exact', async () => {
@@ -95,6 +117,7 @@ describe('JournalService.editTransaction', () => {
       '    Expenses:Coffee                          USD 4\n' +
       '    Assets:Cash                              USD -4\n';
     await fs.writeFile(path.join(dir, 'main.ledger'), before);
+    await push(userId);
 
     const draftBefore = {
       date: '2024-09-01',
@@ -138,6 +161,7 @@ describe('JournalService.editTransaction', () => {
       path.join(dir, 'main.ledger'),
       '2024-09-01 lunch\n    ; :uid: 01HZX5G5KJDS9HQRYK8E5T0DJC\n    Expenses:Food  USD 10\n    Assets:Cash\n'
     );
+    await push(userId);
 
     const result = await service.editTransaction(userId, {
       kind: 'edit',
@@ -165,6 +189,7 @@ describe('JournalService.editTransaction', () => {
       path.join(getJournalDir(userId), 'main.ledger'),
       '2024-09-01 lunch\n    Expenses:Food  USD 10\n    Assets:Cash\n'
     );
+    await push(userId);
 
     const result = await service.editTransaction(userId, {
       kind: 'edit',
@@ -191,6 +216,7 @@ describe('JournalService.deleteTransaction', () => {
   let service: JournalService;
 
   beforeEach(async () => {
+    resetObjectStore();
     ctx = await setupTestDb('journal-del-');
     await insertTestUser(ctx);
     service = new JournalService(new JournalRepository(ctx.db));
@@ -198,6 +224,7 @@ describe('JournalService.deleteTransaction', () => {
 
   afterEach(async () => {
     await teardownTestDb(ctx);
+    resetObjectStore();
   });
 
   it('removes the block plus the trailing blank line', async () => {
@@ -214,6 +241,7 @@ describe('JournalService.deleteTransaction', () => {
       '    Expenses:Coffee  USD 4\n' +
       '    Assets:Cash\n';
     await fs.writeFile(path.join(dir, 'main.ledger'), before);
+    await push(userId);
 
     const draft = {
       date: '2024-09-01',
@@ -254,6 +282,7 @@ describe('JournalService.deleteTransaction', () => {
       '    Expenses:Food  USD 10\n' +
       '    Assets:Cash\n';
     await fs.writeFile(path.join(dir, 'main.ledger'), before);
+    await push(userId);
 
     const draft = {
       date: '2024-09-01',
@@ -286,6 +315,7 @@ describe('JournalService.backfillUids', () => {
   let service: JournalService;
 
   beforeEach(async () => {
+    resetObjectStore();
     ctx = await setupTestDb('journal-bf-');
     await insertTestUser(ctx);
     service = new JournalService(new JournalRepository(ctx.db));
@@ -293,6 +323,7 @@ describe('JournalService.backfillUids', () => {
 
   afterEach(async () => {
     await teardownTestDb(ctx);
+    resetObjectStore();
   });
 
   it('inserts UID into every block lacking one', async () => {

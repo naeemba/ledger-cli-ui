@@ -19,6 +19,7 @@ import {
 import { JournalRepository } from './repository';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
 import { verifyJournalParseable } from './verify';
+import { pull, push, StorageConflictError } from '@/lib/storage';
 import {
   formatTransaction,
   transactionDraftSchema,
@@ -115,6 +116,7 @@ export class JournalService {
   // ---- read passthroughs ----------------------------------------------------
 
   async listTransactions(userId: string): Promise<ParsedJournal> {
+    await pull(userId);
     return this.repo.list(userId);
   }
 
@@ -122,6 +124,7 @@ export class JournalService {
     userId: string,
     uid: string
   ): Promise<Transaction | null> {
+    await pull(userId);
     return this.repo.find(userId, uid);
   }
 
@@ -142,6 +145,7 @@ export class JournalService {
     }
 
     const draft: TransactionDraft = { ...parsed.data, uid: generateUid() };
+    await pull(userId);
     const { mainPath } = await this.repo.ensureLayout(userId);
     // Snapshot the file so we can roll back if ledger rejects the result.
     const snapshot = await this.repo.readFile(mainPath);
@@ -165,6 +169,17 @@ export class JournalService {
         fieldErrors: {},
         formError: `Ledger rejected the new transaction: ${verify.firstLine}`,
       };
+    }
+    try {
+      await push(userId);
+    } catch (e) {
+      // Local is ahead of canonical — roll back so we never diverge.
+      await this.repo.writeFileAtomic(mainPath, snapshot);
+      const formError =
+        e instanceof StorageConflictError
+          ? e.message
+          : 'Failed to save journal to storage.';
+      return { ok: false, fieldErrors: {}, formError };
     }
     invalidateCache(userId);
     return { ok: true };
@@ -215,6 +230,7 @@ export class JournalService {
     // No rollback on parse failure for imports — too much state to undo.
     // Surface the error so the user can re-upload a clean journal.
     const verify = await verifyJournalParseable(mainPath);
+    await push(userId);
     return {
       uidsAdded: backfill.uidsAdded,
       ...(verify.ok ? {} : { parseFailure: verify.firstLine }),
@@ -263,6 +279,7 @@ export class JournalService {
     // No rollback on parse failure for imports — too much state to undo.
     // Surface the error so the user can re-upload a clean journal.
     const verify = await verifyJournalParseable(path.join(dir, mainFile));
+    await push(userId);
     return {
       mainFile,
       fileCount: entries.length,
@@ -277,6 +294,7 @@ export class JournalService {
     userId: string,
     input: WriteEditInput
   ): Promise<WriteResult> {
+    await pull(userId);
     if (input.uid !== input.draft.uid) {
       return {
         ok: false,
@@ -354,7 +372,19 @@ export class JournalService {
         message: `Ledger rejected the edit: ${verify.firstLine}`,
       };
     }
-
+    try {
+      await push(userId);
+    } catch (e) {
+      await this.repo.writeFileAtomic(tx.file, text); // restore pre-edit content
+      return {
+        ok: false,
+        reason: 'stale',
+        message:
+          e instanceof StorageConflictError
+            ? e.message
+            : 'Failed to save journal to storage.',
+      };
+    }
     invalidateCache(userId);
     return { ok: true };
   }
@@ -363,6 +393,7 @@ export class JournalService {
     userId: string,
     input: WriteDeleteInput
   ): Promise<WriteResult> {
+    await pull(userId);
     const tx = await this.repo.find(userId, input.uid);
     if (!tx) {
       return {
@@ -424,7 +455,19 @@ export class JournalService {
         message: `Ledger rejected the delete: ${verify.firstLine}`,
       };
     }
-
+    try {
+      await push(userId);
+    } catch (e) {
+      await this.repo.writeFileAtomic(tx.file, text); // restore pre-delete content
+      return {
+        ok: false,
+        reason: 'stale',
+        message:
+          e instanceof StorageConflictError
+            ? e.message
+            : 'Failed to save journal to storage.',
+      };
+    }
     invalidateCache(userId);
     return { ok: true };
   }

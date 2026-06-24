@@ -5,7 +5,7 @@ import { DEFAULT_MAIN, PRICE_DB_NAME, getJournalDir } from './layout';
 import { parseJournal, type ParsedJournal, type Transaction } from './parser';
 import { userSetting } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
-import { pull } from '@/lib/storage';
+import { pull, clearRemote } from '@/lib/storage';
 
 export type JournalLayout = {
   dir: string;
@@ -64,9 +64,11 @@ export class JournalRepository {
       });
   }
 
-  /** Wipes the journal directory and recreates it empty. Used by the import flow. */
+  /** Wipes the user's journal locally AND in canonical storage, then recreates
+   * the local dir empty. Used by the import flow. */
   async emptyJournalDir(userId: string): Promise<void> {
     const dir = getJournalDir(userId);
+    await clearRemote(userId);
     try {
       await fs.rm(dir, { recursive: true, force: true });
     } catch {
