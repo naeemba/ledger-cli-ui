@@ -144,45 +144,47 @@ export class JournalService {
       return { ok: false, fieldErrors };
     }
 
-    const draft: TransactionDraft = { ...parsed.data, uid: generateUid() };
-    await pull(userId);
-    const { mainPath } = await this.repo.ensureLayout(userId);
-    // Snapshot the file so we can roll back if ledger rejects the result.
-    const snapshot = await this.repo.readFile(mainPath);
-    // Leading "\n\n" guards against imported files that lack a trailing newline.
-    const block = `\n\n${formatTransaction(draft)}\n`;
-    try {
-      await this.repo.appendFile(mainPath, block);
-    } catch (e) {
-      return {
-        ok: false,
-        fieldErrors: {},
-        formError: e instanceof Error ? e.message : 'Failed to write journal',
-      };
-    }
-    const verify = await verifyJournalParseable(mainPath);
-    if (!verify.ok) {
-      // Roll back so the journal stays parseable.
-      await this.repo.writeFileAtomic(mainPath, snapshot);
-      return {
-        ok: false,
-        fieldErrors: {},
-        formError: `Ledger rejected the new transaction: ${verify.firstLine}`,
-      };
-    }
-    try {
-      await push(userId);
-    } catch (e) {
-      // Local is ahead of canonical — roll back so we never diverge.
-      await this.repo.writeFileAtomic(mainPath, snapshot);
-      const formError =
-        e instanceof StorageConflictError
-          ? e.message
-          : 'Failed to save journal to storage.';
-      return { ok: false, fieldErrors: {}, formError };
-    }
-    invalidateCache(userId);
-    return { ok: true };
+    return withUserLock(userId, async () => {
+      const draft: TransactionDraft = { ...parsed.data, uid: generateUid() };
+      await pull(userId);
+      const { mainPath } = await this.repo.ensureLayout(userId);
+      // Snapshot the file so we can roll back if ledger rejects the result.
+      const snapshot = await this.repo.readFile(mainPath);
+      // Leading "\n\n" guards against imported files that lack a trailing newline.
+      const block = `\n\n${formatTransaction(draft)}\n`;
+      try {
+        await this.repo.appendFile(mainPath, block);
+      } catch (e) {
+        return {
+          ok: false,
+          fieldErrors: {},
+          formError: e instanceof Error ? e.message : 'Failed to write journal',
+        };
+      }
+      const verify = await verifyJournalParseable(mainPath);
+      if (!verify.ok) {
+        // Roll back so the journal stays parseable.
+        await this.repo.writeFileAtomic(mainPath, snapshot);
+        return {
+          ok: false,
+          fieldErrors: {},
+          formError: `Ledger rejected the new transaction: ${verify.firstLine}`,
+        };
+      }
+      try {
+        await push(userId);
+      } catch (e) {
+        // Local is ahead of canonical — roll back so we never diverge.
+        await this.repo.writeFileAtomic(mainPath, snapshot);
+        const formError =
+          e instanceof StorageConflictError
+            ? e.message
+            : 'Failed to save journal to storage.';
+        return { ok: false, fieldErrors: {}, formError };
+      }
+      invalidateCache(userId);
+      return { ok: true };
+    });
   }
 
   async editTransaction(
@@ -220,31 +222,34 @@ export class JournalService {
     userId: string,
     content: Buffer
   ): Promise<{ uidsAdded: number; parseFailure?: string }> {
-    await this.repo.emptyJournalDir(userId);
-    const dir = getJournalDir(userId);
-    const mainPath = path.join(dir, DEFAULT_MAIN);
-    await fs.writeFile(mainPath, content);
-    await this.repo.setMainFile(userId, DEFAULT_MAIN);
-    const backfill = await this.backfillUids(userId);
-    invalidateCache(userId);
-    // No rollback on parse failure for imports — too much state to undo.
-    // Surface the error so the user can re-upload a clean journal.
-    const verify = await verifyJournalParseable(mainPath);
-    try {
-      await push(userId);
-    } catch (e) {
+    return withUserLock(userId, async () => {
+      await pull(userId); // sync local cache + manifest to canonical
+      await this.repo.resetLocalJournal(userId); // wipe local files, keep manifest
+      const dir = getJournalDir(userId);
+      const mainPath = path.join(dir, DEFAULT_MAIN);
+      await fs.writeFile(mainPath, content);
+      await this.repo.setMainFile(userId, DEFAULT_MAIN);
+      const backfill = await this.backfillUids(userId);
+      invalidateCache(userId);
+      // No rollback on parse failure for imports — too much state to undo.
+      // Surface the error so the user can re-upload a clean journal.
+      const verify = await verifyJournalParseable(mainPath);
+      try {
+        await push(userId);
+      } catch (e) {
+        return {
+          uidsAdded: backfill.uidsAdded,
+          parseFailure:
+            e instanceof StorageConflictError
+              ? e.message
+              : 'Failed to save journal to storage.',
+        };
+      }
       return {
         uidsAdded: backfill.uidsAdded,
-        parseFailure:
-          e instanceof StorageConflictError
-            ? e.message
-            : 'Failed to save journal to storage.',
+        ...(verify.ok ? {} : { parseFailure: verify.firstLine }),
       };
-    }
-    return {
-      uidsAdded: backfill.uidsAdded,
-      ...(verify.ok ? {} : { parseFailure: verify.firstLine }),
-    };
+    });
   }
 
   /** Extracts a .zip into the journal dir, picks a main file, backfills UIDs. */
@@ -269,45 +274,48 @@ export class JournalService {
       }
     }
 
-    await this.repo.emptyJournalDir(userId);
-    const dir = getJournalDir(userId);
+    return withUserLock(userId, async () => {
+      await pull(userId); // sync local cache + manifest to canonical
+      await this.repo.resetLocalJournal(userId); // wipe local files, keep manifest
+      const dir = getJournalDir(userId);
 
-    for (const entry of entries) {
-      const target = path.join(dir, entry.entryName);
-      const resolved = path.resolve(target);
-      if (!resolved.startsWith(path.resolve(dir) + path.sep)) {
-        throw new Error(`Unsafe path in archive: ${entry.entryName}`);
+      for (const entry of entries) {
+        const target = path.join(dir, entry.entryName);
+        const resolved = path.resolve(target);
+        if (!resolved.startsWith(path.resolve(dir) + path.sep)) {
+          throw new Error(`Unsafe path in archive: ${entry.entryName}`);
+        }
+        await fs.mkdir(path.dirname(target), { recursive: true });
+        await fs.writeFile(target, entry.getData());
       }
-      await fs.mkdir(path.dirname(target), { recursive: true });
-      await fs.writeFile(target, entry.getData());
-    }
 
-    const mainFile = detectMain(entries.map((e) => ({ name: e.entryName })));
-    await this.repo.setMainFile(userId, mainFile);
-    const backfill = await this.backfillUids(userId);
-    invalidateCache(userId);
-    // No rollback on parse failure for imports — too much state to undo.
-    // Surface the error so the user can re-upload a clean journal.
-    const verify = await verifyJournalParseable(path.join(dir, mainFile));
-    try {
-      await push(userId);
-    } catch (e) {
+      const mainFile = detectMain(entries.map((e) => ({ name: e.entryName })));
+      await this.repo.setMainFile(userId, mainFile);
+      const backfill = await this.backfillUids(userId);
+      invalidateCache(userId);
+      // No rollback on parse failure for imports — too much state to undo.
+      // Surface the error so the user can re-upload a clean journal.
+      const verify = await verifyJournalParseable(path.join(dir, mainFile));
+      try {
+        await push(userId);
+      } catch (e) {
+        return {
+          mainFile,
+          fileCount: entries.length,
+          uidsAdded: backfill.uidsAdded,
+          parseFailure:
+            e instanceof StorageConflictError
+              ? e.message
+              : 'Failed to save journal to storage.',
+        };
+      }
       return {
         mainFile,
         fileCount: entries.length,
         uidsAdded: backfill.uidsAdded,
-        parseFailure:
-          e instanceof StorageConflictError
-            ? e.message
-            : 'Failed to save journal to storage.',
+        ...(verify.ok ? {} : { parseFailure: verify.firstLine }),
       };
-    }
-    return {
-      mainFile,
-      fileCount: entries.length,
-      uidsAdded: backfill.uidsAdded,
-      ...(verify.ok ? {} : { parseFailure: verify.firstLine }),
-    };
+    });
   }
 
   // ---- internals ------------------------------------------------------------

@@ -5,7 +5,7 @@ import { DEFAULT_MAIN, PRICE_DB_NAME, getJournalDir } from './layout';
 import { parseJournal, type ParsedJournal, type Transaction } from './parser';
 import { userSetting } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
-import { pull, clearRemote } from '@/lib/storage';
+import { pull, manifestRelName } from '@/lib/storage';
 
 export type JournalLayout = {
   dir: string;
@@ -64,17 +64,22 @@ export class JournalRepository {
       });
   }
 
-  /** Wipes the user's journal locally AND in canonical storage, then recreates
-   * the local dir empty. Used by the import flow. */
-  async emptyJournalDir(userId: string): Promise<void> {
+  /** Removes the user's journal files locally but PRESERVES the storage manifest
+   * (.manifest.json), so a subsequent push can diff against canonical and replace
+   * it atomically (upload new + delete orphans) without first wiping canonical. */
+  async resetLocalJournal(userId: string): Promise<void> {
     const dir = getJournalDir(userId);
-    await clearRemote(userId);
-    try {
-      await fs.rm(dir, { recursive: true, force: true });
-    } catch {
-      // ignore
-    }
     await fs.mkdir(dir, { recursive: true });
+    const entries = await fs
+      .readdir(dir, { withFileTypes: true })
+      .catch(() => []);
+    await Promise.all(
+      entries
+        .filter((e) => e.name !== manifestRelName)
+        .map((e) =>
+          fs.rm(path.join(dir, e.name), { recursive: true, force: true })
+        )
+    );
   }
 
   /** Reads a file by absolute path. */

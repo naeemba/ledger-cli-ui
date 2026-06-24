@@ -5,7 +5,7 @@ import AdmZip from 'adm-zip';
 import { getJournalDir } from './layout';
 import { JournalRepository } from './repository';
 import { JournalService } from './service';
-import { resetObjectStore } from '@/lib/storage';
+import { resetObjectStore, getObjectStore } from '@/lib/storage';
 import {
   setupTestDb,
   teardownTestDb,
@@ -114,6 +114,43 @@ describe('JournalService.replaceFromZip', () => {
       expect(
         await fs.readFile(path.join(dir, 'sub', 'sub.ledger'), 'utf-8')
       ).toContain('2024-01-01 a');
+    });
+  });
+
+  describe('atomic canonical replace (orphan removal)', () => {
+    it('single-file import after zip-import removes orphan files from canonical', async () => {
+      const userId = 'test-user';
+
+      // 1. Zip-import: two ledger files land in canonical.
+      const zip = buildZip([
+        { name: 'main.ledger', content: '2024-01-01 a\n    A  USD 1\n    B\n' },
+        {
+          name: 'extra.ledger',
+          content: '2024-01-02 b\n    A  USD 2\n    B\n',
+        },
+      ]);
+      await service.replaceFromZip(userId, zip);
+
+      const store = getObjectStore();
+      const afterZip = await store.list(`journals/${userId}/`);
+      const afterZipKeys = afterZip.map((o) => o.key);
+      expect(afterZipKeys.some((k) => k.includes('main.ledger'))).toBe(true);
+      expect(afterZipKeys.some((k) => k.includes('extra.ledger'))).toBe(true);
+
+      // 2. Single-file import: only main.ledger should survive in canonical.
+      const singleContent = Buffer.from(
+        '2024-03-01 c\n    A  USD 3\n    B\n',
+        'utf-8'
+      );
+      await service.replaceFromSingleFile(userId, singleContent);
+
+      const afterSingle = await store.list(`journals/${userId}/`);
+      const afterSingleKeys = afterSingle.map((o) => o.key);
+      expect(afterSingleKeys.some((k) => k.includes('main.ledger'))).toBe(true);
+      // extra.ledger must be gone — the push replaced canonical atomically.
+      expect(afterSingleKeys.some((k) => k.includes('extra.ledger'))).toBe(
+        false
+      );
     });
   });
 });
