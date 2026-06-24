@@ -82,6 +82,10 @@ export const pullToLocal = async (
     remoteRelSet.add(rel);
     nextManifest[rel] = obj.etag;
     const localAbs = path.join(dir, rel);
+    const resolvedRoot = path.resolve(dir) + path.sep;
+    if (!path.resolve(localAbs).startsWith(resolvedRoot)) {
+      throw new Error(`Refusing to write outside journal dir: ${obj.key}`);
+    }
     if (prevManifest[rel] === obj.etag) {
       // Unchanged — only download if the local file is missing.
       try {

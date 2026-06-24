@@ -26,6 +26,12 @@ describe('key helpers', () => {
       path.join(getJournalDir(USER), 'a.ledger')
     );
   });
+
+  it('rejects keys that escape the journal dir', () => {
+    expect(() =>
+      relPathFromKey(USER, `journals/${USER}/../../etc/passwd`)
+    ).toThrow();
+  });
 });
 
 describe('manifest io', () => {

@@ -1,9 +1,10 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { pullToLocal } from './download';
 import { keyFor, readManifest } from './manifest';
 import { MemoryObjectStore } from './memoryObjectStore';
+import type { ObjectStore } from './objectStore';
 import { getJournalDir } from '@/lib/journal/layout';
 
 const USER = 'pull-user';
@@ -61,5 +62,50 @@ describe('pullToLocal', () => {
     const store = new MemoryObjectStore();
     const { fingerprint } = await pullToLocal(store, USER);
     expect(fingerprint).toHaveLength(64);
+  });
+
+  it('rejects a remote key that escapes the journal dir and writes nothing outside', async () => {
+    const store = new MemoryObjectStore();
+    // Raw key with traversal — bypasses keyFor on purpose.
+    await store.put(`journals/${USER}/../evil.ledger`, Buffer.from('x'));
+    await expect(pullToLocal(store, USER)).rejects.toThrow(
+      /Unsafe journal object key/
+    );
+  });
+
+  it('serves the stale local cache when the store is unreachable but a manifest exists', async () => {
+    const store = new MemoryObjectStore();
+    await seed(store, { 'main.ledger': 'a' });
+    await pullToLocal(store, USER); // populates local + manifest
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const downStore: ObjectStore = {
+      list: async () => {
+        throw new Error('garage down');
+      },
+      get: store.get.bind(store),
+      put: store.put.bind(store),
+      delete: store.delete.bind(store),
+      deletePrefix: store.deletePrefix.bind(store),
+    };
+    const { fingerprint } = await pullToLocal(downStore, USER);
+    expect(fingerprint).toHaveLength(64);
+    expect(await read('main.ledger')).toBe('a'); // local cache intact
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('rethrows when the store is unreachable and no manifest exists', async () => {
+    const downStore: ObjectStore = {
+      list: async () => {
+        throw new Error('garage down');
+      },
+      get: async () => {
+        throw new Error('n/a');
+      },
+      put: async () => ({ etag: '' }),
+      delete: async () => {},
+      deletePrefix: async () => {},
+    };
+    await expect(pullToLocal(downStore, USER)).rejects.toThrow(/garage down/);
   });
 });

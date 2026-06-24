@@ -15,9 +15,15 @@ export const userPrefix = (userId: string): string => `journals/${userId}/`;
 export const keyFor = (userId: string, relPath: string): string =>
   userPrefix(userId) + relPath.split(path.sep).join('/');
 
-/** Inverse of keyFor: the relPath (OS separators) for a full key. */
-export const relPathFromKey = (userId: string, key: string): string =>
-  key.slice(userPrefix(userId).length).split('/').join(path.sep);
+/** Inverse of keyFor: the relPath (OS separators) for a full key. Rejects keys
+ * that would escape the user's journal dir (absolute or containing `..`). */
+export const relPathFromKey = (userId: string, key: string): string => {
+  const rel = key.slice(userPrefix(userId).length).split('/').join(path.sep);
+  if (path.isAbsolute(rel) || /(^|[/\\])\.\.([/\\]|$)/.test(rel)) {
+    throw new Error(`Unsafe journal object key: ${key}`);
+  }
+  return rel;
+};
 
 /** Absolute local cache path for a relPath inside the user's journal dir. */
 export const localPathFor = (userId: string, relPath: string): string =>
