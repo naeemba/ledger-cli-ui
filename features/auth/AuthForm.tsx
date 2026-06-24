@@ -6,6 +6,7 @@ import { SentNotice } from './SentNotice';
 import { getAuthCopy, type AuthMode } from './authCopy';
 import {
   authReducer,
+  canResend,
   initialAuthState,
   RESEND_COOLDOWN_MS,
   type Method,
@@ -36,15 +37,22 @@ export function AuthForm({ mode }: AuthFormProps) {
   const showSocial = passkeySupported || googleEnabled;
 
   useEffect(() => {
-    if (state.lastSentAt === null) return;
+    const lastSentAt = state.lastSentAt;
+    if (lastSentAt === null) return;
     const remaining = Math.max(
       0,
-      RESEND_COOLDOWN_MS - (Date.now() - state.lastSentAt)
+      RESEND_COOLDOWN_MS - (Date.now() - lastSentAt)
     );
-    const disableId = setTimeout(() => setResendAllowed(false), 0);
-    const enableId = setTimeout(() => setResendAllowed(true), remaining);
+    const syncId = setTimeout(
+      () => setResendAllowed(canResend(lastSentAt, Date.now())),
+      0
+    );
+    const enableId = setTimeout(
+      () => setResendAllowed(canResend(lastSentAt, Date.now())),
+      remaining
+    );
     return () => {
-      clearTimeout(disableId);
+      clearTimeout(syncId);
       clearTimeout(enableId);
     };
   }, [state.lastSentAt]);

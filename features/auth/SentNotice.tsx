@@ -17,7 +17,7 @@ export function SentNotice({
   onResend,
   onUseDifferentEmail,
 }: SentNoticeProps) {
-  const copy = sentCopy(email);
+  const copy = sentCopy();
   return (
     <div className="flex flex-col gap-4 text-center" aria-live="polite">
       <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
