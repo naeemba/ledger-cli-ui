@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { authClient } from '@/lib/auth-client';
+import { useWebAuthnSupported } from '@naeemba/next-starter/client';
 import Link from 'next/link';
 
 const CALLBACK_URL = '/dashboard';
@@ -31,6 +32,8 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
   const [resendAllowed, setResendAllowed] = useState(false);
+  const passkeySupported = useWebAuthnSupported();
+  const showSocial = passkeySupported || googleEnabled;
 
   useEffect(() => {
     if (state.lastSentAt === null) return;
@@ -136,43 +139,49 @@ export function AuthForm({ mode }: AuthFormProps) {
         <p className="text-sm text-muted-foreground">{copy.subheading}</p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onPasskey}
-          disabled={sending}
-        >
-          <Fingerprint className="size-4" aria-hidden />
-          Continue with a passkey
-        </Button>
-        {googleEnabled && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onGoogle}
-            disabled={sending}
-          >
-            Continue with Google
-          </Button>
-        )}
-        {state.status.passkey === 'error' && (
-          <p className="text-sm text-destructive" aria-live="polite">
-            {state.errors.passkey}
-          </p>
-        )}
-        {state.status.google === 'error' && (
-          <p className="text-sm text-destructive" aria-live="polite">
-            {state.errors.google}
-          </p>
-        )}
-      </div>
+      {showSocial && (
+        <>
+          <div className="flex flex-col gap-2">
+            {passkeySupported && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onPasskey}
+                disabled={sending}
+              >
+                <Fingerprint className="size-4" aria-hidden />
+                Continue with a passkey
+              </Button>
+            )}
+            {googleEnabled && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onGoogle}
+                disabled={sending}
+              >
+                Continue with Google
+              </Button>
+            )}
+            {passkeySupported && state.status.passkey === 'error' && (
+              <p className="text-sm text-destructive" aria-live="polite">
+                {state.errors.passkey}
+              </p>
+            )}
+            {state.status.google === 'error' && (
+              <p className="text-sm text-destructive" aria-live="polite">
+                {state.errors.google}
+              </p>
+            )}
+          </div>
 
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <Separator className="flex-1" />
-        or
-        <Separator className="flex-1" />
-      </div>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <Separator className="flex-1" />
+            or
+            <Separator className="flex-1" />
+          </div>
+        </>
+      )}
 
       <form className="flex flex-col gap-4" onSubmit={onSubmit}>
         <div className="space-y-1.5">
