@@ -32,6 +32,8 @@ export function proxy(req: NextRequest) {
 
 // Run on every request except:
 //   /sign-in and /sign-in/error  — the auth UI itself
+//   /sign-up                     — open registration; must be reachable without
+//                                  a session, or new users get bounced to /sign-in
 //   /api/auth/*                  — better-auth's own handlers
 //   _next/* internals, favicon, static assets
 // The public landing at `/` still passes through the matcher but is short-
@@ -39,6 +41,6 @@ export function proxy(req: NextRequest) {
 // session.
 export const config = {
   matcher: [
-    '/((?!sign-in|api/auth|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!sign-in|sign-up|api/auth|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
