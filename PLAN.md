@@ -206,10 +206,14 @@ The Tier-2/3 items from `TODO.md` that need more than a weekend.
 
 ---
 
-## Phase 7 — Multi-user hardening
+## Phase 7 — Multi-user hardening / backups
 
 Only relevant if this gets deployed to anyone other than you.
 
+- [ ] **Object storage (Garage):** journal files are stored in Garage (S3-compatible)
+  as the source of truth; local disk is an ephemeral cache synced via
+  ListObjectsV2 + ETags. See `docs/deployment/garage.md` and
+  `docs/superpowers/specs/2026-06-24-garage-object-storage-design.md`.
 - [ ] **Encrypted user journals at rest** — envelope encryption with **session-scoped** decryption (zero-knowledge at rest, not full E2E). One per-user DEK encrypts the journal; wrapped by passphrase + one-time recovery code, with optional passkey-PRF convenience wrap. DEK reaches the server in RAM only, for the session; server-side `ledger` preserved. Unlock once per login session + a manual Lock button. Design: `docs/superpowers/specs/2026-06-22-encrypted-journals-design.md`. (Supersedes the earlier `.env.example` "server master key" idea — that was not zero-knowledge.)
 - [ ] Rate limit `/api/upload` and any future write endpoint
 - [ ] Audit log of journal mutations (who, when, how many bytes)
