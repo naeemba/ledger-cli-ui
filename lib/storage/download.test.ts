@@ -76,7 +76,7 @@ describe('pullToLocal', () => {
   it('serves the stale local cache when the store is unreachable but a manifest exists', async () => {
     const store = new MemoryObjectStore();
     await seed(store, { 'main.ledger': 'a' });
-    await pullToLocal(store, USER); // populates local + manifest
+    const live = await pullToLocal(store, USER); // populates local + manifest
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const downStore: ObjectStore = {
       list: async () => {
@@ -88,7 +88,7 @@ describe('pullToLocal', () => {
       deletePrefix: store.deletePrefix.bind(store),
     };
     const { fingerprint } = await pullToLocal(downStore, USER);
-    expect(fingerprint).toHaveLength(64);
+    expect(fingerprint).toBe(live.fingerprint);
     expect(await read('main.ledger')).toBe('a'); // local cache intact
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();

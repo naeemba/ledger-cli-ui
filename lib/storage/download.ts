@@ -76,13 +76,14 @@ export const pullToLocal = async (
 
   const nextManifest: Manifest = {};
   const remoteRelSet = new Set<string>();
+  const resolvedRoot = path.resolve(dir) + path.sep;
 
   for (const obj of remote) {
     const rel = relPathFromKey(userId, obj.key);
     remoteRelSet.add(rel);
     nextManifest[rel] = obj.etag;
     const localAbs = path.join(dir, rel);
-    const resolvedRoot = path.resolve(dir) + path.sep;
+    // Defense in depth: relPathFromKey already rejects `..`; re-check containment before writing.
     if (!path.resolve(localAbs).startsWith(resolvedRoot)) {
       throw new Error(`Refusing to write outside journal dir: ${obj.key}`);
     }

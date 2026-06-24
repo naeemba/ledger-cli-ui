@@ -30,7 +30,7 @@ describe('key helpers', () => {
   it('rejects keys that escape the journal dir', () => {
     expect(() =>
       relPathFromKey(USER, `journals/${USER}/../../etc/passwd`)
-    ).toThrow();
+    ).toThrow(/Unsafe journal object key/);
   });
 });
 
