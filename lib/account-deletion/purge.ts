@@ -1,6 +1,6 @@
-import 'server-only';
 import { promises as fs } from 'fs';
 import { eq } from 'drizzle-orm';
+import 'server-only';
 import type { DbInstance } from '@/lib/db/connection';
 import { getJournalDir } from '@/lib/journal/layout';
 import { clearRemote as clearRemoteDefault } from '@/lib/storage/sync';
