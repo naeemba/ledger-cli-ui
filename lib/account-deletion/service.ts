@@ -1,5 +1,5 @@
-import { createHash, randomInt, timingSafeEqual } from 'crypto';
 import 'server-only';
+import { createHash, randomInt, timingSafeEqual } from 'crypto';
 import type { AccountDeletionChallengeRepository } from './repository';
 
 export const CODE_TTL_MS = 600_000; // 10 minutes
