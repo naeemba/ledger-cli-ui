@@ -2,7 +2,6 @@
 
 import { MailCheck } from 'lucide-react';
 import { sentCopy } from './authCopy';
-import { Button } from '@/components/ui/button';
 
 interface SentNoticeProps {
   email: string;
@@ -19,33 +18,37 @@ export function SentNotice({
 }: SentNoticeProps) {
   const copy = sentCopy();
   return (
-    <div className="flex flex-col gap-4 text-center" aria-live="polite">
-      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
-        <MailCheck className="size-6 text-foreground" aria-hidden />
+    <div className="flex flex-col gap-6" aria-live="polite">
+      <div className="au-icon-tile">
+        <MailCheck className="size-5" aria-hidden />
       </div>
-      <div className="space-y-1">
-        <h2 className="text-lg font-semibold">{copy.heading}</h2>
-        <p className="text-sm text-muted-foreground">
+      <div className="space-y-2">
+        <h2 className="ff-display text-[clamp(1.75rem,3.5vw,2.4rem)] leading-tight">
+          {copy.heading}
+        </h2>
+        <p className="text-[0.95rem] text-[color:var(--txt-dim)]">
           We sent a sign-in link to{' '}
-          <span className="font-medium text-foreground">{email}</span>. It
+          <span className="ff-mono text-[color:var(--txt)]">{email}</span>. It
           expires in 10 minutes.
         </p>
       </div>
-      <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-        {copy.spam}
-      </p>
-      <div className="flex flex-col gap-2">
-        <Button
+      <p className="au-note">{copy.spam}</p>
+      <div className="flex flex-col gap-2.5">
+        <button
           type="button"
-          variant="outline"
+          className="au-btn au-btn--ghost"
           onClick={onResend}
           disabled={!canResend}
         >
           Resend link
-        </Button>
-        <Button type="button" variant="ghost" onClick={onUseDifferentEmail}>
+        </button>
+        <button
+          type="button"
+          className="au-btn au-btn--ghost border-0 bg-transparent text-[color:var(--txt-dim)]"
+          onClick={onUseDifferentEmail}
+        >
           Use a different email
-        </Button>
+        </button>
       </div>
     </div>
   );

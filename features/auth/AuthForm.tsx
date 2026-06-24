@@ -12,10 +12,6 @@ import {
   type Method,
 } from './authState';
 import { resolveCallbackUrl } from './callbackUrl';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { authClient } from '@/lib/auth-client';
 import { useWebAuthnSupported } from '@naeemba/next-starter/client';
 import Link from 'next/link';
@@ -139,63 +135,64 @@ export function AuthForm({ mode }: AuthFormProps) {
     state.status.passkey === 'sending';
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="space-y-1.5 text-center lg:text-left">
-        <h1 className="text-2xl font-semibold tracking-tight">
+    <div className="flex flex-col gap-7">
+      <div className="space-y-2">
+        <h1 className="au-grad ff-display text-[clamp(2rem,4vw,2.75rem)] leading-[1.05]">
           {copy.heading}
         </h1>
-        <p className="text-sm text-muted-foreground">{copy.subheading}</p>
+        <p className="text-[0.95rem] text-[color:var(--txt-dim)]">
+          {copy.subheading}
+        </p>
       </div>
 
       {showSocial && (
         <>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             {passkeySupported && (
-              <Button
+              <button
                 type="button"
-                variant="outline"
+                className="au-btn au-btn--ghost"
                 onClick={onPasskey}
                 disabled={sending}
               >
                 <Fingerprint className="size-4" aria-hidden />
                 Continue with a passkey
-              </Button>
+              </button>
             )}
             {googleEnabled && (
-              <Button
+              <button
                 type="button"
-                variant="outline"
+                className="au-btn au-btn--ghost"
                 onClick={onGoogle}
                 disabled={sending}
               >
                 Continue with Google
-              </Button>
+              </button>
             )}
             {passkeySupported && state.status.passkey === 'error' && (
-              <p className="text-sm text-destructive" aria-live="polite">
+              <p className="au-error" aria-live="polite">
                 {state.errors.passkey}
               </p>
             )}
             {state.status.google === 'error' && (
-              <p className="text-sm text-destructive" aria-live="polite">
+              <p className="au-error" aria-live="polite">
                 {state.errors.google}
               </p>
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <Separator className="flex-1" />
-            or
-            <Separator className="flex-1" />
-          </div>
+          <div className="au-sep ff-mono">or</div>
         </>
       )}
 
       <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
-          <Input
+        <div>
+          <label className="au-label" htmlFor="email">
+            Email
+          </label>
+          <input
             id="email"
+            className="au-input"
             type="email"
             required
             autoComplete="email"
@@ -204,22 +201,23 @@ export function AuthForm({ mode }: AuthFormProps) {
             placeholder="you@example.com"
           />
         </div>
-        <Button type="submit" disabled={sending}>
+        <button
+          type="submit"
+          className="au-btn au-btn--primary"
+          disabled={sending}
+        >
           {state.status.magicLink === 'sending' ? 'Sending…' : copy.submitLabel}
-        </Button>
+        </button>
         {state.status.magicLink === 'error' && (
-          <p className="text-sm text-destructive" aria-live="polite">
+          <p className="au-error" aria-live="polite">
             {state.errors.magicLink}
           </p>
         )}
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-sm text-[color:var(--txt-faint)]">
         {copy.altPrompt}{' '}
-        <Link
-          href={copy.altHref}
-          className="font-medium text-foreground underline-offset-4 hover:underline"
-        >
+        <Link href={copy.altHref} className="au-link">
           {copy.altLinkLabel}
         </Link>
       </p>

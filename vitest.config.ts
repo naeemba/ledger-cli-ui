@@ -6,6 +6,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, '.'),
       'server-only': path.resolve(__dirname, 'vitest-server-only.js'),
+      'next/font/google': path.resolve(__dirname, 'vitest-next-font.js'),
     },
   },
   test: {

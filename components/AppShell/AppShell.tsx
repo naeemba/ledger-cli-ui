@@ -32,12 +32,14 @@ const AppShell = ({ children, headerSlot, bannerSlot }: Props) => {
     return <>{children}</>;
   }
 
+  // Auth pages own their own full-bleed chrome — AuthScreen renders its own
+  // <main> split layout, so the shell must not wrap it in a width-clamped
+  // container (the old starter centered-card wrapper squished the split into a
+  // narrow column and nested <main> inside <main>).
   if (isAuthPage) {
     return (
       <TooltipProvider>
-        <main className="mx-auto flex min-h-svh w-full max-w-md flex-col justify-center px-4 py-12 sm:px-6">
-          {children}
-        </main>
+        {children}
         <Toaster />
       </TooltipProvider>
     );

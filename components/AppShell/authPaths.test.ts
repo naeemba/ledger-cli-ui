@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { isAuthPath } from './authPaths';
 
 describe('isAuthPath', () => {
-  it('treats the starter sign-in routes as auth pages', () => {
+  it('treats the sign-in and sign-up routes as auth pages', () => {
     expect(isAuthPath('/sign-in')).toBe(true);
     expect(isAuthPath('/sign-in/error')).toBe(true);
+    expect(isAuthPath('/sign-up')).toBe(true);
   });
 
   it('treats app routes as non-auth pages', () => {
