@@ -6,6 +6,10 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/')).toBe(true);
   });
 
+  it('treats /account/deleted as public', () => {
+    expect(isPublicPath('/account/deleted')).toBe(true);
+  });
+
   it('treats app and auth routes as non-public pages', () => {
     expect(isPublicPath('/dashboard')).toBe(false);
     expect(isPublicPath('/balance')).toBe(false);
