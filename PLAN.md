@@ -218,8 +218,8 @@ Only relevant if this gets deployed to anyone other than you.
 - [ ] Rate limit `/api/upload` and any future write endpoint
 - [ ] Audit log of journal mutations (who, when, how many bytes)
 - [ ] Quota on per-user journal size
-- [ ] Backup / restore endpoint (download `.zip` of the journal directory)
-- [ ] Account deletion (wipe journals + DB rows)
+- [x] Backup endpoint — `GET /api/account/export` streams a `.zip` of the user's journal directory (reuses `pullLocked` + `listLocalRelPaths` + `adm-zip`). (Restore-from-backup upload still pending; import covers re-upload.)
+- [x] **Account deletion** — self-service on `/settings` Danger Zone: emailed 6-digit code (hashed, 10-min expiry, 5-attempt cap, 30s resend throttle) → `purgeUserData` wipes Garage (`clearRemote`) + local journal dir + `db.delete(user)` cascade → sign-out + `/account/deleted`. Spec: `docs/superpowers/specs/2026-06-25-account-deletion-design.md`.
 - [ ] CSP / security headers pass
 - [ ] Structured logging + an error-tracking destination
 

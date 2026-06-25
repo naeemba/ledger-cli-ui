@@ -1,4 +1,5 @@
 import BaseCurrencyForm from './BaseCurrencyForm';
+import DangerZone from './DangerZone';
 import { clearSessionBaseCurrencyAction } from './actions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,8 @@ const Settings = ({ base, currencies, savedDefault, envFallback }: Props) => {
           )}
         </CardContent>
       </Card>
+
+      <DangerZone />
     </div>
   );
 };

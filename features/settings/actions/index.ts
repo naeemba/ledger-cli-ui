@@ -7,3 +7,5 @@ export {
   type SetSessionBaseCurrencyResult,
 } from './setSessionBaseCurrency';
 export { clearSessionBaseCurrencyAction } from './clearSessionBaseCurrency';
+export { requestAccountDeletionAction } from './requestAccountDeletion';
+export { deleteAccountAction } from './deleteAccount';
