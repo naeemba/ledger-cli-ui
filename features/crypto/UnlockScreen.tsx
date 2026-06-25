@@ -188,7 +188,9 @@ function UnlockForm() {
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         <div>
           <label className="au-label" htmlFor="unlock-value">
-            {isPassphrase ? CRYPTO_COPY.passphrase.label : 'Recovery code'}
+            {isPassphrase
+              ? CRYPTO_COPY.passphrase.label
+              : CRYPTO_COPY.recovery.label}
           </label>
           <input
             id="unlock-value"
@@ -217,11 +219,9 @@ function UnlockForm() {
           {pending ? copy.unlockingLabel : copy.submitLabel}
         </button>
 
-        {error && (
-          <p className="au-error" aria-live="polite">
-            {error}
-          </p>
-        )}
+        <p className="au-error" aria-live="polite" aria-atomic="true">
+          {error ?? ''}
+        </p>
       </form>
 
       <p className="text-sm text-[color:var(--txt-faint)]">

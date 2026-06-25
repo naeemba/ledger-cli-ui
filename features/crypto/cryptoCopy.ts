@@ -30,6 +30,7 @@ export const CRYPTO_COPY = {
   // ── Recovery-code step ──────────────────────────────────────────────────────
   recovery: {
     heading: 'Save your recovery code',
+    label: 'Recovery code',
     warning:
       'This code is shown once. Write it down or store it in a password manager — you cannot retrieve it later.',
     instruction:
