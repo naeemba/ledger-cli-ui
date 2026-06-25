@@ -16,3 +16,5 @@ export {
   type RequestEncryptionResetResult,
 } from './requestEncryptionReset';
 export { confirmEncryptionResetAction } from './confirmEncryptionReset';
+export { enablePasskeyUnlockAction } from '@/features/crypto/actions/enablePasskeyUnlock';
+export { disablePasskeyUnlockAction } from '@/features/crypto/actions/disablePasskeyUnlock';

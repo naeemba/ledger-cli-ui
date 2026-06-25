@@ -1,4 +1,5 @@
 import ChangePassphraseCard from './ChangePassphraseCard';
+import PasskeyUnlockCard from './PasskeyUnlockCard';
 import ResetEncryptionCard from './ResetEncryptionCard';
 import RotateRecoveryCard from './RotateRecoveryCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +29,7 @@ const SecuritySection = ({ enabled }: Props) => {
       <h2 className="text-lg font-semibold">Security</h2>
       <ChangePassphraseCard />
       <RotateRecoveryCard />
+      <PasskeyUnlockCard />
       <ResetEncryptionCard />
     </div>
   );
