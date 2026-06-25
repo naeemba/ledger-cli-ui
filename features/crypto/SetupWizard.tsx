@@ -488,7 +488,9 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'ledger-recovery-code.txt';
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
 
@@ -664,12 +666,20 @@ export function SetupWizard() {
   const [step, setStep] = useState<Step>('why');
   const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
   const [fatalError, setFatalError] = useState<string | null>(null);
+  const [fatalRetryStep, setFatalRetryStep] = useState<Step>('passphrase');
 
   // Advance from passphrase → recovery: runs the full orchestration.
   async function handlePassphraseNext(passphrase: string) {
-    const code = await runSetup(passphrase);
-    setRecoveryCode(code);
-    setStep('recovery');
+    try {
+      const code = await runSetup(passphrase);
+      setRecoveryCode(code);
+      setStep('recovery');
+    } catch (err) {
+      setFatalRetryStep('passphrase');
+      setFatalError(
+        err instanceof Error ? err.message : CRYPTO_COPY.errors.setupFailed
+      );
+    }
   }
 
   // Advance from recovery → encrypting: kick off finalization.
@@ -678,12 +688,14 @@ export function SetupWizard() {
     try {
       const result = await finalizeEncryption();
       if (!result.ok) {
+        setFatalRetryStep('recovery');
         setFatalError(result.error ?? CRYPTO_COPY.errors.setupFailed);
         return;
       }
       // Hard navigate so the session gate sees `ready`.
       window.location.assign('/dashboard');
     } catch (err) {
+      setFatalRetryStep('recovery');
       setFatalError(
         err instanceof Error ? err.message : CRYPTO_COPY.errors.generic
       );
@@ -743,7 +755,7 @@ export function SetupWizard() {
                     className="au-btn au-btn--ghost"
                     onClick={() => {
                       setFatalError(null);
-                      setStep('recovery');
+                      setStep(fatalRetryStep);
                     }}
                   >
                     Retry
