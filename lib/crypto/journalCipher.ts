@@ -10,6 +10,7 @@ export const encryptForUpload = (
   relPath: string,
   plaintext: Buffer
 ): Buffer => {
+  if (isCiphertext(plaintext)) return plaintext; // never double-wrap already-ciphertext
   const dek = getSessionDek(userId);
   return dek ? encryptFile(dek, relPath, plaintext) : plaintext;
 };

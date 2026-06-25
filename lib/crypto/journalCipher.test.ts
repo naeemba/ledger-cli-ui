@@ -46,4 +46,14 @@ describe('journalCipher', () => {
       LockedError
     );
   });
+
+  it('encryptForUpload does not re-wrap already-ciphertext bytes', () => {
+    const dek = randomBytes(32);
+    setSessionDek('alice', dek);
+    const plaintext = Buffer.from('2026/01/01 Payee\n');
+    const ct = encryptFile(dek, 'main.ledger', plaintext);
+    // Passing already-ciphertext through encryptForUpload must return it unchanged
+    const out = encryptForUpload('alice', 'main.ledger', ct);
+    expect(out.equals(ct)).toBe(true);
+  });
 });

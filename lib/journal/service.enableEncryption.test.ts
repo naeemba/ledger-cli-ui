@@ -11,7 +11,7 @@ import {
 } from '@/lib/crypto/sessionKeys';
 import { journalService } from '@/lib/journal';
 import { getJournalDir } from '@/lib/journal/layout';
-import { resetObjectStore, getObjectStore, push } from '@/lib/storage';
+import { resetObjectStore, getObjectStore, push, pull } from '@/lib/storage';
 import { keyFor } from '@/lib/storage/manifest';
 import {
   setupTestDb,
@@ -53,6 +53,12 @@ describe('JournalService.enableEncryption', () => {
 
     const remote = await getObjectStore().get(keyFor(userId, 'main.ledger'));
     expect(isCiphertext(remote.body)).toBe(true);
+
+    // Round-trip: wipe local, pull, assert original plaintext is recoverable (catches double-encryption)
+    await fs.unlink(path.join(dir, 'main.ledger'));
+    await pull(userId);
+    const recovered = await fs.readFile(path.join(dir, 'main.ledger'), 'utf8');
+    expect(recovered).toBe('2026/01/01 Opening\n  Assets:Cash  $10\n');
 
     // idempotent: pulling decrypts to plaintext locally; re-running re-encrypts the same content
     const r2 = await journalService.enableEncryption(userId);
