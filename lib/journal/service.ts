@@ -16,6 +16,7 @@ import {
   type ParsedJournal,
   type Transaction,
 } from './parser';
+import { getJournalDirSize, journalQuotaBytes, journalQuotaMb } from './quota';
 import { JournalRepository } from './repository';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
 import { verifyJournalParseable } from './verify';
@@ -152,6 +153,15 @@ export class JournalService {
       const snapshot = await this.repo.readFile(mainPath);
       // Leading "\n\n" guards against imported files that lack a trailing newline.
       const block = `\n\n${formatTransaction(draft)}\n`;
+      const projected =
+        (await getJournalDirSize(userId)) + Buffer.byteLength(block);
+      if (projected > journalQuotaBytes()) {
+        return {
+          ok: false,
+          fieldErrors: {},
+          formError: `This transaction would exceed your ${journalQuotaMb()} MB journal limit.`,
+        };
+      }
       try {
         await this.repo.appendFile(mainPath, block);
       } catch (e) {
@@ -221,8 +231,15 @@ export class JournalService {
   async replaceFromSingleFile(
     userId: string,
     content: Buffer
-  ): Promise<{ uidsAdded: number; parseFailure?: string }> {
+  ): Promise<{
+    uidsAdded: number;
+    parseFailure?: string;
+    quotaExceeded?: boolean;
+  }> {
     return withUserLock(userId, async () => {
+      if (content.length > journalQuotaBytes()) {
+        return { uidsAdded: 0, quotaExceeded: true };
+      }
       await pull(userId); // sync local cache + manifest to canonical
       await this.repo.resetLocalJournal(userId); // wipe local files, keep manifest
       const dir = getJournalDir(userId);
@@ -261,6 +278,7 @@ export class JournalService {
     fileCount: number;
     uidsAdded: number;
     parseFailure?: string;
+    quotaExceeded?: boolean;
   }> {
     const zip = new AdmZip(buffer);
     const entries = zip.getEntries().filter((e) => !e.isDirectory);
@@ -274,19 +292,40 @@ export class JournalService {
       }
     }
 
+    // Decompress each entry exactly once (adm-zip does not cache buffers) and
+    // short-circuit the quota sum as soon as it crosses the cap, so a malicious
+    // archive (a "zip bomb") can't force us to decompress its entire payload
+    // into memory before the quota rejects it.
+    const quota = journalQuotaBytes();
+    const decompressed: { entry: AdmZip.IZipEntry; data: Buffer }[] = [];
+    let extractedBytes = 0;
+    for (const entry of entries) {
+      const data = entry.getData();
+      extractedBytes += data.length;
+      decompressed.push({ entry, data });
+      if (extractedBytes > quota) {
+        return {
+          mainFile: '',
+          fileCount: entries.length,
+          uidsAdded: 0,
+          quotaExceeded: true,
+        };
+      }
+    }
+
     return withUserLock(userId, async () => {
       await pull(userId); // sync local cache + manifest to canonical
       await this.repo.resetLocalJournal(userId); // wipe local files, keep manifest
       const dir = getJournalDir(userId);
 
-      for (const entry of entries) {
+      for (const { entry, data } of decompressed) {
         const target = path.join(dir, entry.entryName);
         const resolved = path.resolve(target);
         if (!resolved.startsWith(path.resolve(dir) + path.sep)) {
           throw new Error(`Unsafe path in archive: ${entry.entryName}`);
         }
         await fs.mkdir(path.dirname(target), { recursive: true });
-        await fs.writeFile(target, entry.getData());
+        await fs.writeFile(target, data);
       }
 
       const mainFile = detectMain(entries.map((e) => ({ name: e.entryName })));

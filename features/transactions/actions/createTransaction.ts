@@ -3,12 +3,16 @@
 import type { TransactionActionState } from './types';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
+import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 
 export async function createTransactionAction(
   _prev: TransactionActionState | null,
   formData: FormData
 ): Promise<TransactionActionState> {
   const user = await requireUser();
+  if (!rateLimit(WRITE, user.id).allowed) {
+    return { ok: false, formError: RATE_LIMIT_MESSAGE };
+  }
   const draftJson = formData.get('draft');
   if (typeof draftJson !== 'string') {
     return { ok: false, formError: 'Missing transaction payload' };

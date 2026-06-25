@@ -1,6 +1,7 @@
 'use server';
 
 import { requireUser } from '@/lib/auth/require-user';
+import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 import { templateService } from '@/lib/templates';
 import { templateNameSchema } from '@/lib/templates/schema';
 import { revalidatePath } from 'next/cache';
@@ -19,6 +20,9 @@ export const renameTemplateAction = async (
   name: unknown
 ): Promise<RenameTemplateResult> => {
   const user = await requireUser();
+  if (!rateLimit(WRITE, user.id).allowed) {
+    return { ok: false, reason: 'invalid', message: RATE_LIMIT_MESSAGE };
+  }
   const parsed = templateNameSchema.safeParse(name);
   if (!parsed.success) {
     return {

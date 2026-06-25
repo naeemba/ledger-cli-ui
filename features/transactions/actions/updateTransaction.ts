@@ -3,6 +3,7 @@
 import type { TransactionActionState } from './types';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
+import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 
 export async function updateTransactionAction(
@@ -10,6 +11,9 @@ export async function updateTransactionAction(
   formData: FormData
 ): Promise<TransactionActionState> {
   const user = await requireUser();
+  if (!rateLimit(WRITE, user.id).allowed) {
+    return { ok: false, formError: RATE_LIMIT_MESSAGE };
+  }
   const draftJson = formData.get('draft');
   const uid = formData.get('uid');
   const expectedFingerprint = formData.get('expectedFingerprint');
