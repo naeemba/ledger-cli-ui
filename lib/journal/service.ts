@@ -20,7 +20,10 @@ import { getJournalDirSize, journalQuotaBytes, journalQuotaMb } from './quota';
 import { JournalRepository } from './repository';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
 import { verifyJournalParseable } from './verify';
+import { encryptFile, isCiphertext } from '@/lib/crypto/fileCrypto';
+import { getSessionDek, LockedError } from '@/lib/crypto/sessionKeys';
 import { pull, pullLocked, push, StorageConflictError } from '@/lib/storage';
+import { listLocalRelPaths } from '@/lib/storage/manifest';
 import {
   formatTransaction,
   transactionDraftSchema,
@@ -539,6 +542,31 @@ export class JournalService {
     }
     invalidateCache(userId);
     return { ok: true };
+  }
+
+  async enableEncryption(
+    userId: string
+  ): Promise<{ encrypted: number; alreadyCiphertext: number }> {
+    return withUserLock(userId, async () => {
+      const dek = getSessionDek(userId);
+      if (!dek) throw new LockedError();
+      await pull(userId); // bring canonical down (decrypts any already-ciphertext)
+      const dir = getJournalDir(userId);
+      let encrypted = 0;
+      let alreadyCiphertext = 0;
+      for (const rel of await listLocalRelPaths(dir)) {
+        const abs = path.join(dir, rel);
+        const body = await fs.readFile(abs);
+        if (isCiphertext(body)) {
+          alreadyCiphertext++;
+          continue;
+        }
+        await fs.writeFile(abs, encryptFile(dek, rel, body));
+        encrypted++;
+      }
+      await push(userId); // re-encrypts on the seam too (DEK present) — uploads ciphertext
+      return { encrypted, alreadyCiphertext };
+    });
   }
 
   private async backfillFile(filePath: string): Promise<BackfillFileResult> {
