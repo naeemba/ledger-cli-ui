@@ -21,3 +21,11 @@ export const setupCryptoSchema = z.object({
   wrapRecovery: b64(2000),
 });
 export type SetupCryptoInput = z.infer<typeof setupCryptoSchema>;
+
+// Wrapped key-material the server hands back to the client (GET /api/crypto/material).
+// Same opaque blobs as setup, minus the server-owned userId. Derived from the
+// schema so the route and its client consumer can't drift out of sync.
+export type CryptoMaterial = Pick<
+  SetupCryptoInput,
+  'passSalt' | 'argonParams' | 'wrapPassphrase' | 'wrapRecovery'
+>;

@@ -1,5 +1,6 @@
 import { requireUser } from '@/lib/auth/require-user';
 import { getUserCryptoRepository } from '@/lib/crypto';
+import type { CryptoMaterial } from '@/lib/crypto/setupSchema';
 import { NextResponse } from 'next/server';
 
 export async function GET(): Promise<NextResponse> {
@@ -12,10 +13,11 @@ export async function GET(): Promise<NextResponse> {
     );
   }
   // All four are opaque without the user's secret.
-  return NextResponse.json({
+  const material: CryptoMaterial = {
     passSalt: row.passSalt,
     argonParams: row.argonParams,
     wrapPassphrase: row.wrapPassphrase,
     wrapRecovery: row.wrapRecovery,
-  });
+  };
+  return NextResponse.json(material);
 }

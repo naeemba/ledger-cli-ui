@@ -6,18 +6,12 @@ import {
   toBase64,
   unwrapDek,
 } from './clientCrypto';
+import type { CryptoMaterial } from '@/lib/crypto/setupSchema';
 
-type Material = {
-  passSalt: string;
-  argonParams: { m: number; t: number; p: number };
-  wrapPassphrase: string;
-  wrapRecovery: string;
-};
-
-const getMaterial = async (): Promise<Material> => {
+const getMaterial = async (): Promise<CryptoMaterial> => {
   const res = await fetch('/api/crypto/material');
   if (!res.ok) throw new Error('Encryption is not set up.');
-  return res.json() as Promise<Material>;
+  return res.json() as Promise<CryptoMaterial>;
 };
 
 export const postDek = async (dek: Uint8Array): Promise<void> => {
