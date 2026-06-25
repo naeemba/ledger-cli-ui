@@ -1,3 +1,4 @@
+import { isAuthPath } from '@/components/AppShell/authPaths';
 import {
   bouncesSignedInToDashboard,
   isPublicPath,
@@ -30,6 +31,15 @@ function withSecurityHeaders(req: NextRequest): NextResponse {
 }
 
 export function proxy(req: NextRequest) {
+  // Auth pages (sign-in / sign-up) are reachable regardless of session and must
+  // NOT trigger the no-session redirect (that would loop on /sign-in). They were
+  // previously excluded from the matcher entirely; now they pass through so they
+  // receive security headers (notably X-Frame-Options / frame-ancestors against
+  // clickjacking of the credential forms).
+  if (isAuthPath(req.nextUrl.pathname)) {
+    return withSecurityHeaders(req);
+  }
+
   // Public paths are reachable without a session. A subset (the marketing
   // landing at `/`) also bounces signed-in visitors to their dashboard via a
   // cheap cookie check (no DB), since logged-in users have no use for it.
@@ -66,16 +76,17 @@ export function proxy(req: NextRequest) {
 }
 
 // Run on every request except:
-//   /sign-in and /sign-in/error  — the auth UI itself
-//   /sign-up                     — open registration; must be reachable without
-//                                  a session, or new users get bounced to /sign-in
 //   /api/auth/*                  — better-auth's own handlers
 //   _next/* internals, favicon, static assets
+// /sign-in, /sign-in/error, and /sign-up now pass through (removed from the
+// negative-lookahead) so they receive security headers (X-Frame-Options, CSP
+// frame-ancestors) against clickjacking. The isAuthPath branch at the top of
+// proxy() short-circuits them before the no-session redirect, so there is no
+// redirect loop.
 // The public landing at `/` still passes through the matcher but is short-
-// circuited above via isPublicPath/PUBLIC_PATHS, so it renders without a
-// session.
+// circuited via isPublicPath/PUBLIC_PATHS, so it renders without a session.
 export const config = {
   matcher: [
-    '/((?!sign-in|sign-up|api/auth|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
