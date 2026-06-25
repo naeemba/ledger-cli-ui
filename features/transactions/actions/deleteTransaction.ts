@@ -2,6 +2,7 @@
 
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
+import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 
 export type DeleteTransactionResult =
   | { ok: true }
@@ -12,6 +13,9 @@ export async function deleteTransactionAction(
   expectedFingerprint: string
 ): Promise<DeleteTransactionResult> {
   const user = await requireUser();
+  if (!rateLimit(WRITE, user.id).allowed) {
+    return { ok: false, message: RATE_LIMIT_MESSAGE };
+  }
   const result = await journalService.deleteTransaction(user.id, {
     kind: 'delete',
     uid,
