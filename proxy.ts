@@ -2,8 +2,32 @@ import {
   bouncesSignedInToDashboard,
   isPublicPath,
 } from '@/components/AppShell/publicPaths';
+import { buildSecurityHeaders } from '@/lib/security/headers';
 import { getSessionCookie } from '@naeemba/next-starter/proxy';
 import { type NextRequest, NextResponse } from 'next/server';
+
+function withSecurityHeaders(req: NextRequest): NextResponse {
+  // Per-request nonce (Web Crypto + btoa are available in the Edge runtime).
+  const nonce = btoa(crypto.randomUUID());
+  const headers = buildSecurityHeaders(nonce);
+
+  // Forward the nonce + CSP on the request so Next threads the nonce into its
+  // own bootstrap <script> tags.
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set(
+    'Content-Security-Policy',
+    headers['Content-Security-Policy']
+  );
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // Emit all security headers on the response.
+  for (const [key, value] of Object.entries(headers)) {
+    response.headers.set(key, value);
+  }
+  return response;
+}
 
 export function proxy(req: NextRequest) {
   // Public paths are reachable without a session. A subset (the marketing
@@ -25,7 +49,7 @@ export function proxy(req: NextRequest) {
       target.search = '';
       return NextResponse.redirect(target);
     }
-    return NextResponse.next();
+    return withSecurityHeaders(req);
   }
 
   if (!getSessionCookie(req)) {
@@ -38,7 +62,7 @@ export function proxy(req: NextRequest) {
     );
     return NextResponse.redirect(target);
   }
-  return NextResponse.next();
+  return withSecurityHeaders(req);
 }
 
 // Run on every request except:
