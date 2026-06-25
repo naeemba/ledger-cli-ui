@@ -160,11 +160,12 @@ function UnlockForm() {
       }
       // Reconcile any journal that was left plaintext-at-rest if a prior setup
       // was abandoned after the userCrypto row was written but before the bulk
-      // migration ran. enableEncryption is idempotent — it short-circuits on
-      // already-ciphertext files via the LEJ1 magic — so this is a cheap no-op
-      // for the common already-encrypted case. Best-effort: a failure here
-      // must not block entry, since the DEK is now in-session and the data
-      // layer re-encrypts on the next mutating push regardless.
+      // migration ran. finalizeEncryption short-circuits on the persisted
+      // `migratedAt` flag, so for the common already-migrated case this is a
+      // single DB read with no journal pull/push. Only the rare partial-setup
+      // user pays the one-time migration cost. Best-effort: a failure here must
+      // not block entry, since the DEK is now in-session and the data layer
+      // re-encrypts on the next mutating push regardless.
       await finalizeEncryption().catch(() => {});
       window.location.assign(resolveCallback());
     } catch (err) {
