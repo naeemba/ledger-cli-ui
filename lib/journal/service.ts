@@ -292,17 +292,25 @@ export class JournalService {
       }
     }
 
-    const extractedBytes = entries.reduce(
-      (sum, entry) => sum + entry.getData().length,
-      0
-    );
-    if (extractedBytes > journalQuotaBytes()) {
-      return {
-        mainFile: '',
-        fileCount: entries.length,
-        uidsAdded: 0,
-        quotaExceeded: true,
-      };
+    // Decompress each entry exactly once (adm-zip does not cache buffers) and
+    // short-circuit the quota sum as soon as it crosses the cap, so a malicious
+    // archive (a "zip bomb") can't force us to decompress its entire payload
+    // into memory before the quota rejects it.
+    const quota = journalQuotaBytes();
+    const decompressed: { entry: AdmZip.IZipEntry; data: Buffer }[] = [];
+    let extractedBytes = 0;
+    for (const entry of entries) {
+      const data = entry.getData();
+      extractedBytes += data.length;
+      decompressed.push({ entry, data });
+      if (extractedBytes > quota) {
+        return {
+          mainFile: '',
+          fileCount: entries.length,
+          uidsAdded: 0,
+          quotaExceeded: true,
+        };
+      }
     }
 
     return withUserLock(userId, async () => {
@@ -310,14 +318,14 @@ export class JournalService {
       await this.repo.resetLocalJournal(userId); // wipe local files, keep manifest
       const dir = getJournalDir(userId);
 
-      for (const entry of entries) {
+      for (const { entry, data } of decompressed) {
         const target = path.join(dir, entry.entryName);
         const resolved = path.resolve(target);
         if (!resolved.startsWith(path.resolve(dir) + path.sep)) {
           throw new Error(`Unsafe path in archive: ${entry.entryName}`);
         }
         await fs.mkdir(path.dirname(target), { recursive: true });
-        await fs.writeFile(target, entry.getData());
+        await fs.writeFile(target, data);
       }
 
       const mainFile = detectMain(entries.map((e) => ({ name: e.entryName })));
