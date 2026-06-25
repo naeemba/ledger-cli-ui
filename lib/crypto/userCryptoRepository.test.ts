@@ -68,4 +68,54 @@ describe('UserCryptoRepository', () => {
     await repo.markMigrated('alice');
     expect(await repo.hasMigrated('alice')).toBe(true);
   });
+
+  it('updateWrapPassphrase replaces the passphrase wrap fields', async () => {
+    await repo.create({
+      userId: 'alice',
+      wrapPassphrase: 'w1',
+      passSalt: 's1',
+      argonParams: { m: 65536, t: 3, p: 1 },
+      wrapRecovery: 'r1',
+    });
+    await repo.updateWrapPassphrase('alice', 'w2', 's2', {
+      m: 19456,
+      t: 2,
+      p: 1,
+    });
+    const row = await repo.get('alice');
+    expect(row?.wrapPassphrase).toBe('w2');
+    expect(row?.passSalt).toBe('s2');
+    expect(row?.argonParams).toEqual({ m: 19456, t: 2, p: 1 });
+    expect(row?.wrapRecovery).toBe('r1'); // recovery wrap untouched
+  });
+
+  it('updateWrapRecovery replaces the recovery wrap and bumps recoveryCreatedAt', async () => {
+    await repo.create({
+      userId: 'alice',
+      wrapPassphrase: 'w1',
+      passSalt: 's1',
+      argonParams: { m: 65536, t: 3, p: 1 },
+      wrapRecovery: 'r1',
+    });
+    const before = (await repo.get('alice'))!.recoveryCreatedAt;
+    await repo.updateWrapRecovery('alice', 'r2');
+    const row = await repo.get('alice');
+    expect(row?.wrapRecovery).toBe('r2');
+    expect(row?.wrapPassphrase).toBe('w1'); // passphrase wrap untouched
+    expect(row!.recoveryCreatedAt.getTime()).toBeGreaterThanOrEqual(
+      before.getTime()
+    );
+  });
+
+  it('delete removes the row', async () => {
+    await repo.create({
+      userId: 'alice',
+      wrapPassphrase: 'w1',
+      passSalt: 's1',
+      argonParams: { m: 65536, t: 3, p: 1 },
+      wrapRecovery: 'r1',
+    });
+    await repo.delete('alice');
+    expect(await repo.exists('alice')).toBe(false);
+  });
 });

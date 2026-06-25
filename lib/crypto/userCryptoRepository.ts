@@ -1,5 +1,10 @@
-import { eq } from 'drizzle-orm';
-import { userCrypto, type NewUserCrypto, type UserCrypto } from '@/db/schema';
+import { eq, sql } from 'drizzle-orm';
+import {
+  userCrypto,
+  type ArgonParams,
+  type NewUserCrypto,
+  type UserCrypto,
+} from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 
 export class UserCryptoRepository {
@@ -34,5 +39,31 @@ export class UserCryptoRepository {
       .update(userCrypto)
       .set({ migratedAt: new Date() })
       .where(eq(userCrypto.userId, userId));
+  }
+
+  async updateWrapPassphrase(
+    userId: string,
+    wrapPassphrase: string,
+    passSalt: string,
+    argonParams: ArgonParams
+  ): Promise<void> {
+    await this.db
+      .update(userCrypto)
+      .set({ wrapPassphrase, passSalt, argonParams })
+      .where(eq(userCrypto.userId, userId));
+  }
+
+  async updateWrapRecovery(
+    userId: string,
+    wrapRecovery: string
+  ): Promise<void> {
+    await this.db
+      .update(userCrypto)
+      .set({ wrapRecovery, recoveryCreatedAt: sql`now()` })
+      .where(eq(userCrypto.userId, userId));
+  }
+
+  async delete(userId: string): Promise<void> {
+    await this.db.delete(userCrypto).where(eq(userCrypto.userId, userId));
   }
 }
