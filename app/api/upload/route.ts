@@ -1,6 +1,7 @@
 import path from 'path';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
+import { journalQuotaMb } from '@/lib/journal/quota';
 import { rateLimit, UPLOAD } from '@/lib/rate-limit';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       if (result.quotaExceeded) {
         return NextResponse.json(
           {
-            error: `Importing this would exceed your ${process.env.JOURNAL_QUOTA_MB ?? 100} MB journal limit.`,
+            error: `Importing this would exceed your ${journalQuotaMb()} MB journal limit.`,
           },
           { status: 413 }
         );
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       if (result.quotaExceeded) {
         return NextResponse.json(
           {
-            error: `Importing this would exceed your ${process.env.JOURNAL_QUOTA_MB ?? 100} MB journal limit.`,
+            error: `Importing this would exceed your ${journalQuotaMb()} MB journal limit.`,
           },
           { status: 413 }
         );

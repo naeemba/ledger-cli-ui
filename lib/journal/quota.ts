@@ -15,10 +15,12 @@ const DEFAULT_QUOTA_MB = 100;
  * non-numeric so a bad env var defaults *closed* (still enforcing a cap) rather
  * than silently disabling the quota (Number('x') → NaN → every check false).
  */
-export const journalQuotaBytes = (): number => {
+export const journalQuotaMb = (): number => {
   const mb = Number(process.env.JOURNAL_QUOTA_MB);
-  return (Number.isFinite(mb) && mb > 0 ? mb : DEFAULT_QUOTA_MB) * 1024 * 1024;
+  return Number.isFinite(mb) && mb > 0 ? mb : DEFAULT_QUOTA_MB;
 };
+
+export const journalQuotaBytes = (): number => journalQuotaMb() * 1024 * 1024;
 
 /**
  * Total bytes of user-authored files under the journal dir (0 if absent).

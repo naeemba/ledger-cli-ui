@@ -16,7 +16,7 @@ import {
   type ParsedJournal,
   type Transaction,
 } from './parser';
-import { getJournalDirSize, journalQuotaBytes } from './quota';
+import { getJournalDirSize, journalQuotaBytes, journalQuotaMb } from './quota';
 import { JournalRepository } from './repository';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
 import { verifyJournalParseable } from './verify';
@@ -159,7 +159,7 @@ export class JournalService {
         return {
           ok: false,
           fieldErrors: {},
-          formError: `This transaction would exceed your ${process.env.JOURNAL_QUOTA_MB ?? 100} MB journal limit.`,
+          formError: `This transaction would exceed your ${journalQuotaMb()} MB journal limit.`,
         };
       }
       try {
