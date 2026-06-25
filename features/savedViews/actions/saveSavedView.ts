@@ -1,6 +1,7 @@
 'use server';
 
 import { requireUser } from '@/lib/auth/require-user';
+import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 import { savedViewService, savedViewInputSchema } from '@/lib/savedViews';
 import { revalidatePath } from 'next/cache';
 
@@ -18,6 +19,9 @@ export const saveSavedViewAction = async (
   opts: { overwrite?: boolean } = {}
 ): Promise<SaveSavedViewResult> => {
   const user = await requireUser();
+  if (!rateLimit(WRITE, user.id).allowed) {
+    return { ok: false, reason: 'invalid', message: RATE_LIMIT_MESSAGE };
+  }
   const parsed = savedViewInputSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};

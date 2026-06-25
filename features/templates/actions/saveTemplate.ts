@@ -1,6 +1,7 @@
 'use server';
 
 import { requireUser } from '@/lib/auth/require-user';
+import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 import { templateService } from '@/lib/templates';
 import { templateInputSchema } from '@/lib/templates/schema';
 import { revalidatePath } from 'next/cache';
@@ -19,6 +20,9 @@ export const saveTemplateAction = async (
   opts: { overwrite?: boolean } = {}
 ): Promise<SaveTemplateResult> => {
   const user = await requireUser();
+  if (!rateLimit(WRITE, user.id).allowed) {
+    return { ok: false, reason: 'invalid', message: RATE_LIMIT_MESSAGE };
+  }
   const parsed = templateInputSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
