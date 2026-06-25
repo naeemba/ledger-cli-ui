@@ -9,3 +9,5 @@ export {
 export { clearSessionBaseCurrencyAction } from './clearSessionBaseCurrency';
 export { requestAccountDeletionAction } from './requestAccountDeletion';
 export { deleteAccountAction } from './deleteAccount';
+export { changePassphraseAction } from './changePassphrase';
+export { rotateRecoveryAction } from './rotateRecovery';
