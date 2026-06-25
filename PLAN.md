@@ -215,13 +215,15 @@ Only relevant if this gets deployed to anyone other than you.
   ListObjectsV2 + ETags. See `docs/deployment/garage.md` and
   `docs/superpowers/specs/2026-06-24-garage-object-storage-design.md`.
 - [ ] **Encrypted user journals at rest** — envelope encryption with **session-scoped** decryption (zero-knowledge at rest, not full E2E). One per-user DEK encrypts the journal; wrapped by passphrase + one-time recovery code, with optional passkey-PRF convenience wrap. DEK reaches the server in RAM only, for the session; server-side `ledger` preserved. Unlock once per login session + a manual Lock button. Design: `docs/superpowers/specs/2026-06-22-encrypted-journals-design.md`. (Supersedes the earlier `.env.example` "server master key" idea — that was not zero-knowledge.)
-- [ ] Rate limit `/api/upload` and any future write endpoint
+- [x] Rate limit `/api/upload` and any future write endpoint — in-memory per-user fixed-window limiter (lib/rate-limit/) on /api/upload + all mutating server actions; auth endpoints covered by better-auth.
 - [ ] Audit log of journal mutations (who, when, how many bytes)
-- [ ] Quota on per-user journal size
+- [x] Quota on per-user journal size — JOURNAL_QUOTA_MB (default 100) enforced in JournalService for imports + adds; lib/journal/quota.ts.
 - [x] Backup endpoint — `GET /api/account/export` streams a `.zip` of the user's journal directory (reuses `pullLocked` + `listLocalRelPaths` + `adm-zip`). (Restore-from-backup upload still pending; import covers re-upload.)
 - [x] **Account deletion** — self-service on `/settings` Danger Zone: emailed 6-digit code (hashed, 10-min expiry, 5-attempt cap, 30s resend throttle) → `purgeUserData` wipes Garage (`clearRemote`) + local journal dir + `db.delete(user)` cascade → sign-out + `/account/deleted`. Spec: `docs/superpowers/specs/2026-06-25-account-deletion-design.md`.
-- [ ] CSP / security headers pass
+- [x] CSP / security headers pass — strict nonce-based CSP + HSTS/X-Frame-Options/nosniff/Referrer-Policy/Permissions-Policy via proxy.ts (lib/security/headers.ts).
 - [ ] Structured logging + an error-tracking destination
+
+Spec: docs/superpowers/specs/2026-06-25-phase7-hardening-design.md.
 
 ---
 
