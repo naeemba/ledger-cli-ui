@@ -40,10 +40,14 @@ const mono = JetBrains_Mono({
 
 const ARGON = { m: 65536, t: 3, p: 1 } as const;
 
-// Fixed setup orchestration — runs exactly once on advancing from step 2 → 3.
-// Generates DEK client-side, derives both wrapping keys, posts to server,
-// unlocks the session, and returns the one-time recovery code.
-async function runSetup(passphrase: string): Promise<string> {
+// Fixed setup orchestration — runs on advancing from step 2 → 3.
+// Generates DEK client-side, derives both wrapping keys, and persists the
+// wrapped keys server-side. Returns the raw DEK and the one-time recovery code
+// so the caller can surface the code immediately and unlock the session
+// separately — a failure to unlock must not discard the recovery secret.
+async function runSetup(
+  passphrase: string
+): Promise<{ dek: Uint8Array; code: string }> {
   const dek = generateDek();
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const { code, bytes } = generateRecoveryCode();
@@ -59,8 +63,7 @@ async function runSetup(passphrase: string): Promise<string> {
     wrapRecovery,
   });
   if (!res.ok) throw new Error(res.error);
-  await postDek(dek); // unlock this session so migration can run
-  return code;
+  return { dek, code };
 }
 
 type Step = 'why' | 'passphrase' | 'recovery' | 'encrypting';
@@ -667,11 +670,18 @@ export function SetupWizard() {
   const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
   const [fatalError, setFatalError] = useState<string | null>(null);
   const [fatalRetryStep, setFatalRetryStep] = useState<Step>('passphrase');
+  // Held in memory so a transient unlock failure can be retried at finalize
+  // time without re-running setupCrypto (which would now reject with
+  // "already set up" and orphan the displayed recovery code).
+  const dekRef = useRef<Uint8Array | null>(null);
 
-  // Advance from passphrase → recovery: runs the full orchestration.
+  // Advance from passphrase → recovery: persists the wrapped keys, then
+  // surfaces the recovery code. The session unlock (postDek) is deferred to
+  // finalize so a network blip here can never discard the one-time code.
   async function handlePassphraseNext(passphrase: string) {
     try {
-      const code = await runSetup(passphrase);
+      const { dek, code } = await runSetup(passphrase);
+      dekRef.current = dek;
       setRecoveryCode(code);
       setStep('recovery');
     } catch (err) {
@@ -682,10 +692,19 @@ export function SetupWizard() {
     }
   }
 
-  // Advance from recovery → encrypting: kick off finalization.
+  // Advance from recovery → encrypting: unlock the session, then finalize.
+  // Both steps are idempotent and safe to re-run on "Retry".
   async function handleRecoveryNext() {
+    const dek = dekRef.current;
+    if (!dek) {
+      // Lost the in-memory DEK (e.g. a reload landed back here) — the row
+      // already exists, so route through the normal unlock flow instead.
+      window.location.assign('/crypto/unlock');
+      return;
+    }
     setStep('encrypting');
     try {
+      await postDek(dek); // unlock this session so migration can run
       const result = await finalizeEncryption();
       if (!result.ok) {
         setFatalRetryStep('recovery');
