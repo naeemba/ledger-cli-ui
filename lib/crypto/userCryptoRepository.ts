@@ -1,9 +1,5 @@
 import { eq } from 'drizzle-orm';
-import {
-  userCrypto,
-  type NewUserCrypto,
-  type UserCrypto,
-} from '@/db/schema/userCrypto';
+import { userCrypto, type NewUserCrypto, type UserCrypto } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 
 export class UserCryptoRepository {
