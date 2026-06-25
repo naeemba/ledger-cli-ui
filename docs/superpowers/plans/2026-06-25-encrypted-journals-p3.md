@@ -24,8 +24,9 @@
 **Create:**
 - `lib/crypto/rewrapSchema.ts` — Zod schemas for the change-passphrase / rotate-recovery payloads (shared with the actions).
 - `features/crypto/lib/rewrapFlow.ts` — client orchestration: `obtainDek(authorizer)`, `changePassphrase(authorizer, newPassphrase)`, `rotateRecovery(authorizer)`.
-- `lib/crypto/resetEncryption.ts` — server `resetUserEncryption(userId, deps?)` (clearRemote + rm dir + repo.delete + ensureLayout + dropSessionDek).
-- `features/settings/actions/changePassphrase.ts`, `features/settings/actions/rotateRecovery.ts`, `features/settings/actions/resetEncryption.ts` — server actions.
+- `lib/crypto/resetEncryption.ts` — server `resetUserEncryption(userId, db, deps?)` (clearRemote + rm dir + repo.delete + dropSessionDek + ensureLayout).
+- `db/schema/encryptionResetChallenge.ts` (+ migration) and `lib/crypto/resetChallenge/` (repository + service + schema) — emailed-code challenge for reset, modelled on `lib/account-deletion/`.
+- `features/settings/actions/changePassphrase.ts`, `rotateRecovery.ts`, `requestEncryptionReset.ts`, `confirmEncryptionReset.ts` — server actions.
 - `features/settings/SecuritySection.tsx` (+ `ChangePassphraseCard.tsx`, `RotateRecoveryCard.tsx`, `ResetEncryptionCard.tsx`) — the Security UI.
 - Tests alongside each.
 
@@ -347,13 +348,12 @@ Export both from `features/settings/actions/index.ts`.
 
 ---
 
-## Task 4: Reset-encryption (service + action)
+## Task 4: Reset-encryption — wipe service (`resetUserEncryption`)
 
-**Files:** Create `lib/crypto/resetEncryption.ts`, `features/settings/actions/resetEncryption.ts`, and tests; export the action from the actions barrel.
+**Files:** Create `lib/crypto/resetEncryption.ts`, `lib/crypto/resetEncryption.test.ts`.
 
 **Interfaces — Produces:**
 - `resetUserEncryption(userId: string, db: DbInstance, deps?: {...}): Promise<void>` — `clearRemote(userId)` + `fs.rm(getJournalDir(userId), {recursive,force})` + `userCryptoRepository.delete(userId)` (via a repo bound to `db`) + `dropSessionDek(userId)` + `journalRepository.ensureLayout(userId)` (recreate empty stub). Inject `clearRemote`/`removeLocalJournal` for tests (mirror `purgeUserData`'s `PurgeDeps`).
-- `resetEncryptionAction(confirm: unknown): Promise<{ ok: true } | { ok: false; reason: 'too-many-attempts' | 'not-confirmed' | 'not-set-up' }>` — `requireUser`, `DESTRUCTIVE` rate-limit, require the typed confirmation phrase, run the reset.
 
 - [ ] **Step 1: Failing test for `resetUserEncryption`** (setupTestDb; create a userCrypto row + a journal dir; inject a fake `clearRemote`/`removeLocalJournal`; assert the row is gone, the injected wipes were called, the DEK dropped, and an empty stub journal exists afterward).
 
@@ -392,11 +392,27 @@ export async function resetUserEncryption(
 }
 ```
 
-> **Note for reviewer:** order matters — delete the `userCrypto` row (so `cryptoStatus` is `'unset'`) and drop the DEK BEFORE the user navigates; `ensureLayout` recreates a plaintext stub so the (now un-encrypted) account renders an empty journal and the gate routes to `/crypto/setup`.
+> **Note for reviewer:** order matters — delete the `userCrypto` row (so `cryptoStatus` is `'unset'`) and drop the DEK; `ensureLayout` recreates a plaintext stub so the (now un-encrypted) account renders an empty journal and the gate routes to `/crypto/setup`. Deleting the row also clears `migratedAt`.
 
-- [ ] **Step 3: Implement `resetEncryptionAction`** — `requireUser`; `DESTRUCTIVE` rate-limit; require the confirmation phrase (e.g. the schema accepts the literal string the UI asks the user to type, like `'RESET'`); reject if no `userCrypto` row; call `resetUserEncryption(user.id, db)`; `revalidatePath('/', 'layout')`. Return the discriminated result.
+- [ ] **Step 3: Run — expect PASS**, **Commit** `git add lib/crypto/resetEncryption.ts lib/crypto/resetEncryption.test.ts && git commit -m "feat(crypto): resetUserEncryption wipe service (keeps account)"`
 
-- [ ] **Step 4: Test the action** (mock `requireUser`; assert wrong/absent confirmation → `{ok:false, reason:'not-confirmed'}`; correct confirmation triggers the reset). Run, type-check, **Commit** `git add lib/crypto/resetEncryption.ts features/settings/actions/resetEncryption.ts lib/crypto/resetEncryption.test.ts features/settings/actions/resetEncryption.test.ts features/settings/actions/index.ts && git commit -m "feat(crypto): reset-encryption service + action"`
+---
+
+## Task 4b: Reset-encryption — emailed-code challenge + actions
+
+**Decision (locked):** reset is guarded by an **emailed 6-digit code**, equal in strength to account deletion. Build a **parallel, self-contained** challenge modelled on `lib/account-deletion/` — do NOT reuse `accountDeletionChallenge` (a deletion code must not authorize a reset) and do NOT modify the shipped account-deletion feature.
+
+**Files:** Create `db/schema/encryptionResetChallenge.ts` (+ barrel export + drizzle migration), `lib/crypto/resetChallenge/` (`repository.ts`, `service.ts`, `schema.ts`, `index.ts` + tests), `features/settings/actions/requestEncryptionReset.ts`, `features/settings/actions/confirmEncryptionReset.ts` (+ tests); modify `features/settings/actions/index.ts`.
+
+**Model precisely on these existing files** (read them; mirror structure, hashing, expiry, attempt-cap, and the email transport):
+- `db/schema/accountDeletionChallenge.ts` → `encryptionResetChallenge` (identical columns: `userId` PK→user cascade, `codeHash`, `expiresAt`, `attempts`, `createdAt`).
+- `lib/account-deletion/{schema.ts,repository.ts,service.ts}` → the reset-challenge schema (6-digit `resetCodeSchema`), repository (upsert challenge / get / increment attempts / delete), and service (`requestReset` = generate code → hash → upsert → email; `verifyAndReset` = load → check expiry/attempts/hash → on success call `resetUserEncryption(userId, db)` from Task 4 → delete challenge; on failure increment attempts, return remaining). Reuse the SAME pure code-gen + hashing helpers account-deletion uses (import them if exported; otherwise mirror).
+- `features/settings/actions/requestAccountDeletion.ts` + `deleteAccount.ts` → `requestEncryptionResetAction()` (`requireUser`, `DESTRUCTIVE` rate-limit, require a `userCrypto` row exists, call `resetChallengeService.requestReset(user.id, user.email)`) and `confirmEncryptionResetAction(code)` (`requireUser`, `DESTRUCTIVE` rate-limit, validate code, call `verifyAndReset` → returns `{ ok:true } | { ok:false, reason:'too-many-attempts'|'invalid'|'not-set-up', remaining? }`). `revalidatePath('/', 'layout')` after a successful reset.
+
+- [ ] **Step 1:** Create the `encryptionResetChallenge` schema (mirror `accountDeletionChallenge.ts`), export from `db/schema/index.ts`, add to `drizzle.config.ts` `tablesFilter`, run `pnpm db:generate`, confirm the migration creates only that table.
+- [ ] **Step 2:** Write the reset-challenge schema/repository/service with failing tests first, mirroring `lib/account-deletion/` (request → hashed code stored + emailed; verify → expiry/attempt/hash checks → `resetUserEncryption` on success). Use the injected-deps pattern from `account-deletion/service.test.ts` so tests don't send real email and don't wipe real storage.
+- [ ] **Step 3:** Write the two actions with tests (mock `requireUser`; assert request is gated on an existing `userCrypto` row + rate-limited; confirm rejects bad/expired codes and, on a valid code, invokes the reset).
+- [ ] **Step 4:** Run tests + type-check, **Commit** `git add db/schema/encryptionResetChallenge.ts db/schema/index.ts drizzle.config.ts db/migrations lib/crypto/resetChallenge features/settings/actions/requestEncryptionReset.ts features/settings/actions/confirmEncryptionReset.ts features/settings/actions/*.test.ts features/settings/actions/index.ts && git commit -m "feat(crypto): emailed-code challenge for reset-encryption"`
 
 ---
 
@@ -411,7 +427,7 @@ export async function resetUserEncryption(
 - [ ] **Step 3:** `SecuritySection.tsx` — a `<Card>` titled "Security" containing the three cards/sub-forms:
   - **ChangePassphraseCard** — fields: current passphrase (with a "Forgot? use recovery code" toggle that swaps to a recovery-code field), new passphrase + confirm (match + min-length, reuse the wizard's strength hint if cheap). On submit: build the authorizer, call `changePassphrase(authorizer, newPassphrase)` (Task 2), then `changePassphraseAction(result)` (Task 3); show success/error via `Alert`/toast. Errors from `obtainDek` ("Incorrect passphrase." / "Incorrect recovery code.") surface inline.
   - **RotateRecoveryCard** — authorizer field (current passphrase, with recovery toggle) → on submit call `rotateRecovery(authorizer)` then `rotateRecoveryAction({wrapRecovery})`; on success display the NEW recovery code once (grouped, copy + download, like the wizard's recovery step) with a "I've saved it" acknowledgement.
-  - **ResetEncryptionCard** — a destructive card (model on `DangerZone`): explains it permanently deletes the encrypted journal and cannot be undone; a confirm dialog requires typing the confirmation phrase; on confirm call `resetEncryptionAction(phrase)`; on success `window.location.assign('/crypto/setup')` (hard nav so the gate re-routes).
+  - **ResetEncryptionCard** — a destructive card modelled on `DangerZone`'s **two-phase emailed-code** flow: explains it permanently deletes the encrypted journal and cannot be undone; "Reset encryption" → calls `requestEncryptionResetAction()` (emails a code) → reveals a 6-digit code input + Resend; on confirm calls `confirmEncryptionResetAction(code)`; on success `window.location.assign('/crypto/setup')` (hard nav so the gate re-routes). Surface `too-many-attempts`/`invalid`/remaining-attempts inline like `DangerZone`.
 - [ ] **Step 4: Verify (no live env):** `pnpm type-check` clean, `pnpm lint` clean, `pnpm test` (full suite — confirm no regression from the settings-page change). The live visual + e2e acceptance (each flow against a real unlocked session) is the user's pass — note it in the report.
 - [ ] **Step 5: Commit** `git add features/settings/SecuritySection.tsx features/settings/ChangePassphraseCard.tsx features/settings/RotateRecoveryCard.tsx features/settings/ResetEncryptionCard.tsx features/settings/Settings.tsx app/settings/page.tsx && git commit -m "feat(crypto): settings security section (change passphrase, rotate recovery, reset)"`
 
@@ -425,9 +441,9 @@ export async function resetUserEncryption(
 
 ---
 
-## Open decision (confirm before/while implementing)
+## Resolved decision
 
-**Reset-encryption confirmation strength.** This plan defaults to a **typed-confirmation dialog** (type a phrase) + `DESTRUCTIVE` rate-limit. Reset destroys all journal data irreversibly (the ciphertext is unreadable without the key being discarded). Account deletion uses a stronger **emailed 6-digit code** flow. If you want reset to be equally guarded, swap Task 4's confirmation for the account-deletion challenge pattern (`requestAccountDeletion`/`verifyAndDelete` analog). Default = typed confirmation; upgrade on request.
+**Reset-encryption confirmation = emailed 6-digit code** (locked by the user) — equal in strength to account deletion. Implemented as a parallel, self-contained challenge in Task 4b (do not reuse the account-deletion challenge; do not modify account deletion).
 
 ## Out of scope (later)
 
@@ -435,7 +451,7 @@ export async function resetUserEncryption(
 
 ## Self-Review
 
-**Spec coverage (P3 slice of the v2 design):** change passphrase → Tasks 2/3/5; forgot-passphrase (recovery) → folded into change-passphrase's recovery authorizer (Tasks 2/5); rotate recovery code → Tasks 2/3/5; reset encryption → Task 4/5. Re-wrap keeps the DEK unchanged (no journal re-encryption) → Task 2 design. ✓
+**Spec coverage (P3 slice of the v2 design):** change passphrase → Tasks 2/3/5; forgot-passphrase (recovery) → folded into change-passphrase's recovery authorizer (Tasks 2/5); rotate recovery code → Tasks 2/3/5; reset encryption (emailed-code, wipe-but-keep-account) → Tasks 4 (wipe service) + 4b (challenge + actions) + 5 (two-phase card). Re-wrap keeps the DEK unchanged (no journal re-encryption) → Task 2 design. ✓
 
 **Placeholder scan:** Task 3 Step 2 and Task 4 Steps 1/3 describe test/impl shape with concrete assertions and full action code; the UI task specifies fixed orchestration (which client+action functions each card calls) + shadcn acceptance rather than full JSX (iterative UI, paired with frontend-design). No TBDs.
 
