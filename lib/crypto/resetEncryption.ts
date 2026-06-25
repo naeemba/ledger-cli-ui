@@ -1,5 +1,6 @@
 // lib/crypto/resetEncryption.ts
 import { promises as fs } from 'fs';
+import 'server-only';
 import { dropSessionDek } from './sessionKeys';
 import { UserCryptoRepository } from './userCryptoRepository';
 import type { DbInstance } from '@/lib/db/connection';
