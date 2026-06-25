@@ -1,5 +1,6 @@
 // lib/crypto/sessionKeys.ts
-const DEK_BYTES = 32;
+import { DEK_BYTES } from './constants';
+
 const keys = new Map<string, Buffer>();
 
 /** Thrown when an operation needs the DEK but the session is locked. */

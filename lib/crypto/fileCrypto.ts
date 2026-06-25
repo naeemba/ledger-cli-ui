@@ -5,6 +5,7 @@ import {
   hkdfSync,
   randomBytes,
 } from 'crypto';
+import { DEK_BYTES } from './constants';
 
 // On-disk envelope: [magic "LEJ1"(4)][version(1)][nonce(12)][ciphertext][tag(16)]
 export const MAGIC = Buffer.from('LEJ1', 'ascii');
@@ -17,7 +18,13 @@ const HEADER_LEN = MAGIC.length + 1 + NONCE_LEN; // 17
  * key to its path so ciphertexts can't be swapped between files. */
 const subkeyFor = (dek: Buffer, relPath: string): Buffer =>
   Buffer.from(
-    hkdfSync('sha256', dek, Buffer.alloc(0), Buffer.from(relPath, 'utf8'), 32)
+    hkdfSync(
+      'sha256',
+      dek,
+      Buffer.alloc(0),
+      Buffer.from(relPath, 'utf8'),
+      DEK_BYTES
+    )
   );
 
 /** AAD binds magic+version+relPath into the GCM tag (defence in depth). */
