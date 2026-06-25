@@ -14,6 +14,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await fs.rm(dataDir, { recursive: true, force: true });
+  delete process.env.DATA_DIR;
   delete process.env.JOURNAL_QUOTA_MB;
 });
 
