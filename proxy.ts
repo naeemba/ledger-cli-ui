@@ -30,6 +30,20 @@ function withSecurityHeaders(req: NextRequest): NextResponse {
   return response;
 }
 
+/**
+ * Attaches the security-header baseline to a redirect so 3xx responses carry the
+ * same CSP/HSTS/X-Frame-Options set as rendered pages. A fresh nonce is minted
+ * for completeness even though a redirect has no body to apply it to.
+ */
+function redirectWithSecurityHeaders(target: URL): NextResponse {
+  const response = NextResponse.redirect(target);
+  const nonce = btoa(crypto.randomUUID());
+  for (const [key, value] of Object.entries(buildSecurityHeaders(nonce))) {
+    response.headers.set(key, value);
+  }
+  return response;
+}
+
 export function proxy(req: NextRequest) {
   // Auth pages (sign-in / sign-up) are reachable regardless of session and must
   // NOT trigger the no-session redirect (that would loop on /sign-in). They were
@@ -57,7 +71,7 @@ export function proxy(req: NextRequest) {
       const target = req.nextUrl.clone();
       target.pathname = '/dashboard';
       target.search = '';
-      return NextResponse.redirect(target);
+      return redirectWithSecurityHeaders(target);
     }
     return withSecurityHeaders(req);
   }
@@ -70,7 +84,7 @@ export function proxy(req: NextRequest) {
       'callbackUrl',
       req.nextUrl.pathname + req.nextUrl.search
     );
-    return NextResponse.redirect(target);
+    return redirectWithSecurityHeaders(target);
   }
   return withSecurityHeaders(req);
 }
