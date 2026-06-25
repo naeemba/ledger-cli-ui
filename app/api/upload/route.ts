@@ -1,6 +1,7 @@
 import path from 'path';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
+import { rateLimit, UPLOAD } from '@/lib/rate-limit';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const ALLOWED_SINGLE_EXTS = new Set(['.ledger', '.dat', '.journal', '.txt']);
@@ -9,6 +10,17 @@ const MAX_BYTES = 25 * 1024 * 1024;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const user = await requireUser();
+  const limit = rateLimit(UPLOAD, user.id);
+  if (!limit.allowed) {
+    const retryAfter = Math.ceil((limit.resetAt - Date.now()) / 1000);
+    return NextResponse.json(
+      { error: 'Too many uploads. Please wait a moment and try again.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.max(1, retryAfter)) },
+      }
+    );
+  }
   const data = await req.formData();
   const file = data.get('file');
 
