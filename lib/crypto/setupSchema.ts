@@ -22,10 +22,18 @@ export const setupCryptoSchema = z.object({
 });
 export type SetupCryptoInput = z.infer<typeof setupCryptoSchema>;
 
+export type PasskeyMaterial = {
+  credentialId: string;
+  prfSalt: string;
+  wrap: string;
+};
+
 // Wrapped key-material the server hands back to the client (GET /api/crypto/material).
-// Same opaque blobs as setup, minus the server-owned userId. Derived from the
-// schema so the route and its client consumer can't drift out of sync.
+// Opaque blobs only; the server never unwraps them. `passkeys` is the list of
+// enrolled passkey wraps (empty when none).
 export type CryptoMaterial = Pick<
   SetupCryptoInput,
   'passSalt' | 'argonParams' | 'wrapPassphrase' | 'wrapRecovery'
->;
+> & {
+  passkeys: PasskeyMaterial[];
+};

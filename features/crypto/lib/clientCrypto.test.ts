@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  derivePrfKek,
   derivePassphraseKek,
   generateDek,
   generateRecoveryCode,
@@ -53,5 +54,31 @@ describe('clientCrypto', () => {
     const { code, bytes } = generateRecoveryCode();
     expect(bytes.length).toBe(32);
     expect(code).toMatch(/^[A-Z2-7]{4}(-[A-Z2-7]{4})+$/);
+  });
+});
+
+describe('derivePrfKek', () => {
+  it('round-trips a DEK wrap and is deterministic for the same PRF output', async () => {
+    const prf = crypto.getRandomValues(new Uint8Array(32));
+    const dek = crypto.getRandomValues(new Uint8Array(32));
+    const kek = await derivePrfKek(prf);
+    const wrapped = await wrapDek(dek, kek);
+    const kek2 = await derivePrfKek(prf); // same PRF → same key
+    const back = await unwrapDek(wrapped, kek2);
+    expect(Array.from(back)).toEqual(Array.from(dek));
+  });
+
+  it('a different PRF output cannot unwrap', async () => {
+    const dek = crypto.getRandomValues(new Uint8Array(32));
+    const wrapped = await wrapDek(
+      dek,
+      await derivePrfKek(crypto.getRandomValues(new Uint8Array(32)))
+    );
+    await expect(
+      unwrapDek(
+        wrapped,
+        await derivePrfKek(crypto.getRandomValues(new Uint8Array(32)))
+      )
+    ).rejects.toBeTruthy();
   });
 });

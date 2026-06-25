@@ -1,5 +1,8 @@
 import { requireUser } from '@/lib/auth/require-user';
-import { getUserCryptoRepository } from '@/lib/crypto';
+import {
+  getPasskeyWrapRepository,
+  getUserCryptoRepository,
+} from '@/lib/crypto';
 import type { CryptoMaterial } from '@/lib/crypto/setupSchema';
 import { NextResponse } from 'next/server';
 
@@ -12,12 +15,18 @@ export async function GET(): Promise<NextResponse> {
       { status: 404 }
     );
   }
-  // All four are opaque without the user's secret.
+  const wraps = await getPasskeyWrapRepository().listByUser(user.id);
+  // All blobs are opaque without the user's secret.
   const material: CryptoMaterial = {
     passSalt: row.passSalt,
     argonParams: row.argonParams,
     wrapPassphrase: row.wrapPassphrase,
     wrapRecovery: row.wrapRecovery,
+    passkeys: wraps.map((w) => ({
+      credentialId: w.credentialId,
+      prfSalt: w.prfSalt,
+      wrap: w.wrap,
+    })),
   };
   return NextResponse.json(material);
 }

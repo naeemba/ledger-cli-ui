@@ -36,6 +36,13 @@
       "when": 1782395825605,
       "tag": "0004_tough_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782401941426,
+      "tag": "0005_common_black_cat",
+      "breakpoints": true
     }
   ]
 }

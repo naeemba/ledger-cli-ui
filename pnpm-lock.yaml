@@ -21,8 +21,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0(react@19.2.6)
       '@naeemba/next-starter':
-        specifier: ^0.8.0
-        version: 0.8.0(kdfycvscpr5k77eefnlzn7k3am)
+        specifier: ^0.9.0
+        version: 0.9.0(kdfycvscpr5k77eefnlzn7k3am)
       '@react-email/components':
         specifier: ^1.0.12
         version: 1.0.12(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -1420,8 +1420,8 @@ packages:
     resolution: {integrity: sha512-VVPPgHyQ6ShqnrmDWuxjmUIsO9gWyOZFmuOfLd9LfBGQJwZfy0gvv9pbHSJuoFNIYC7ZDX9aoFwowjcdSC4E8w==}
     engines: {node: '>=18'}
 
-  '@naeemba/next-starter@0.8.0':
-    resolution: {integrity: sha512-nDEywzJavoiHoiPVC6tpuknn317wzdc54rYCe15ovYohcRxsrL8H3jKZAJMleg7VMLBUgfTWmczAodoqBZzonw==}
+  '@naeemba/next-starter@0.9.0':
+    resolution: {integrity: sha512-C0xnIAJN2dG24v7kjDgVqx+x1VcBZ2n8sffSSsm/ZI0E+A65h6pa8bPyi3Y6c+q1I/AjeOQPsQ4HSoyr0J4oSg==}
     engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
@@ -7054,7 +7054,7 @@ snapshots:
       outvariant: 1.4.3
       strict-event-emitter: 0.5.1
 
-  '@naeemba/next-starter@0.8.0(kdfycvscpr5k77eefnlzn7k3am)':
+  '@naeemba/next-starter@0.9.0(kdfycvscpr5k77eefnlzn7k3am)':
     dependencies:
       better-auth: 1.6.20(better-sqlite3@12.10.0)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@electric-sql/pglite@0.5.3)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(kysely@0.28.17)(postgres@3.4.9))(next@16.2.6(@babel/core@7.29.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vitest@4.1.6)
       drizzle-orm: 0.45.2(@electric-sql/pglite@0.5.3)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(kysely@0.28.17)(postgres@3.4.9)

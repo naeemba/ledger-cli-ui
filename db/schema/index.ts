@@ -2,11 +2,16 @@ export {
   accountDeletionChallenge,
   type AccountDeletionChallenge,
 } from './accountDeletionChallenge';
+export { commodityPrice, type CommodityPrice } from './commodityPrice';
+export {
+  cryptoPasskeyWrap,
+  type CryptoPasskeyWrap,
+  type NewCryptoPasskeyWrap,
+} from './cryptoPasskeyWrap';
 export {
   encryptionResetChallenge,
   type EncryptionResetChallenge,
 } from './encryptionResetChallenge';
-export { commodityPrice, type CommodityPrice } from './commodityPrice';
 export { priceFetchRun, type PriceFetchRun } from './priceFetchRun';
 export { savedView, type SavedView } from './savedView';
 export { template, type Template } from './template';

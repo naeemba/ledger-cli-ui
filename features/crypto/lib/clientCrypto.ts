@@ -2,6 +2,7 @@ import { argon2id } from 'hash-wasm';
 
 const GCM_NONCE = 12;
 const RECOVERY_INFO = new TextEncoder().encode('ledger-recovery-v1');
+const PASSKEY_INFO = new TextEncoder().encode('ledger-passkey-v1');
 
 export const toBase64 = (b: Uint8Array): string =>
   btoa(String.fromCharCode(...b));
@@ -50,6 +51,31 @@ export const recoveryHkdfKey = async (
       hash: 'SHA-256',
       salt: new Uint8Array(0) as Uint8Array<ArrayBuffer>,
       info: RECOVERY_INFO,
+    },
+    base,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+};
+
+/** Derive an AES-GCM KEK from a passkey's PRF output (HKDF, empty salt). */
+export const derivePrfKek = async (
+  prfOutput: Uint8Array
+): Promise<CryptoKey> => {
+  const base = await crypto.subtle.importKey(
+    'raw',
+    new Uint8Array(prfOutput) as Uint8Array<ArrayBuffer>,
+    'HKDF',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: new Uint8Array(0) as Uint8Array<ArrayBuffer>,
+      info: PASSKEY_INFO,
     },
     base,
     { name: 'AES-GCM', length: 256 },
