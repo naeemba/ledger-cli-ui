@@ -12,6 +12,7 @@ export default defineConfig({
   // drop the auth schema.
   tablesFilter: [
     'userSetting',
+    'userCrypto',
     'template',
     'commodity_price',
     'price_fetch_run',
