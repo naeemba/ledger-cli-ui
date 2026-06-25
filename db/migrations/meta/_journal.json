@@ -29,6 +29,13 @@
       "when": 1782391793514,
       "tag": "0003_thankful_tag",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782395825605,
+      "tag": "0004_tough_guardian",
+      "breakpoints": true
     }
   ]
 }

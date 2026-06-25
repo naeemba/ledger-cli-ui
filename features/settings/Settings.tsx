@@ -1,5 +1,6 @@
 import BaseCurrencyForm from './BaseCurrencyForm';
 import DangerZone from './DangerZone';
+import SecuritySection from './SecuritySection';
 import { clearSessionBaseCurrencyAction } from './actions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -10,9 +11,16 @@ type Props = {
   currencies: string[];
   savedDefault: string | null;
   envFallback: string;
+  encryptionEnabled: boolean;
 };
 
-const Settings = ({ base, currencies, savedDefault, envFallback }: Props) => {
+const Settings = ({
+  base,
+  currencies,
+  savedDefault,
+  envFallback,
+  encryptionEnabled,
+}: Props) => {
   const overrideActive =
     (savedDefault !== null && base !== savedDefault) ||
     (savedDefault === null && base !== envFallback);
@@ -47,6 +55,8 @@ const Settings = ({ base, currencies, savedDefault, envFallback }: Props) => {
           )}
         </CardContent>
       </Card>
+
+      <SecuritySection enabled={encryptionEnabled} />
 
       <DangerZone />
     </div>

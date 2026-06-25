@@ -17,5 +17,6 @@ export default defineConfig({
     'commodity_price',
     'price_fetch_run',
     'savedView',
+    'encryptionResetChallenge',
   ],
 });
