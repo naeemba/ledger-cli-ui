@@ -21,5 +21,12 @@ export const DESTRUCTIVE: RateLimitPolicy = {
   windowMs: 60_000,
 };
 
+/** DEK unlock attempts. */
+export const UNLOCK: RateLimitPolicy = {
+  name: 'unlock',
+  max: 10,
+  windowMs: 60_000,
+};
+
 export const RATE_LIMIT_MESSAGE =
   'Too many requests. Please wait a moment and try again.';
