@@ -8,6 +8,13 @@ describe('buildSecurityHeaders', () => {
     expect(csp).toContain("script-src 'self' 'nonce-abc123' 'strict-dynamic'");
   });
 
+  it("allows wasm-unsafe-eval (for the encryption wizard's hash-wasm Argon2id) but not unsafe-eval", () => {
+    const csp = buildSecurityHeaders('n')['Content-Security-Policy'];
+    expect(csp).toContain("'wasm-unsafe-eval'");
+    // The narrow WASM keyword must NOT bring in general JS eval.
+    expect(csp).not.toContain("'unsafe-eval'");
+  });
+
   it('sets the core directives and static headers', () => {
     const csp = buildSecurityHeaders('n')['Content-Security-Policy'];
     expect(csp).toContain("default-src 'self'");

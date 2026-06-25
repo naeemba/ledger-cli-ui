@@ -39,4 +39,33 @@ describe('UserCryptoRepository', () => {
   it('exists is false for an unknown user', async () => {
     expect(await repo.exists('nobody')).toBe(false);
   });
+
+  it('hasMigrated is false until markMigrated stamps the row', async () => {
+    await repo.create({
+      userId: 'alice',
+      wrapPassphrase: 'd2FwUA==',
+      passSalt: 'c2FsdA==',
+      argonParams: { m: 65536, t: 3, p: 1 },
+      wrapRecovery: 'd2FwUg==',
+    });
+    expect(await repo.hasMigrated('alice')).toBe(false);
+    expect((await repo.get('alice'))?.migratedAt).toBeNull();
+
+    await repo.markMigrated('alice');
+    expect(await repo.hasMigrated('alice')).toBe(true);
+    expect((await repo.get('alice'))?.migratedAt).toBeInstanceOf(Date);
+  });
+
+  it('markMigrated is idempotent', async () => {
+    await repo.create({
+      userId: 'alice',
+      wrapPassphrase: 'd2FwUA==',
+      passSalt: 'c2FsdA==',
+      argonParams: { m: 65536, t: 3, p: 1 },
+      wrapRecovery: 'd2FwUg==',
+    });
+    await repo.markMigrated('alice');
+    await repo.markMigrated('alice');
+    expect(await repo.hasMigrated('alice')).toBe(true);
+  });
 });

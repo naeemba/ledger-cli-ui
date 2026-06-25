@@ -5,11 +5,16 @@
  * style-src keeps 'unsafe-inline' because Recharts and Base UI write inline
  * `style=` attributes that a nonce cannot cover; injected CSS is far lower-risk
  * than injected script, which 'nonce' + 'strict-dynamic' fully gate.
+ *
+ * script-src adds 'wasm-unsafe-eval' so the client-side encryption wizard can
+ * instantiate the hash-wasm Argon2id WebAssembly module. This keyword permits
+ * WASM compilation ONLY — it does NOT enable JS eval()/'unsafe-eval', so the
+ * strict-dynamic + nonce protection against injected script is fully preserved.
  */
 export function buildSecurityHeaders(nonce: string): Record<string, string> {
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",

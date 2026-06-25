@@ -1,0 +1,1 @@
+ALTER TABLE "userCrypto" ADD COLUMN "migratedAt" timestamp;

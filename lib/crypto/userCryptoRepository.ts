@@ -21,4 +21,18 @@ export class UserCryptoRepository {
   async create(input: NewUserCrypto): Promise<void> {
     await this.db.insert(userCrypto).values(input);
   }
+
+  /** True once the bulk journal migration has completed for this user. */
+  async hasMigrated(userId: string): Promise<boolean> {
+    const row = await this.get(userId);
+    return row?.migratedAt != null;
+  }
+
+  /** Stamp the row as migrated. Idempotent — re-stamping is a harmless no-op. */
+  async markMigrated(userId: string): Promise<void> {
+    await this.db
+      .update(userCrypto)
+      .set({ migratedAt: new Date() })
+      .where(eq(userCrypto.userId, userId));
+  }
 }

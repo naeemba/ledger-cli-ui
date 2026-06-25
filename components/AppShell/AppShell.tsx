@@ -1,6 +1,7 @@
 'use client';
 
 import { isAuthPath } from './authPaths';
+import { isCryptoPath } from './cryptoPaths';
 import { isPublicPath } from './publicPaths';
 import CommandPalette, {
   CommandPaletteProvider,
@@ -23,7 +24,7 @@ type Props = {
 
 const AppShell = ({ children, headerSlot, bannerSlot }: Props) => {
   const pathname = usePathname();
-  const isAuthPage = isAuthPath(pathname);
+  const isBare = isAuthPath(pathname) || isCryptoPath(pathname);
 
   // Public marketing pages own their own full-bleed chrome — no sidebar,
   // header, or app-only banners. Centralized in publicPaths.ts (tested) so the
@@ -32,11 +33,9 @@ const AppShell = ({ children, headerSlot, bannerSlot }: Props) => {
     return <>{children}</>;
   }
 
-  // Auth pages own their own full-bleed chrome — AuthScreen renders its own
-  // <main> split layout, so the shell must not wrap it in a width-clamped
-  // container (the old starter centered-card wrapper squished the split into a
-  // narrow column and nested <main> inside <main>).
-  if (isAuthPage) {
+  // Auth and crypto pages own their own full-bleed chrome — they render their
+  // own layouts and must not be wrapped in the app sidebar/header chrome.
+  if (isBare) {
     return (
       <TooltipProvider>
         {children}

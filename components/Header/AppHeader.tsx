@@ -23,6 +23,7 @@ import {
   NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { LockButton } from '@/features/crypto/LockButton';
 import { authClient } from '@/lib/auth-client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -37,6 +38,8 @@ const AppHeader = ({ slot }: Props) => {
   const userInitial = (user?.email?.[0] ?? 'U').toUpperCase();
 
   const signOut = async () => {
+    // Drop DEK before signing out (best-effort; ignore failure)
+    await fetch('/api/crypto/lock', { method: 'POST' }).catch(() => {});
     await authClient.signOut();
     router.push('/sign-in');
     router.refresh();
@@ -114,6 +117,7 @@ const AppHeader = ({ slot }: Props) => {
               <DropdownMenuItem render={<Link href="/settings" />}>
                 <SettingsIcon /> Settings
               </DropdownMenuItem>
+              <LockButton />
               <DropdownMenuItem onClick={signOut}>
                 <LogOutIcon /> Sign out
               </DropdownMenuItem>
