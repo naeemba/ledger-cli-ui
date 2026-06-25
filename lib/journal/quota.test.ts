@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { PRICE_DB_NAME } from './layout';
 import { getJournalDirSize, journalQuotaBytes } from './quota';
 
 let dataDir: string;
@@ -28,6 +29,14 @@ describe('journalQuotaBytes', () => {
     process.env.JOURNAL_QUOTA_MB = '5';
     expect(journalQuotaBytes()).toBe(5 * 1024 * 1024);
   });
+
+  it.each(['abc', '0', '-5'])(
+    'falls back to 100 MB (fail closed) for invalid value %j',
+    (value) => {
+      process.env.JOURNAL_QUOTA_MB = value;
+      expect(journalQuotaBytes()).toBe(100 * 1024 * 1024);
+    }
+  );
 });
 
 describe('getJournalDirSize', () => {
@@ -41,5 +50,13 @@ describe('getJournalDirSize', () => {
     await fs.writeFile(path.join(dir, 'main.ledger'), 'a'.repeat(100));
     await fs.writeFile(path.join(dir, 'sub', 'inc.ledger'), 'b'.repeat(50));
     expect(await getJournalDirSize(userId)).toBe(150);
+  });
+
+  it('excludes the auto-managed price DB from the total', async () => {
+    const dir = path.join(dataDir, 'journals', userId);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, 'main.ledger'), 'a'.repeat(100));
+    await fs.writeFile(path.join(dir, PRICE_DB_NAME), 'p'.repeat(500));
+    expect(await getJournalDirSize(userId)).toBe(100);
   });
 });
