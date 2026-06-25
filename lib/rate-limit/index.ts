@@ -15,5 +15,11 @@ export function rateLimit(
   return store.hit(`${policy.name}:${userId}`, policy);
 }
 
-export { UPLOAD, WRITE, DESTRUCTIVE, RATE_LIMIT_MESSAGE } from './limits';
+export {
+  UPLOAD,
+  WRITE,
+  DESTRUCTIVE,
+  UNLOCK,
+  RATE_LIMIT_MESSAGE,
+} from './limits';
 export type { RateLimitPolicy, RateLimitResult } from './store';

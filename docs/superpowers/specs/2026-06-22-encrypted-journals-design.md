@@ -2,7 +2,10 @@
 
 **Date:** 2026-06-22
 **Phase:** 7 (Multi-user hardening)
-**Status:** Approved design (no implementation scheduled — captured for later)
+**Status:** ⚠️ SUPERSEDED by `2026-06-25-encrypted-journals-v2-design.md` — kept for
+history. The v2 spec reconciles this design with the merged Garage object-storage
+layer and passwordless email login, and fixes the v1 scope (passphrase + recovery
+code; passkey-PRF as a fast-follow). Implement from v2, not this file.
 
 ## Summary
 

@@ -10,6 +10,7 @@ import {
   type Manifest,
 } from './manifest';
 import type { ObjectStore } from './objectStore';
+import { encryptForUpload } from '@/lib/crypto/journalCipher';
 import { getJournalDir } from '@/lib/journal/layout';
 
 /** Thrown when the remote changed between pull and push (lost-update guard). */
@@ -52,7 +53,8 @@ export const pushFromLocal = async (
   const next: Manifest = {};
   for (const rel of localRels) {
     const body = await fs.readFile(path.join(dir, rel));
-    const { etag } = await store.put(keyFor(userId, rel), body);
+    const payload = encryptForUpload(userId, rel, body);
+    const { etag } = await store.put(keyFor(userId, rel), payload);
     next[rel] = etag;
   }
 

@@ -10,6 +10,7 @@ import {
   type Manifest,
 } from './manifest';
 import type { ObjectStore } from './objectStore';
+import { decryptFromDownload } from '@/lib/crypto/journalCipher';
 import { getJournalDir } from '@/lib/journal/layout';
 
 /**
@@ -73,8 +74,9 @@ export const pullToLocal = async (
       }
     }
     const { body } = await store.get(obj.key);
+    const plaintext = decryptFromDownload(userId, rel, body);
     await fs.mkdir(path.dirname(localAbs), { recursive: true });
-    await fs.writeFile(localAbs, body);
+    await fs.writeFile(localAbs, plaintext);
   }
 
   // Delete local files that are no longer in the remote set.
