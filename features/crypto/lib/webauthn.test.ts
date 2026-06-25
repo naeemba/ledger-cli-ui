@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   base64urlToBytes,
-  bytesToBase64url,
   assertPrfForCredential,
   assertPrfAny,
 } from './webauthn';
@@ -20,12 +19,12 @@ const stubGet = (impl: (opts: CredentialRequestOptions) => unknown) => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe('base64url helpers', () => {
-  it('round-trips bytes', () => {
-    const b = new Uint8Array([0, 1, 2, 250, 255]);
-    expect(Array.from(base64urlToBytes(bytesToBase64url(b)))).toEqual(
-      Array.from(b)
-    );
+describe('base64urlToBytes', () => {
+  it('decodes base64url (incl. -_ and missing padding) to bytes', () => {
+    // [0, 1, 2, 250, 255] => standard base64 "AAEC+v8=" => base64url "AAEC-v8"
+    expect(Array.from(base64urlToBytes('AAEC-v8'))).toEqual([
+      0, 1, 2, 250, 255,
+    ]);
   });
 });
 

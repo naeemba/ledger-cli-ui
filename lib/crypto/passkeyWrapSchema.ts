@@ -6,7 +6,11 @@ const b64 = z
   .min(1)
   .max(512);
 
-// WebAuthn credential id: base64url charset.
+// WebAuthn credential id: base64url charset. This hard-asserts better-auth
+// hands back a base64url `credentialID`; a standard-base64 id (with `+`/`/`)
+// would fail closed here with a generic "Invalid request." See live-acceptance
+// item 5 (confirm the list-user-passkeys response shape) before assuming
+// otherwise — the client-side base64urlToBytes only translates `-_`.
 const b64url = z
   .string()
   .regex(/^[A-Za-z0-9_-]+={0,2}$/)

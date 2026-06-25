@@ -8,12 +8,6 @@ export const base64urlToBytes = (s: string): Uint8Array<ArrayBuffer> => {
   ) as Uint8Array<ArrayBuffer>;
 };
 
-export const bytesToBase64url = (b: Uint8Array): string =>
-  btoa(String.fromCharCode(...b))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-
 export type PrfAssertion = { credentialId: string; prfOutput: Uint8Array };
 
 const readPrf = (cred: PublicKeyCredential): Uint8Array => {
