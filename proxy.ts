@@ -16,6 +16,7 @@ function withSecurityHeaders(req: NextRequest): NextResponse {
   // own bootstrap <script> tags.
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('x-pathname', req.nextUrl.pathname);
   requestHeaders.set(
     'Content-Security-Policy',
     headers['Content-Security-Policy']
