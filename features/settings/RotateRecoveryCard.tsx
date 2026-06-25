@@ -1,7 +1,7 @@
 'use client';
 
 import { Copy, Download, Check } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { rotateRecoveryAction } from './actions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -25,6 +25,13 @@ const RotateRecoveryCard = () => {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (copyTimeout.current) clearTimeout(copyTimeout.current);
+    },
+    []
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { changePassphraseAction } from './actions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -22,7 +22,6 @@ const ChangePassphraseCard = () => {
   const [confirmPass, setConfirmPass] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,11 +73,7 @@ const ChangePassphraseCard = () => {
         <CardTitle>Change passphrase</CardTitle>
       </CardHeader>
       <CardContent>
-        <form
-          ref={formRef}
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="current-secret">
