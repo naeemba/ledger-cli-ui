@@ -36,4 +36,34 @@ describe('GET /api/crypto/material', () => {
     getMock.mockResolvedValue(null);
     expect((await GET()).status).toBe(404);
   });
+  it('projects passkey wraps to strip internal fields', async () => {
+    getMock.mockResolvedValue({
+      passSalt: 's',
+      argonParams: { m: 1, t: 1, p: 1 },
+      wrapPassphrase: 'wp',
+      wrapRecovery: 'wr',
+    });
+    listByUserMock.mockResolvedValue([
+      {
+        id: 'w1',
+        userId: 'alice',
+        credentialId: 'cred-A',
+        prfSalt: 'c2FsdA==',
+        wrap: 'd3JhcA==',
+        label: 'Laptop',
+        createdAt: new Date(),
+      },
+    ]);
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.passkeys).toEqual([
+      { credentialId: 'cred-A', prfSalt: 'c2FsdA==', wrap: 'd3JhcA==' },
+    ]);
+    expect(Object.keys(body.passkeys[0]).sort()).toEqual([
+      'credentialId',
+      'prfSalt',
+      'wrap',
+    ]);
+  });
 });
