@@ -16,6 +16,7 @@ import {
   type ParsedJournal,
   type Transaction,
 } from './parser';
+import { getJournalDirSize, journalQuotaBytes } from './quota';
 import { JournalRepository } from './repository';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
 import { verifyJournalParseable } from './verify';
@@ -152,6 +153,15 @@ export class JournalService {
       const snapshot = await this.repo.readFile(mainPath);
       // Leading "\n\n" guards against imported files that lack a trailing newline.
       const block = `\n\n${formatTransaction(draft)}\n`;
+      const projected =
+        (await getJournalDirSize(userId)) + Buffer.byteLength(block);
+      if (projected > journalQuotaBytes()) {
+        return {
+          ok: false,
+          fieldErrors: {},
+          formError: `This transaction would exceed your ${process.env.JOURNAL_QUOTA_MB ?? 100} MB journal limit.`,
+        };
+      }
       try {
         await this.repo.appendFile(mainPath, block);
       } catch (e) {
@@ -221,8 +231,15 @@ export class JournalService {
   async replaceFromSingleFile(
     userId: string,
     content: Buffer
-  ): Promise<{ uidsAdded: number; parseFailure?: string }> {
+  ): Promise<{
+    uidsAdded: number;
+    parseFailure?: string;
+    quotaExceeded?: boolean;
+  }> {
     return withUserLock(userId, async () => {
+      if (content.length > journalQuotaBytes()) {
+        return { uidsAdded: 0, quotaExceeded: true };
+      }
       await pull(userId); // sync local cache + manifest to canonical
       await this.repo.resetLocalJournal(userId); // wipe local files, keep manifest
       const dir = getJournalDir(userId);
@@ -261,6 +278,7 @@ export class JournalService {
     fileCount: number;
     uidsAdded: number;
     parseFailure?: string;
+    quotaExceeded?: boolean;
   }> {
     const zip = new AdmZip(buffer);
     const entries = zip.getEntries().filter((e) => !e.isDirectory);
@@ -272,6 +290,19 @@ export class JournalService {
       ) {
         throw new Error(`Unsafe path in archive: ${entry.entryName}`);
       }
+    }
+
+    const extractedBytes = entries.reduce(
+      (sum, entry) => sum + entry.getData().length,
+      0
+    );
+    if (extractedBytes > journalQuotaBytes()) {
+      return {
+        mainFile: '',
+        fileCount: entries.length,
+        uidsAdded: 0,
+        quotaExceeded: true,
+      };
     }
 
     return withUserLock(userId, async () => {

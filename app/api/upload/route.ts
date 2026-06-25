@@ -42,6 +42,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     if (ext === ZIP_EXT) {
       const result = await journalService.replaceFromZip(user.id, buffer);
+      if (result.quotaExceeded) {
+        return NextResponse.json(
+          {
+            error: `Importing this would exceed your ${process.env.JOURNAL_QUOTA_MB ?? 100} MB journal limit.`,
+          },
+          { status: 413 }
+        );
+      }
       return NextResponse.json({
         ok: true,
         mode: 'archive',
@@ -58,6 +66,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         user.id,
         buffer
       );
+      if (result.quotaExceeded) {
+        return NextResponse.json(
+          {
+            error: `Importing this would exceed your ${process.env.JOURNAL_QUOTA_MB ?? 100} MB journal limit.`,
+          },
+          { status: 413 }
+        );
+      }
       return NextResponse.json({
         ok: true,
         mode: 'single',
