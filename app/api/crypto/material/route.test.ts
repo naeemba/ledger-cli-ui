@@ -2,11 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GET } from './route';
 
 const getMock = vi.fn();
+const listByUserMock = vi.fn();
 vi.mock('@/lib/auth/require-user', () => ({
   requireUser: vi.fn(async () => ({ id: 'alice' })),
 }));
 vi.mock('@/lib/crypto', () => ({
   getUserCryptoRepository: () => ({ get: getMock }),
+  getPasskeyWrapRepository: () => ({ listByUser: listByUserMock }),
 }));
 
 afterEach(() => vi.clearAllMocks());
@@ -19,6 +21,7 @@ describe('GET /api/crypto/material', () => {
       wrapPassphrase: 'wp',
       wrapRecovery: 'wr',
     });
+    listByUserMock.mockResolvedValue([]);
     const res = await GET();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
@@ -26,6 +29,7 @@ describe('GET /api/crypto/material', () => {
       argonParams: { m: 1, t: 1, p: 1 },
       wrapPassphrase: 'wp',
       wrapRecovery: 'wr',
+      passkeys: [],
     });
   });
   it('404s when not set up', async () => {
