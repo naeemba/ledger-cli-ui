@@ -54,4 +54,14 @@ describe('setupCrypto', () => {
     });
     expect(res.ok).toBe(false);
   });
+
+  it('rejects a non-base64 wrap blob', async () => {
+    const res = await setupCrypto({ ...VALID, wrapPassphrase: 'not base64!' });
+    expect(res.ok).toBe(false);
+  });
+
+  it('rejects an over-long salt', async () => {
+    const res = await setupCrypto({ ...VALID, passSalt: 'A'.repeat(65) });
+    expect(res.ok).toBe(false);
+  });
 });
