@@ -8,25 +8,13 @@ import {
   wrapDek,
   fromBase64,
 } from './clientCrypto';
+import { getMaterial } from './cryptoMaterial';
 
 const ARGON = { m: 65536, t: 3, p: 1 } as const;
-
-type Material = {
-  passSalt: string;
-  argonParams: { m: number; t: number; p: number };
-  wrapPassphrase: string;
-  wrapRecovery: string;
-};
 
 export type Authorizer =
   | { kind: 'passphrase'; passphrase: string }
   | { kind: 'recovery'; code: string };
-
-const getMaterial = async (): Promise<Material> => {
-  const res = await fetch('/api/crypto/material');
-  if (!res.ok) throw new Error('Encryption is not set up.');
-  return res.json();
-};
 
 /** Re-obtain the DEK client-side by unwrapping with the current secret. */
 export const obtainDek = async (
