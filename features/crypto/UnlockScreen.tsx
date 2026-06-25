@@ -3,6 +3,7 @@
 import { KeyRound, ShieldCheck } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import '@/features/auth/auth.css';
+import { finalizeEncryption } from '@/features/crypto/actions/finalizeEncryption';
 import { CRYPTO_COPY } from '@/features/crypto/cryptoCopy';
 import {
   unlockWithPassphrase,
@@ -157,6 +158,14 @@ function UnlockForm() {
       } else {
         await unlockWithRecovery(value);
       }
+      // Reconcile any journal that was left plaintext-at-rest if a prior setup
+      // was abandoned after the userCrypto row was written but before the bulk
+      // migration ran. enableEncryption is idempotent — it short-circuits on
+      // already-ciphertext files via the LEJ1 magic — so this is a cheap no-op
+      // for the common already-encrypted case. Best-effort: a failure here
+      // must not block entry, since the DEK is now in-session and the data
+      // layer re-encrypts on the next mutating push regardless.
+      await finalizeEncryption().catch(() => {});
       window.location.assign(resolveCallback());
     } catch (err) {
       setError(
