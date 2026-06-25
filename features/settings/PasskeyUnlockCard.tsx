@@ -23,7 +23,7 @@ async function fetchPasskeys(): Promise<AuthPasskey[]> {
     method: 'GET',
     credentials: 'include',
   });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error('Could not load passkeys');
   return (await res.json()) as AuthPasskey[];
 }
 
@@ -36,6 +36,7 @@ const PasskeyUnlockCard = () => {
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
+    setLoading(true);
     try {
       const [passkeys, material] = await Promise.all([
         fetchPasskeys(),
@@ -183,7 +184,7 @@ const PasskeyUnlockCard = () => {
                 ) : (
                   <Button
                     size="sm"
-                    disabled={busyId === row.credentialId}
+                    disabled={busyId === row.credentialId || !secret}
                     onClick={() => handleEnable(row)}
                   >
                     {busyId === row.credentialId
