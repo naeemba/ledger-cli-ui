@@ -1,10 +1,12 @@
 'use client';
 
 import { KeyRound, ShieldCheck } from 'lucide-react';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import '@/features/auth/auth.css';
 import { finalizeEncryption } from '@/features/crypto/actions/finalizeEncryption';
 import { CRYPTO_COPY } from '@/features/crypto/cryptoCopy';
+import { getMaterial } from '@/features/crypto/lib/cryptoMaterial';
+import { unlockWithPasskey } from '@/features/crypto/lib/passkeyFlow';
 import {
   unlockWithPassphrase,
   unlockWithRecovery,
@@ -147,6 +149,28 @@ function UnlockForm() {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [hasPasskey, setHasPasskey] = useState(false);
+
+  useEffect(() => {
+    void getMaterial()
+      .then((m) => setHasPasskey(m.passkeys.length > 0))
+      .catch(() => setHasPasskey(false));
+  }, []);
+
+  async function handlePasskey() {
+    setError(null);
+    setPending(true);
+    try {
+      await unlockWithPasskey();
+      await finalizeEncryption().catch(() => {});
+      window.location.assign(resolveCallback());
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : CRYPTO_COPY.errors.unlockFailed
+      );
+      setPending(false);
+    }
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -233,6 +257,17 @@ function UnlockForm() {
           {error ?? ''}
         </p>
       </form>
+
+      {hasPasskey && (
+        <button
+          type="button"
+          className="au-btn au-btn--ghost"
+          onClick={handlePasskey}
+          disabled={pending}
+        >
+          Unlock with passkey
+        </button>
+      )}
 
       <p className="text-sm text-[color:var(--txt-faint)]">
         <button
