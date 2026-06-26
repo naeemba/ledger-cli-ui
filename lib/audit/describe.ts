@@ -8,6 +8,8 @@ const COPY: Record<string, [string, string]> = {
   'tx.edit': ['Edited a transaction', 'Failed to edit a transaction'],
   'tx.delete': ['Deleted a transaction', 'Failed to delete a transaction'],
   'journal.import': ['Imported journal', 'Import failed'],
+  'price.add': ['Recorded a price', 'Failed to record a price'],
+  'price.delete': ['Deleted a price', 'Failed to delete a price'],
   'crypto.enable': ['Enabled encryption', 'Failed to enable encryption'],
   'crypto.unlock': ['Unlocked journal', 'Failed to unlock journal'],
   'crypto.lock': ['Locked journal', 'Failed to lock journal'],
