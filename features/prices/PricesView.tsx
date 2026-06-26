@@ -1,0 +1,197 @@
+'use client';
+
+import { Trash2 } from 'lucide-react';
+import { useActionState, useState } from 'react';
+import Combobox from '@/components/Combobox/Combobox';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { ManualPrice } from '@/db/schema';
+import {
+  addManualPricesAction,
+  deleteManualPriceAction,
+  type PriceActionState,
+} from '@/features/prices/actions';
+import { formatLedgerDateTime } from '@/utils/formatDate';
+
+type Row = { symbol: string; price: string };
+
+type Props = {
+  prices: ManualPrice[];
+  commodities: string[];
+  baseCurrency: string;
+};
+
+const todayUtc = () => new Date().toISOString().slice(0, 10);
+
+export const PricesView = ({ prices, commodities, baseCurrency }: Props) => {
+  const [state, formAction, isPending] = useActionState<
+    PriceActionState,
+    FormData
+  >(addManualPricesAction, { ok: false });
+
+  const [date, setDate] = useState(todayUtc());
+  const [time, setTime] = useState('');
+  const [quote, setQuote] = useState(baseCurrency);
+  const [rows, setRows] = useState<Row[]>([{ symbol: '', price: '' }]);
+
+  const updateRow = (i: number, patch: Partial<Row>) =>
+    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const addRow = () => setRows((rs) => [...rs, { symbol: '', price: '' }]);
+  const removeRow = (i: number) =>
+    setRows((rs) => (rs.length > 1 ? rs.filter((_, j) => j !== i) : rs));
+
+  const draft = JSON.stringify({
+    date,
+    time: time || undefined,
+    quote,
+    rows: rows
+      .filter((r) => r.symbol.trim() && r.price.trim())
+      .map((r) => ({ symbol: r.symbol.trim(), price: Number(r.price) })),
+  });
+
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-8 p-4">
+      <header>
+        <h1 className="text-2xl font-semibold">Prices</h1>
+        <p className="text-muted-foreground text-sm">
+          Record exchange rates for commodities (e.g. KIRT) your price provider
+          doesn&apos;t cover. Each rate is dated, so historical reports use the
+          rate in effect at the time.
+        </p>
+      </header>
+
+      <form action={formAction} className="space-y-4 rounded-lg border p-4">
+        <input type="hidden" name="draft" value={draft} />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="space-y-1">
+            <Label htmlFor="price-date">Date</Label>
+            <Input
+              id="price-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="price-time">Time (optional)</Label>
+            <Input
+              id="price-time"
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Quote currency</Label>
+            <Combobox
+              value={quote}
+              onChange={setQuote}
+              options={commodities}
+              placeholder="USD"
+              allowFreeText
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {rows.map((row, i) => (
+            <div key={i} className="flex items-end gap-2">
+              <div className="flex-1 space-y-1">
+                {i === 0 && <Label>Commodity</Label>}
+                <Combobox
+                  value={row.symbol}
+                  onChange={(v) => updateRow(i, { symbol: v })}
+                  options={commodities}
+                  placeholder="KIRT"
+                  allowFreeText
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                {i === 0 && <Label htmlFor={`price-${i}`}>Rate</Label>}
+                <Input
+                  id={`price-${i}`}
+                  type="number"
+                  step="any"
+                  min="0"
+                  inputMode="decimal"
+                  value={row.price}
+                  onChange={(e) => updateRow(i, { price: e.target.value })}
+                  placeholder="0.0000033"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Remove row"
+                onClick={() => removeRow(i)}
+                disabled={rows.length === 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={addRow}>
+            Add another commodity
+          </Button>
+        </div>
+
+        {state.formError && (
+          <p className="text-destructive text-sm">{state.formError}</p>
+        )}
+        {state.ok && <p className="text-sm text-green-600">Prices saved.</p>}
+
+        <Button type="submit" disabled={isPending}>
+          {isPending ? 'Saving…' : 'Save prices'}
+        </Button>
+      </form>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-medium">History</h2>
+        {prices.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No manual prices yet.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-muted-foreground text-left">
+                <th className="py-1">When</th>
+                <th>Commodity</th>
+                <th className="text-right">Rate</th>
+                <th>Quote</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {prices.map((p) => (
+                <tr key={p.id} className="border-t">
+                  <td className="py-1">
+                    {formatLedgerDateTime(new Date(p.pricedAt))}
+                  </td>
+                  <td>{p.symbol}</td>
+                  <td className="text-right tabular-nums">{p.price}</td>
+                  <td>{p.quote}</td>
+                  <td className="text-right">
+                    <form action={deleteManualPriceAction}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Delete ${p.symbol} rate`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </div>
+  );
+};

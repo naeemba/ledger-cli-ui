@@ -1,0 +1,1 @@
+export { PricesView } from './PricesView';
