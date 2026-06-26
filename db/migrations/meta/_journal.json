@@ -64,6 +64,13 @@
       "when": 1782504971594,
       "tag": "0008_lowly_zarek",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782513743588,
+      "tag": "0009_odd_sunfire",
+      "breakpoints": true
     }
   ]
 }

@@ -13,6 +13,7 @@ export {
   encryptionResetChallenge,
   type EncryptionResetChallenge,
 } from './encryptionResetChallenge';
+export { manualPrice, type ManualPrice } from './manualPrice';
 export { priceFetchRun, type PriceFetchRun } from './priceFetchRun';
 export { savedView, type SavedView } from './savedView';
 export { template, type Template } from './template';
