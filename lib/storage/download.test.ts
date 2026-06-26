@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { pullToLocal } from './download';
 import { keyFor, readManifest } from './manifest';
 import { MemoryObjectStore } from './memoryObjectStore';
@@ -77,7 +77,6 @@ describe('pullToLocal', () => {
     const store = new MemoryObjectStore();
     await seed(store, { 'main.ledger': 'a' });
     const live = await pullToLocal(store, USER); // populates local + manifest
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const downStore: ObjectStore = {
       list: async () => {
         throw new Error('garage down');
@@ -90,8 +89,6 @@ describe('pullToLocal', () => {
     const { fingerprint } = await pullToLocal(downStore, USER);
     expect(fingerprint).toBe(live.fingerprint);
     expect(await read('main.ledger')).toBe('a'); // local cache intact
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
   });
 
   it('rethrows when the store is unreachable and no manifest exists', async () => {

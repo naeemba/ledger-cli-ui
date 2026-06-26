@@ -12,6 +12,9 @@ import {
 import type { ObjectStore } from './objectStore';
 import { decryptFromDownload } from '@/lib/crypto/journalCipher';
 import { getJournalDir } from '@/lib/journal/layout';
+import { createLogger } from '@/lib/log';
+
+const log = createLogger('storage');
 
 /**
  * Mirrors the user's remote prefix into the local journal dir. Downloads only
@@ -35,10 +38,7 @@ export const pullToLocal = async (
     remote = await store.list(prefix);
   } catch (err) {
     if (Object.keys(prevManifest).length > 0) {
-      console.warn(
-        `[storage] Garage unreachable for ${userId}; serving stale local cache`,
-        err
-      );
+      log.warn({ err }, 'Garage unreachable; serving stale local cache');
       return {
         fingerprint: fingerprint(
           Object.entries(prevManifest).map(([rel, etag]) => ({

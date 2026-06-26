@@ -2,8 +2,11 @@ import path from 'path';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { journalQuotaMb } from '@/lib/journal/quota';
+import { createLogger } from '@/lib/log';
 import { rateLimit, UPLOAD } from '@/lib/rate-limit';
 import { NextResponse, type NextRequest } from 'next/server';
+
+const log = createLogger('upload');
 
 const ALLOWED_SINGLE_EXTS = new Set(['.ledger', '.dat', '.journal', '.txt']);
 const ZIP_EXT = '.zip';
@@ -92,7 +95,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { status: 415 }
     );
   } catch (e) {
-    console.error('upload failed', e);
+    log.error({ err: e }, 'upload failed');
     const message = e instanceof Error ? e.message : 'Upload failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -2,10 +2,13 @@ import { requireUser } from '@/lib/auth/require-user';
 import { periodicBalanceRowsToCsv } from '@/lib/balance/csvPeriodic';
 import { parsePeriodicBalanceRows } from '@/lib/balance/parsePeriodic';
 import { csvDownload } from '@/lib/csv';
+import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
 import { parseISODateStrict } from '@/utils/date';
 import runLedger from '@/utils/runLedger';
 import { type NextRequest, NextResponse } from 'next/server';
+
+const log = createLogger('export');
 
 export const dynamic = 'force-dynamic';
 
@@ -46,7 +49,7 @@ export async function GET(req: NextRequest): Promise<Response> {
         { status: 400 }
       );
     }
-    console.error('periodic balance export failed', e);
+    log.error({ err: e }, 'periodic balance export failed');
     return NextResponse.json(
       { error: 'Could not export periodic balance' },
       { status: 500 }

@@ -16,9 +16,12 @@ import type { DbInstance } from '@/lib/db/connection';
 import { env } from '@/lib/env';
 import { PRICE_DB_NAME, getJournalCacheTag } from '@/lib/journal/layout';
 import type { JournalRepository } from '@/lib/journal/repository';
+import { createLogger } from '@/lib/log';
 import { runLedgerForUser } from '@/utils/runLedgerForUser';
 import { user as userTable } from '@naeemba/next-starter/schema';
 import { revalidateTag } from 'next/cache';
+
+const log = createLogger('prices');
 
 export type RefreshResult =
   | { status: 'success'; fetched: number }
@@ -135,7 +138,7 @@ export class PriceService {
       const message = sanitize(
         err instanceof Error ? err.message : String(err)
       );
-      console.error('[prices] refresh failed:', err);
+      log.error({ err }, 'refresh failed');
       await this.deps.runRepo.update(run.id, {
         completedAt: new Date(),
         status: 'failed',

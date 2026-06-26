@@ -2,10 +2,13 @@ import { requireUser } from '@/lib/auth/require-user';
 import { balanceRowsToCsv } from '@/lib/balance/csv';
 import { parseBalanceRows } from '@/lib/balance/parse';
 import { csvDownload } from '@/lib/csv';
+import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
 import { parseISODateStrict } from '@/utils/date';
 import runLedger from '@/utils/runLedger';
 import { type NextRequest, NextResponse } from 'next/server';
+
+const log = createLogger('export');
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +51,7 @@ export async function GET(req: NextRequest): Promise<Response> {
         { status: 400 }
       );
     }
-    console.error('balance export failed', e);
+    log.error({ err: e }, 'balance export failed');
     return NextResponse.json(
       { error: 'Could not export balance' },
       { status: 500 }

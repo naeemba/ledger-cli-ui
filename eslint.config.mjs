@@ -9,10 +9,26 @@ const config = [
   {
     rules: {
       'prettier/prettier': ['error', { usePrettierrc: true }],
+      'no-console': 'error',
     },
   },
   {
-    ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts'],
+    // Files where console.* is intentional or unavoidable.
+    files: [
+      'lib/log/**',
+      'instrumentation*.ts',
+      'instrumentation-client.ts',
+      'sentry.*.config.ts',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '*.config.{ts,js,mjs}',
+      'scripts/**',
+      'features/accounts/Accounts.tsx',
+    ],
+    rules: { 'no-console': 'off' },
+  },
+  {
+    ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', '.claude/**'],
   },
 ];
 
