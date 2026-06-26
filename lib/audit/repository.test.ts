@@ -50,4 +50,40 @@ describe('AuditRepository', () => {
     expect(rows).toHaveLength(2);
     expect(rows.every((r) => r.userId === 'alice')).toBe(true);
   });
+
+  it('listByUser paginates with a composite cursor (no overlap)', async () => {
+    // Insert 3 rows oldest→newest; createdAt default now() is strictly increasing.
+    await repo.insert('alice', { action: 'tx.add', result: 'success' });
+    await repo.insert('alice', { action: 'tx.edit', result: 'success' });
+    await repo.insert('alice', { action: 'tx.delete', result: 'success' });
+
+    const page1 = await repo.listByUser('alice', { limit: 2 });
+    expect(page1).toHaveLength(2);
+    expect(page1[0].action).toBe('tx.delete'); // newest first
+
+    const last = page1[1];
+    const page2 = await repo.listByUser('alice', {
+      limit: 2,
+      before: { createdAt: last.createdAt, id: last.id },
+    });
+    expect(page2).toHaveLength(1);
+    expect(page2[0].action).toBe('tx.add'); // oldest
+    expect(page2.map((r) => r.id)).not.toContain(last.id);
+  });
+
+  it('listByUser filters by actions and result', async () => {
+    await repo.insert('alice', { action: 'tx.add', result: 'success' });
+    await repo.insert('alice', { action: 'crypto.unlock', result: 'success' });
+    await repo.insert('alice', { action: 'crypto.unlock', result: 'failure' });
+
+    const crypto = await repo.listByUser('alice', {
+      actions: ['crypto.unlock', 'crypto.lock'],
+    });
+    expect(crypto).toHaveLength(2);
+    expect(crypto.every((r) => r.action === 'crypto.unlock')).toBe(true);
+
+    const failures = await repo.listByUser('alice', { result: 'failure' });
+    expect(failures).toHaveLength(1);
+    expect(failures[0].result).toBe('failure');
+  });
 });
