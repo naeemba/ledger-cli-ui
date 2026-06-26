@@ -38,10 +38,11 @@ export function PasskeyStep({
 
   useEffect(() => {
     void (async () => {
-      // fetchUserPasskeys swallows its own errors; only getMaterial can throw.
+      // fetchUserPasskeys swallows its own errors (returns null on failure);
+      // this is an optional step so treat a load failure as "no passkeys".
       // Resolve it separately so a getMaterial failure just means
       // "list passkeys as not-enrolled" without re-fetching the list.
-      const passkeys = await fetchUserPasskeys();
+      const passkeys = (await fetchUserPasskeys()) ?? [];
       const enrolled = await getMaterial()
         .then((m) => new Set(m.passkeys.map((p) => p.credentialId)))
         .catch(() => new Set<string>());

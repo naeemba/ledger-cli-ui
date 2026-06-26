@@ -16,20 +16,21 @@ export type EnablePasskeyInput = {
 export type AuthPasskey = { credentialID: string; name?: string };
 
 /**
- * List the current user's registered passkeys via better-auth. Returns `[]` on
- * any network/HTTP error so callers can treat "no passkeys" and "couldn't load"
- * uniformly; callers that need to distinguish should fetch directly.
+ * List the current user's registered passkeys via better-auth. Returns `null`
+ * on any network/HTTP error so callers can distinguish "no passkeys" (`[]`) from
+ * "couldn't load" (`null`): the wizard step treats both as empty (optional
+ * step), while the settings card surfaces a load error.
  */
-export const fetchUserPasskeys = async (): Promise<AuthPasskey[]> => {
+export const fetchUserPasskeys = async (): Promise<AuthPasskey[] | null> => {
   try {
     const res = await fetch('/api/auth/passkey/list-user-passkeys', {
       method: 'GET',
       credentials: 'include',
     });
-    if (!res.ok) return [];
+    if (!res.ok) return null;
     return (await res.json()) as AuthPasskey[];
   } catch {
-    return [];
+    return null;
   }
 };
 

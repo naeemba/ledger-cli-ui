@@ -35,6 +35,7 @@ const PasskeyUnlockCard = () => {
         fetchUserPasskeys(),
         getMaterial(),
       ]);
+      if (passkeys === null) throw new Error('Could not load passkeys');
       const enabled = new Set(material.passkeys.map((p) => p.credentialId));
       setRows(
         passkeys.map((p) => ({
