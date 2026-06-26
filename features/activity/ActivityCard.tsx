@@ -1,15 +1,9 @@
+import formatWhen from './formatWhen.util';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { AuditLog } from '@/db/schema/auditLog';
 import { describeAuditEvent } from '@/lib/audit/describe';
-import getDefaultDateLocale from '@/utils/getDefaultDateLocale';
 import Link from 'next/link';
-
-const formatWhen = (d: Date): string =>
-  new Date(d).toLocaleString(getDefaultDateLocale(), {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
 
 const ActivityCard = ({ rows }: { rows: AuditLog[] }) => (
   <Card>

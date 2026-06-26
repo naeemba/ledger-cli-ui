@@ -1,12 +1,6 @@
+import formatWhen from './formatWhen.util';
 import type { AuditLog } from '@/db/schema/auditLog';
 import { describeAuditEvent } from '@/lib/audit/describe';
-import getDefaultDateLocale from '@/utils/getDefaultDateLocale';
-
-const formatWhen = (d: Date): string =>
-  new Date(d).toLocaleString(getDefaultDateLocale(), {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
 
 const DetailLine = ({ label, value }: { label: string; value: string }) => (
   <div className="flex gap-2">
