@@ -461,12 +461,14 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
   const copy = CRYPTO_COPY.recovery;
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [interacted, setInteracted] = useState(false);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Format code into groups of 4 separated by dashes
   const groups = code.split('-');
 
   async function handleCopy() {
+    setInteracted(true);
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
@@ -478,6 +480,7 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
   }
 
   function handleDownload() {
+    setInteracted(true);
     const blob = new Blob(
       [
         `${APP_NAME} Recovery Code\n`,
@@ -559,6 +562,12 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
         </div>
       </div>
 
+      {!interacted && (
+        <p className="text-xs text-[color:var(--txt-faint)] text-center">
+          {copy.saveFirstHint}
+        </p>
+      )}
+
       <p className="text-sm text-[color:var(--txt-faint)] leading-relaxed">
         {copy.instruction}
       </p>
@@ -568,8 +577,9 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
         <input
           type="checkbox"
           checked={saved}
+          disabled={!interacted}
           onChange={(e) => setSaved(e.target.checked)}
-          className="mt-0.5 size-4 cursor-pointer accent-[var(--em)]"
+          className="mt-0.5 size-4 cursor-pointer accent-[var(--em)] disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={copy.confirmPrompt}
         />
         <span className="text-sm text-[color:var(--txt-dim)] select-none">
@@ -580,7 +590,7 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
       <button
         type="button"
         className="au-btn au-btn--primary"
-        disabled={!saved}
+        disabled={!interacted || !saved}
         onClick={onNext}
       >
         {copy.submitLabel}

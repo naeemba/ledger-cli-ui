@@ -38,6 +38,7 @@ export const CRYPTO_COPY = {
     copyLabel: 'Copy code',
     copiedLabel: 'Copied!',
     confirmPrompt: 'I have saved my recovery code',
+    saveFirstHint: 'Copy or download your code first.',
     submitLabel: 'Enable encryption',
   },
 
