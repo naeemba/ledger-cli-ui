@@ -32,6 +32,12 @@ export type RefreshResult =
   | { status: 'partial'; fetched: number; failed: string[] }
   | { status: 'failed'; message: string };
 
+/**
+ * Outcome of a manual-price mutation. Shared between the service and the
+ * server actions so the success/error shape can't drift between the two.
+ */
+export type ManualPriceResult = { ok: true } | { ok: false; formError: string };
+
 const sanitize = (msg: string): string =>
   msg.replace(/\/[^\s]+/g, '<path>').slice(0, 500);
 
@@ -96,7 +102,7 @@ export class PriceService {
   async addManualPrices(
     userId: string,
     draft: ManualPriceDraft
-  ): Promise<{ ok: true } | { ok: false; formError: string }> {
+  ): Promise<ManualPriceResult> {
     const quote = normalizeCommoditySymbol(draft.quote);
     if (!quote) return { ok: false, formError: 'Invalid quote currency' };
     const pricedAt = buildPricedAt(draft.date, draft.time);
@@ -132,17 +138,11 @@ export class PriceService {
     return this.deps.manualRepo.listForUser(userId);
   }
 
-  async deleteManualPrice(userId: string, id: number): Promise<void> {
-    await this.deps.manualRepo.deleteForUser(userId, id);
-    await this.regenerateUserPriceDb(userId);
-  }
-
-  async getBaseCurrency(userId: string): Promise<string> {
-    return this.resolveBaseCurrency(userId);
-  }
-
-  async listCommoditiesForUser(userId: string): Promise<string[]> {
-    return this.listNormalizedSymbolsForUser(userId);
+  /** Returns true when a row owned by the user was actually removed. */
+  async deleteManualPrice(userId: string, id: number): Promise<boolean> {
+    const removed = await this.deps.manualRepo.deleteForUser(userId, id);
+    if (removed) await this.regenerateUserPriceDb(userId);
+    return removed;
   }
 
   private async runOnce(): Promise<RefreshResult> {

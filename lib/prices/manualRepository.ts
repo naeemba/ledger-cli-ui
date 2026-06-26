@@ -49,9 +49,12 @@ export class ManualPriceRepository {
       .orderBy(desc(manualPrice.pricedAt), desc(manualPrice.id));
   }
 
-  async deleteForUser(userId: string, id: number): Promise<void> {
-    await this.db
+  /** Returns true when a row owned by the user was actually removed. */
+  async deleteForUser(userId: string, id: number): Promise<boolean> {
+    const deleted = await this.db
       .delete(manualPrice)
-      .where(and(eq(manualPrice.userId, userId), eq(manualPrice.id, id)));
+      .where(and(eq(manualPrice.userId, userId), eq(manualPrice.id, id)))
+      .returning({ id: manualPrice.id });
+    return deleted.length > 0;
   }
 }

@@ -8,8 +8,8 @@ const PricesPage = async () => {
   const user = await requireUser();
   const [prices, commodities, baseCurrency] = await Promise.all([
     priceService.listManualPrices(user.id),
-    priceService.listCommoditiesForUser(user.id),
-    priceService.getBaseCurrency(user.id),
+    priceService.listNormalizedSymbolsForUser(user.id),
+    priceService.resolveBaseCurrency(user.id),
   ]);
 
   return (

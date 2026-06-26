@@ -76,9 +76,9 @@ describe('ManualPriceRepository', () => {
       { userId: 'bob', symbol: 'KIRT', quote: 'USD', price: 2, pricedAt: at },
     ]);
     const aliceRow = (await repo.listForUser('alice'))[0];
-    await repo.deleteForUser('bob', aliceRow.id); // wrong owner → no-op
+    expect(await repo.deleteForUser('bob', aliceRow.id)).toBe(false); // wrong owner → no-op
     expect(await repo.listForUser('alice')).toHaveLength(1);
-    await repo.deleteForUser('alice', aliceRow.id);
+    expect(await repo.deleteForUser('alice', aliceRow.id)).toBe(true);
     expect(await repo.listForUser('alice')).toHaveLength(0);
     expect(await repo.listForUser('bob')).toHaveLength(1);
   });

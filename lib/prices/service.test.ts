@@ -355,8 +355,18 @@ describe('PriceService manual prices', () => {
       rows: [{ symbol: 'KIRT', price: 3 }],
     });
     const row = (await service.listManualPrices('alice'))[0];
-    await service.deleteManualPrice('alice', row.id);
+    expect(await service.deleteManualPrice('alice', row.id)).toBe(true);
     expect(await service.listManualPrices('alice')).toHaveLength(0);
     expect(await readPriceDb('alice')).not.toContain('KIRT');
+  });
+
+  it('deleteManualPrice returns false for a non-existent / unowned row', async () => {
+    await seedUser(
+      ctx,
+      'alice',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
+      'USD'
+    );
+    expect(await service.deleteManualPrice('alice', 999999)).toBe(false);
   });
 });

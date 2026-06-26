@@ -1,7 +1,7 @@
 'use client';
 
 import { Trash2 } from 'lucide-react';
-import { useActionState, useState } from 'react';
+import { useActionState, useState, useTransition } from 'react';
 import Combobox from '@/components/Combobox/Combobox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import {
   deleteManualPriceAction,
   type PriceActionState,
 } from '@/features/prices/actions';
-import { formatLedgerDateTime } from '@/utils/formatDate';
+import { formatLedgerInstant } from '@/utils/formatDate';
 
 type Row = { symbol: string; price: string };
 
@@ -34,6 +34,20 @@ export const PricesView = ({ prices, commodities, baseCurrency }: Props) => {
   const [time, setTime] = useState('');
   const [quote, setQuote] = useState(baseCurrency);
   const [rows, setRows] = useState<Row[]>([{ symbol: '', price: '' }]);
+
+  const [isDeleting, startDelete] = useTransition();
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDelete = (id: number) => {
+    setDeleteError(null);
+    setDeletingId(id);
+    startDelete(async () => {
+      const result = await deleteManualPriceAction(id);
+      setDeletingId(null);
+      if (!result.ok) setDeleteError(result.message);
+    });
+  };
 
   const updateRow = (i: number, patch: Partial<Row>) =>
     setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -151,6 +165,9 @@ export const PricesView = ({ prices, commodities, baseCurrency }: Props) => {
 
       <section className="space-y-2">
         <h2 className="text-lg font-medium">History</h2>
+        {deleteError && (
+          <p className="text-destructive text-sm">{deleteError}</p>
+        )}
         {prices.length === 0 ? (
           <p className="text-muted-foreground text-sm">No manual prices yet.</p>
         ) : (
@@ -168,23 +185,22 @@ export const PricesView = ({ prices, commodities, baseCurrency }: Props) => {
               {prices.map((p) => (
                 <tr key={p.id} className="border-t">
                   <td className="py-1">
-                    {formatLedgerDateTime(new Date(p.pricedAt))}
+                    {formatLedgerInstant(new Date(p.pricedAt))}
                   </td>
                   <td>{p.symbol}</td>
                   <td className="text-right tabular-nums">{p.price}</td>
                   <td>{p.quote}</td>
                   <td className="text-right">
-                    <form action={deleteManualPriceAction}>
-                      <input type="hidden" name="id" value={p.id} />
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Delete ${p.symbol} rate`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </form>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Delete ${p.symbol} rate`}
+                      disabled={isDeleting && deletingId === p.id}
+                      onClick={() => handleDelete(p.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </td>
                 </tr>
               ))}

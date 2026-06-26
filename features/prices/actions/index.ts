@@ -1,3 +1,6 @@
 export { addManualPricesAction } from './addManualPrices';
-export { deleteManualPriceAction } from './deleteManualPrice';
+export {
+  deleteManualPriceAction,
+  type DeleteManualPriceResult,
+} from './deleteManualPrice';
 export type { PriceActionState } from './types';
