@@ -222,7 +222,7 @@ Only relevant if this gets deployed to anyone other than you.
 - [x] **Account deletion** — self-service on `/settings` Danger Zone: emailed 6-digit code (hashed, 10-min expiry, 5-attempt cap, 30s resend throttle) → `purgeUserData` wipes Garage (`clearRemote`) + local journal dir + `db.delete(user)` cascade → sign-out + `/account/deleted`. Spec: `docs/superpowers/specs/2026-06-25-account-deletion-design.md`.
 - [x] CSP / security headers pass — strict nonce-based CSP + HSTS/X-Frame-Options/nosniff/Referrer-Policy/Permissions-Policy via proxy.ts (lib/security/headers.ts).
 - [x] Structured logging + an error-tracking destination — pino logger (`lib/log/`) with mandatory secret redaction as the single node-runtime logging entry point (24 `console.*` calls migrated; `no-console` lint rule guards regressions). Error tracking via self-hosted GlitchTip through `@sentry/nextjs`, fully disabled when `SENTRY_DSN` is unset. Spec: `docs/superpowers/specs/2026-06-26-structured-logging-and-audit-log-design.md`.
-- [ ] _Future:_ audit-log retention/pruning cron + per-user Activity (`/settings`) viewer UI (`AuditRepository.listByUser` already exists). Also: record import quota-exceeded / hard-error failure paths (currently only the parse-failure import path is audited).
+- [ ] _Future:_ audit-log retention/pruning cron. _(Per-user Activity viewer UI shipped: `/settings/activity` + summary card — spec `docs/superpowers/specs/2026-06-26-activity-viewer-design.md`. Import quota/hard-error failure paths already audited.)_
 
 Spec: docs/superpowers/specs/2026-06-25-phase7-hardening-design.md.
 

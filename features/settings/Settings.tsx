@@ -5,6 +5,8 @@ import { clearSessionBaseCurrencyAction } from './actions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { AuditLog } from '@/db/schema/auditLog';
+import { ActivityCard } from '@/features/activity';
 
 type Props = {
   base: string;
@@ -12,6 +14,7 @@ type Props = {
   savedDefault: string | null;
   envFallback: string;
   encryptionEnabled: boolean;
+  recentActivity: AuditLog[];
 };
 
 const Settings = ({
@@ -20,6 +23,7 @@ const Settings = ({
   savedDefault,
   envFallback,
   encryptionEnabled,
+  recentActivity,
 }: Props) => {
   const overrideActive =
     (savedDefault !== null && base !== savedDefault) ||
@@ -57,6 +61,8 @@ const Settings = ({
       </Card>
 
       <SecuritySection enabled={encryptionEnabled} />
+
+      <ActivityCard rows={recentActivity} />
 
       <DangerZone />
     </div>
