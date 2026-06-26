@@ -19,7 +19,7 @@ export async function changePassphraseAction(input: unknown): Promise<Result> {
     await auditService.record(user.id, {
       action: 'crypto.passphrase-change',
       result: 'failure',
-      detail: { reason: 'Encryption is not set up.' },
+      detail: { reason: 'not-set-up' },
       ...(await auditRequestMeta()),
     });
     return { ok: false, message: 'Encryption is not set up.' };

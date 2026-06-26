@@ -17,7 +17,7 @@ export async function setupCrypto(input: unknown): Promise<Result> {
     await auditService.record(user.id, {
       action: 'crypto.enable',
       result: 'failure',
-      detail: { reason: 'Encryption is already set up' },
+      detail: { reason: 'already-set-up' },
       ...(await auditRequestMeta()),
     });
     return { ok: false, error: 'Encryption is already set up' };
