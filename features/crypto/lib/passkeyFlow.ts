@@ -2,6 +2,7 @@ import { derivePrfKek, toBase64, unwrapDek, wrapDek } from './clientCrypto';
 import { getMaterial } from './cryptoMaterial';
 import { postDek } from './unlockFlow';
 import { assertPrfAny, assertPrfForCredential } from './webauthn';
+import { authClient } from '@/lib/auth-client';
 
 export type EnablePasskeyInput = {
   credentialId: string;
@@ -25,6 +26,25 @@ export const buildPasskeyWrap = async (
   const { prfOutput } = await assertPrfForCredential(credentialId, salt);
   const wrap = await wrapDek(dek, await derivePrfKek(prfOutput));
   return { credentialId, prfSalt: toBase64(salt), wrap, label };
+};
+
+/**
+ * Register a new passkey via better-auth and resolve its credentialId. PRF is
+ * requested at registration by the server config (lib/auth.ts:
+ * passkey.registration.extensions.prf = {}), so the created credential supports
+ * PRF — no client-side extension needed here. Throws if the user cancels or the
+ * server rejects.
+ */
+export const registerPasskey = async (
+  name: string
+): Promise<{ credentialId: string }> => {
+  const res = await authClient.passkey.addPasskey({ name });
+  if (!res || res.error || !res.data) {
+    throw new Error(res?.error?.message ?? 'Could not create a passkey.');
+  }
+  return {
+    credentialId: (res.data as { credentialID: string }).credentialID,
+  };
 };
 
 /** Unlock the session using any enrolled passkey. */

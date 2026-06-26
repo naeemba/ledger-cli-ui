@@ -1,13 +1,21 @@
 import { beforeEach, describe, expect, it, vi, MockedFunction } from 'vitest';
 import { generateDek, derivePrfKek, wrapDek, toBase64 } from './clientCrypto';
 import { getMaterial } from './cryptoMaterial';
-import { buildPasskeyWrap, unlockWithPasskey } from './passkeyFlow';
+import {
+  buildPasskeyWrap,
+  unlockWithPasskey,
+  registerPasskey,
+} from './passkeyFlow';
 import { postDek } from './unlockFlow';
 import { assertPrfForCredential, assertPrfAny } from './webauthn';
+import { authClient } from '@/lib/auth-client';
 
 vi.mock('./webauthn');
 vi.mock('./cryptoMaterial');
 vi.mock('./unlockFlow');
+vi.mock('@/lib/auth-client', () => ({
+  authClient: { passkey: { addPasskey: vi.fn() } },
+}));
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -75,5 +83,32 @@ describe('unlockWithPasskey', () => {
       passkeys: [],
     });
     await expect(unlockWithPasskey()).rejects.toThrow(/no passkey/i);
+  });
+});
+
+describe('registerPasskey', () => {
+  it('returns the new credentialId on success', async () => {
+    (
+      authClient.passkey.addPasskey as MockedFunction<
+        typeof authClient.passkey.addPasskey
+      >
+    ).mockResolvedValue({
+      data: { credentialID: 'cred-new' },
+      error: null,
+    } as never);
+    const out = await registerPasskey('This device');
+    expect(out.credentialId).toBe('cred-new');
+    expect(authClient.passkey.addPasskey).toHaveBeenCalledWith({
+      name: 'This device',
+    });
+  });
+
+  it('throws with the server message when registration errors', async () => {
+    (
+      authClient.passkey.addPasskey as MockedFunction<
+        typeof authClient.passkey.addPasskey
+      >
+    ).mockResolvedValue({ data: null, error: { message: 'denied' } } as never);
+    await expect(registerPasskey('x')).rejects.toThrow('denied');
   });
 });
