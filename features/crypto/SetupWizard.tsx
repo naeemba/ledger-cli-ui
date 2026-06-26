@@ -8,7 +8,7 @@ import {
   Loader2,
   ShieldCheck,
 } from 'lucide-react';
-import { type FormEvent, useState, useRef } from 'react';
+import { type FormEvent, useState, useRef, useEffect } from 'react';
 import '@/features/auth/auth.css';
 import { PasskeyStep } from '@/features/crypto/PasskeyStep';
 import { finalizeEncryption } from '@/features/crypto/actions/finalizeEncryption';
@@ -694,6 +694,15 @@ export function SetupWizard() {
   // (the react-hooks/refs lint rule forbids ref access during render).
   const dekRef = useRef<Uint8Array | null>(null);
   const [dekSnapshot, setDekSnapshot] = useState<Uint8Array | null>(null);
+
+  // If we land on the passkey step without the in-memory DEK (e.g. a reload
+  // reset component state), there is nothing to enroll against — route to the
+  // normal unlock flow, symmetric with handlePasskeyNext's guard.
+  useEffect(() => {
+    if (step === 'passkey' && !dekSnapshot) {
+      window.location.assign('/crypto/unlock');
+    }
+  }, [step, dekSnapshot]);
 
   // Advance from passphrase → recovery: persists the wrapped keys, then
   // surfaces the recovery code. The session unlock (postDek) is deferred to

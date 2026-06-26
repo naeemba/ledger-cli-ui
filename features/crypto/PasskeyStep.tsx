@@ -66,7 +66,8 @@ export function PasskeyStep({
           passkeys.filter((p) => enrolled.has(p.credentialID)).length
         );
       } catch {
-        // getMaterial failure: fall back to listing passkeys as not-enrolled.
+        // Promise.all rejected (in practice only getMaterial can throw —
+        // fetchPasskeys swallows its own errors): list passkeys as not-enrolled.
         const passkeys = await fetchPasskeys();
         setRows(
           passkeys.map((p) => ({
