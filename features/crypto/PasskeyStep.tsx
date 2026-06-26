@@ -62,16 +62,31 @@ export function PasskeyStep({
   async function handleAdd() {
     setError(null);
     setBusy(ADD);
+    let credentialId: string;
     try {
-      const { credentialId } = await registerPasskey('This device');
-      await enrollPasskeyForUnlock(dek, credentialId, 'This device');
-      setRows((r) => [
-        ...r.filter((x) => x.credentialId !== credentialId),
-        { credentialId, name: 'This device', enabled: true },
-      ]);
-      setEnrolledCount((c) => c + 1);
+      ({ credentialId } = await registerPasskey('This device'));
     } catch (err) {
       setError(friendlyError(err, copy.errors.registerFailed));
+      setBusy(null);
+      return;
+    }
+    // The passkey now exists server-side. Surface it as an un-enrolled row
+    // immediately so a failed enroll below leaves a retryable "Enable unlock"
+    // entry here instead of an invisible passkey only enrollable via Settings.
+    setRows((r) => [
+      ...r.filter((x) => x.credentialId !== credentialId),
+      { credentialId, name: 'This device', enabled: false },
+    ]);
+    try {
+      await enrollPasskeyForUnlock(dek, credentialId, 'This device');
+      setRows((r) =>
+        r.map((x) =>
+          x.credentialId === credentialId ? { ...x, enabled: true } : x
+        )
+      );
+      setEnrolledCount((c) => c + 1);
+    } catch (err) {
+      setError(friendlyError(err, copy.errors.enrollFailed));
     } finally {
       setBusy(null);
     }
