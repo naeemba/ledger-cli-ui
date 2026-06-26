@@ -11,6 +11,7 @@ export default defineConfig({
   // drizzle-kit scoped to the app's own tables so it never tries to create or
   // drop the auth schema.
   tablesFilter: [
+    'auditLog',
     'userSetting',
     'userCrypto',
     'template',
