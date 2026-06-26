@@ -1,13 +1,24 @@
 import { beforeEach, describe, expect, it, vi, MockedFunction } from 'vitest';
 import { generateDek, derivePrfKek, wrapDek, toBase64 } from './clientCrypto';
 import { getMaterial } from './cryptoMaterial';
-import { buildPasskeyWrap, unlockWithPasskey } from './passkeyFlow';
+import {
+  buildPasskeyWrap,
+  unlockWithPasskey,
+  registerPasskey,
+  enrollPasskeyForUnlock,
+} from './passkeyFlow';
 import { postDek } from './unlockFlow';
 import { assertPrfForCredential, assertPrfAny } from './webauthn';
+import { enablePasskeyUnlockAction } from '@/features/crypto/actions/enablePasskeyUnlock';
+import { authClient } from '@/lib/auth-client';
 
 vi.mock('./webauthn');
 vi.mock('./cryptoMaterial');
 vi.mock('./unlockFlow');
+vi.mock('@/lib/auth-client', () => ({
+  authClient: { passkey: { addPasskey: vi.fn() } },
+}));
+vi.mock('@/features/crypto/actions/enablePasskeyUnlock');
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -75,5 +86,77 @@ describe('unlockWithPasskey', () => {
       passkeys: [],
     });
     await expect(unlockWithPasskey()).rejects.toThrow(/no passkey/i);
+  });
+});
+
+describe('registerPasskey', () => {
+  it('returns the new credentialId on success', async () => {
+    (
+      authClient.passkey.addPasskey as MockedFunction<
+        typeof authClient.passkey.addPasskey
+      >
+    ).mockResolvedValue({
+      data: { credentialID: 'cred-new' },
+      error: null,
+    } as never);
+    const out = await registerPasskey('This device');
+    expect(out.credentialId).toBe('cred-new');
+    expect(authClient.passkey.addPasskey).toHaveBeenCalledWith({
+      name: 'This device',
+    });
+  });
+
+  it('throws with the server message when registration errors', async () => {
+    (
+      authClient.passkey.addPasskey as MockedFunction<
+        typeof authClient.passkey.addPasskey
+      >
+    ).mockResolvedValue({ data: null, error: { message: 'denied' } } as never);
+    await expect(registerPasskey('x')).rejects.toThrow('denied');
+  });
+});
+
+describe('enrollPasskeyForUnlock', () => {
+  it('builds a wrap and enables it', async () => {
+    (
+      assertPrfForCredential as MockedFunction<typeof assertPrfForCredential>
+    ).mockResolvedValue({
+      credentialId: 'cred-A',
+      prfOutput: new Uint8Array(32).fill(7),
+    });
+    (
+      enablePasskeyUnlockAction as MockedFunction<
+        typeof enablePasskeyUnlockAction
+      >
+    ).mockResolvedValue({ ok: true });
+
+    await enrollPasskeyForUnlock(generateDek(), 'cred-A', 'Laptop');
+
+    expect(enablePasskeyUnlockAction).toHaveBeenCalledTimes(1);
+    const arg = (
+      enablePasskeyUnlockAction as MockedFunction<
+        typeof enablePasskeyUnlockAction
+      >
+    ).mock.calls[0][0] as { credentialId: string; label: string };
+    expect(arg.credentialId).toBe('cred-A');
+    expect(arg.label).toBe('Laptop');
+  });
+
+  it('throws with the action message when enabling fails', async () => {
+    (
+      assertPrfForCredential as MockedFunction<typeof assertPrfForCredential>
+    ).mockResolvedValue({
+      credentialId: 'cred-A',
+      prfOutput: new Uint8Array(32).fill(7),
+    });
+    (
+      enablePasskeyUnlockAction as MockedFunction<
+        typeof enablePasskeyUnlockAction
+      >
+    ).mockResolvedValue({ ok: false, message: 'rate limited' });
+
+    await expect(
+      enrollPasskeyForUnlock(generateDek(), 'cred-A', 'L')
+    ).rejects.toThrow('rate limited');
   });
 });

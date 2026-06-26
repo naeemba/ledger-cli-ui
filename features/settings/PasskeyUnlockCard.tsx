@@ -12,20 +12,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getMaterial } from '@/features/crypto/lib/cryptoMaterial';
-import { buildPasskeyWrap } from '@/features/crypto/lib/passkeyFlow';
+import {
+  buildPasskeyWrap,
+  fetchUserPasskeys,
+} from '@/features/crypto/lib/passkeyFlow';
 import { obtainDek, type Authorizer } from '@/features/crypto/lib/rewrapFlow';
 
-type AuthPasskey = { credentialID: string; name?: string };
 type Row = { credentialId: string; name: string; enabled: boolean };
-
-async function fetchPasskeys(): Promise<AuthPasskey[]> {
-  const res = await fetch('/api/auth/passkey/list-user-passkeys', {
-    method: 'GET',
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error('Could not load passkeys');
-  return (await res.json()) as AuthPasskey[];
-}
 
 const PasskeyUnlockCard = () => {
   const [rows, setRows] = useState<Row[]>([]);
@@ -39,9 +32,10 @@ const PasskeyUnlockCard = () => {
     setLoading(true);
     try {
       const [passkeys, material] = await Promise.all([
-        fetchPasskeys(),
+        fetchUserPasskeys(),
         getMaterial(),
       ]);
+      if (passkeys === null) throw new Error('Could not load passkeys');
       const enabled = new Set(material.passkeys.map((p) => p.credentialId));
       setRows(
         passkeys.map((p) => ({

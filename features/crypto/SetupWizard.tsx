@@ -8,8 +8,9 @@ import {
   Loader2,
   ShieldCheck,
 } from 'lucide-react';
-import { type FormEvent, useState, useRef } from 'react';
+import { type FormEvent, useState, useRef, useEffect } from 'react';
 import '@/features/auth/auth.css';
+import { PasskeyStep } from '@/features/crypto/PasskeyStep';
 import { finalizeEncryption } from '@/features/crypto/actions/finalizeEncryption';
 import { setupCrypto } from '@/features/crypto/actions/setupCrypto';
 import { CRYPTO_COPY } from '@/features/crypto/cryptoCopy';
@@ -66,7 +67,7 @@ async function runSetup(
   return { dek, code };
 }
 
-type Step = 'why' | 'passphrase' | 'recovery' | 'encrypting';
+type Step = 'why' | 'passphrase' | 'recovery' | 'passkey' | 'encrypting';
 
 // ── decorative bars (echoes CryptoBrandPanel in UnlockScreen) ──
 const LOCK_TICKS = [14, 22, 18, 28, 20, 32, 16, 26, 24, 30] as const;
@@ -156,7 +157,7 @@ function SetupBrandPanel() {
           [
             'Client-side key generation',
             'Zero-knowledge server',
-            'Passphrase + recovery code',
+            'Passphrase, recovery code & passkey',
           ] as const
         ).map((f) => (
           <li key={f} className="au-tick">
@@ -175,9 +176,16 @@ const STEP_LABELS: Record<Step, string> = {
   why: 'Why',
   passphrase: 'Passphrase',
   recovery: 'Recovery code',
+  passkey: 'Passkey',
   encrypting: 'Encrypting',
 };
-const STEP_ORDER: Step[] = ['why', 'passphrase', 'recovery', 'encrypting'];
+const STEP_ORDER: Step[] = [
+  'why',
+  'passphrase',
+  'recovery',
+  'passkey',
+  'encrypting',
+];
 
 function StepIndicator({ current }: { current: Step }) {
   const currentIdx = STEP_ORDER.indexOf(current);
@@ -461,12 +469,14 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
   const copy = CRYPTO_COPY.recovery;
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [interacted, setInteracted] = useState(false);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Format code into groups of 4 separated by dashes
   const groups = code.split('-');
 
   async function handleCopy() {
+    setInteracted(true);
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
@@ -478,6 +488,7 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
   }
 
   function handleDownload() {
+    setInteracted(true);
     const blob = new Blob(
       [
         `${APP_NAME} Recovery Code\n`,
@@ -559,6 +570,12 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
         </div>
       </div>
 
+      {!interacted && (
+        <p className="text-xs text-[color:var(--txt-faint)] text-center">
+          {copy.saveFirstHint}
+        </p>
+      )}
+
       <p className="text-sm text-[color:var(--txt-faint)] leading-relaxed">
         {copy.instruction}
       </p>
@@ -568,8 +585,9 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
         <input
           type="checkbox"
           checked={saved}
+          disabled={!interacted}
           onChange={(e) => setSaved(e.target.checked)}
-          className="mt-0.5 size-4 cursor-pointer accent-[var(--em)]"
+          className="mt-0.5 size-4 cursor-pointer accent-[var(--em)] disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={copy.confirmPrompt}
         />
         <span className="text-sm text-[color:var(--txt-dim)] select-none">
@@ -580,7 +598,7 @@ function RecoveryStep({ code, onNext }: { code: string; onNext: () => void }) {
       <button
         type="button"
         className="au-btn au-btn--primary"
-        disabled={!saved}
+        disabled={!interacted || !saved}
         onClick={onNext}
       >
         {copy.submitLabel}
@@ -670,10 +688,21 @@ export function SetupWizard() {
   const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
   const [fatalError, setFatalError] = useState<string | null>(null);
   const [fatalRetryStep, setFatalRetryStep] = useState<Step>('passphrase');
-  // Held in memory so a transient unlock failure can be retried at finalize
-  // time without re-running setupCrypto (which would now reject with
-  // "already set up" and orphan the displayed recovery code).
+  // dekRef holds the raw DEK so async finalize handlers can read it without
+  // causing re-renders. dekSnapshot mirrors it in state so the render branch
+  // can pass it to PasskeyStep without touching the ref during render
+  // (the react-hooks/refs lint rule forbids ref access during render).
   const dekRef = useRef<Uint8Array | null>(null);
+  const [dekSnapshot, setDekSnapshot] = useState<Uint8Array | null>(null);
+
+  // If we land on the passkey step without the in-memory DEK (e.g. a reload
+  // reset component state), there is nothing to enroll against — route to the
+  // normal unlock flow, symmetric with handlePasskeyNext's guard.
+  useEffect(() => {
+    if (step === 'passkey' && !dekSnapshot) {
+      window.location.assign('/crypto/unlock');
+    }
+  }, [step, dekSnapshot]);
 
   // Advance from passphrase → recovery: persists the wrapped keys, then
   // surfaces the recovery code. The session unlock (postDek) is deferred to
@@ -682,6 +711,7 @@ export function SetupWizard() {
     try {
       const { dek, code } = await runSetup(passphrase);
       dekRef.current = dek;
+      setDekSnapshot(dek);
       setRecoveryCode(code);
       setStep('recovery');
     } catch (err) {
@@ -692,13 +722,25 @@ export function SetupWizard() {
     }
   }
 
-  // Advance from recovery → encrypting: unlock the session, then finalize.
-  // Both steps are idempotent and safe to re-run on "Retry".
-  async function handleRecoveryNext() {
+  // Advance from recovery → passkey. The DEK is already in dekRef and the
+  // userCrypto row already exists, so the optional passkey step can enroll
+  // before the session is unlocked at finalize.
+  function handleRecoveryNext() {
+    if (!dekRef.current) {
+      // Lost the in-memory DEK (e.g. a reload) — the row already exists, so
+      // route through the normal unlock flow instead.
+      window.location.assign('/crypto/unlock');
+      return;
+    }
+    setStep('passkey');
+  }
+
+  // Advance from passkey → encrypting: unlock the session, then finalize.
+  // Both "Skip" and "Continue" call this; enrolling a passkey is additive and
+  // already complete by this point. Idempotent and safe to re-run on "Retry".
+  async function handlePasskeyNext() {
     const dek = dekRef.current;
     if (!dek) {
-      // Lost the in-memory DEK (e.g. a reload landed back here) — the row
-      // already exists, so route through the normal unlock flow instead.
       window.location.assign('/crypto/unlock');
       return;
     }
@@ -707,14 +749,14 @@ export function SetupWizard() {
       await postDek(dek); // unlock this session so migration can run
       const result = await finalizeEncryption();
       if (!result.ok) {
-        setFatalRetryStep('recovery');
+        setFatalRetryStep('passkey');
         setFatalError(result.error ?? CRYPTO_COPY.errors.setupFailed);
         return;
       }
       // Hard navigate so the session gate sees `ready`.
       window.location.assign('/dashboard');
     } catch (err) {
-      setFatalRetryStep('recovery');
+      setFatalRetryStep('passkey');
       setFatalError(
         err instanceof Error ? err.message : CRYPTO_COPY.errors.generic
       );
@@ -786,6 +828,8 @@ export function SetupWizard() {
                 <PassphraseStep onNext={handlePassphraseNext} />
               ) : step === 'recovery' && recoveryCode ? (
                 <RecoveryStep code={recoveryCode} onNext={handleRecoveryNext} />
+              ) : step === 'passkey' && dekSnapshot ? (
+                <PasskeyStep dek={dekSnapshot} onNext={handlePasskeyNext} />
               ) : step === 'encrypting' ? (
                 <EncryptingStep />
               ) : null}
