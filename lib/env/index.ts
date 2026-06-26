@@ -34,6 +34,14 @@ const envSchema = clientEnvSchema
     POSTAL_API_URL: z.string().url(),
     POSTAL_API_KEY: z.string().min(1),
 
+    // Structured logging level (pino).
+    LOG_LEVEL: z
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
+      .default('info'),
+    // Error tracking (GlitchTip, Sentry-API-compatible). Absent ⇒ disabled.
+    SENTRY_DSN: z.string().url().optional(),
+    SENTRY_ENVIRONMENT: z.string().optional(),
+
     // Google OAuth (optional)
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),

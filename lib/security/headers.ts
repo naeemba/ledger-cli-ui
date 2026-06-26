@@ -12,13 +12,18 @@
  * strict-dynamic + nonce protection against injected script is fully preserved.
  */
 export function buildSecurityHeaders(nonce: string): Record<string, string> {
+  const sentryOrigin = process.env.NEXT_PUBLIC_SENTRY_DSN
+    ? new URL(process.env.NEXT_PUBLIC_SENTRY_DSN).origin
+    : null;
+  const connectSrc = ["'self'", sentryOrigin].filter(Boolean).join(' ');
+
   const csp = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    "connect-src 'self'",
+    `connect-src ${connectSrc}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

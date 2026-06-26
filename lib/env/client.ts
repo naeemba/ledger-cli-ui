@@ -22,6 +22,13 @@ export const clientEnvSchema = z.object({
     emptyToUndefined,
     z.literal('1').optional()
   ),
+
+  // Same value as SENTRY_DSN; exposed so the browser SDK can initialise.
+  // Absent ⇒ client error reporting disabled.
+  NEXT_PUBLIC_SENTRY_DSN: z.preprocess(
+    emptyToUndefined,
+    z.string().url().optional()
+  ),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
@@ -34,6 +41,7 @@ const parsed = clientEnvSchema.safeParse({
   NODE_ENV: process.env.NODE_ENV,
   NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
   NEXT_PUBLIC_ENABLE_GOOGLE: process.env.NEXT_PUBLIC_ENABLE_GOOGLE,
+  NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
 });
 
 if (!parsed.success) {
