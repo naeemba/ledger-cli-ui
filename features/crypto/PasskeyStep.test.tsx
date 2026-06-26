@@ -8,6 +8,11 @@ vi.mock('./lib/passkeyFlow', () => ({
   enrollPasskeyForUnlock: vi.fn(),
 }));
 
+// Mock getMaterial so the test never hits the network.
+vi.mock('./lib/cryptoMaterial', () => ({
+  getMaterial: vi.fn(),
+}));
+
 describe('PasskeyStep', () => {
   it('renders the add-device and skip controls', () => {
     const out = renderToStaticMarkup(

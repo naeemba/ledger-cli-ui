@@ -58,6 +58,7 @@ export const CRYPTO_COPY = {
     errors: {
       registerFailed: 'Could not create a passkey. Please try again.',
       enrollFailed: 'Could not link the passkey. Please try again.',
+      cancelled: 'Passkey prompt was dismissed or timed out.',
     },
   },
 

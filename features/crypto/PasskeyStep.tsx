@@ -3,11 +3,21 @@
 import { CheckCircle2, KeyRound, Loader2, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CRYPTO_COPY } from './cryptoCopy';
+import { getMaterial } from './lib/cryptoMaterial';
 import { enrollPasskeyForUnlock, registerPasskey } from './lib/passkeyFlow';
 
 type Row = { credentialId: string; name: string; enabled: boolean };
 
 const ADD = '__add__';
+
+function friendlyError(err: unknown, fallback: string): string {
+  if (typeof DOMException !== 'undefined' && err instanceof DOMException) {
+    return err.name === 'NotAllowedError'
+      ? CRYPTO_COPY.passkey.errors.cancelled
+      : fallback;
+  }
+  return err instanceof Error && err.message ? err.message : fallback;
+}
 
 async function fetchPasskeys(): Promise<
   { credentialID: string; name?: string }[]
@@ -39,14 +49,33 @@ export function PasskeyStep({
 
   useEffect(() => {
     void (async () => {
-      const passkeys = await fetchPasskeys();
-      setRows(
-        passkeys.map((p) => ({
-          credentialId: p.credentialID,
-          name: p.name ?? 'Passkey',
-          enabled: false,
-        }))
-      );
+      try {
+        const [passkeys, material] = await Promise.all([
+          fetchPasskeys(),
+          getMaterial(),
+        ]);
+        const enrolled = new Set(material.passkeys.map((p) => p.credentialId));
+        setRows(
+          passkeys.map((p) => ({
+            credentialId: p.credentialID,
+            name: p.name ?? 'Passkey',
+            enabled: enrolled.has(p.credentialID),
+          }))
+        );
+        setEnrolledCount(
+          passkeys.filter((p) => enrolled.has(p.credentialID)).length
+        );
+      } catch {
+        // getMaterial failure: fall back to listing passkeys as not-enrolled.
+        const passkeys = await fetchPasskeys();
+        setRows(
+          passkeys.map((p) => ({
+            credentialId: p.credentialID,
+            name: p.name ?? 'Passkey',
+            enabled: false,
+          }))
+        );
+      }
     })();
   }, []);
 
@@ -62,7 +91,7 @@ export function PasskeyStep({
       ]);
       setEnrolledCount((c) => c + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : copy.errors.registerFailed);
+      setError(friendlyError(err, copy.errors.registerFailed));
     } finally {
       setBusy(null);
     }
@@ -80,7 +109,7 @@ export function PasskeyStep({
       );
       setEnrolledCount((c) => c + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : copy.errors.enrollFailed);
+      setError(friendlyError(err, copy.errors.enrollFailed));
     } finally {
       setBusy(null);
     }
