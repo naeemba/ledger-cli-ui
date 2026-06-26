@@ -2,9 +2,12 @@ import { accountsRowsToCsv } from '@/lib/accounts/csv';
 import { requireUser } from '@/lib/auth/require-user';
 import { parseBalanceRows } from '@/lib/balance/parse';
 import { csvDownload } from '@/lib/csv';
+import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
 import runLedger from '@/utils/runLedger';
 import { NextResponse } from 'next/server';
+
+const log = createLogger('export');
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +27,7 @@ export async function GET(): Promise<Response> {
     const rows = parseBalanceRows(stdout).filter((r) => r.account !== 'Total');
     return csvDownload(accountsRowsToCsv(rows, base), 'accounts');
   } catch (e) {
-    console.error('accounts export failed', e);
+    log.error({ err: e }, 'accounts export failed');
     return NextResponse.json(
       { error: 'Could not export accounts' },
       { status: 500 }

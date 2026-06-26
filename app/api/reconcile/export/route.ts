@@ -1,10 +1,13 @@
 import { parseReconcileRows } from '@/features/reconcile/Reconcile.utils';
 import { requireUser } from '@/lib/auth/require-user';
 import { csvDownload } from '@/lib/csv';
+import { createLogger } from '@/lib/log';
 import { reconcileRowsToCsv } from '@/lib/reconcile/csv';
 import { getBaseCurrency } from '@/lib/settings';
 import runLedger from '@/utils/runLedger';
 import { NextResponse } from 'next/server';
+
+const log = createLogger('export');
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +24,7 @@ export async function GET(): Promise<Response> {
       'reconcile'
     );
   } catch (e) {
-    console.error('reconcile export failed', e);
+    log.error({ err: e }, 'reconcile export failed');
     return NextResponse.json(
       { error: 'Could not export reconcile rows' },
       { status: 500 }

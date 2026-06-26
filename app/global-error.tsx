@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
 type Props = {
   error: Error & { digest?: string };
@@ -16,7 +17,7 @@ type Props = {
  */
 export default function GlobalError({ error, reset }: Props) {
   useEffect(() => {
-    console.error('Global error:', error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

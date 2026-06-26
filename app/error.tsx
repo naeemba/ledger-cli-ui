@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import * as Sentry from '@sentry/nextjs';
 
 type Props = {
   error: Error & { digest?: string };
@@ -17,8 +18,7 @@ type Props = {
  */
 export default function RouteError({ error, reset }: Props) {
   useEffect(() => {
-    // Browser console is fine; it stays client-side.
-    console.error('Route error:', error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

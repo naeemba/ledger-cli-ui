@@ -1,3 +1,4 @@
+import { auditService, auditRequestMeta } from '@/lib/audit';
 import { requireUser } from '@/lib/auth/require-user';
 import { getUserCryptoRepository } from '@/lib/crypto';
 import { setSessionDek } from '@/lib/crypto/sessionKeys';
@@ -21,6 +22,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   if (!(await getUserCryptoRepository().exists(user.id))) {
+    await auditService.record(user.id, {
+      action: 'crypto.unlock',
+      result: 'failure',
+      detail: { reason: 'not-set-up' },
+      ...(await auditRequestMeta()),
+    });
     return NextResponse.json(
       { error: 'Encryption is not set up for this account.' },
       { status: 409 }
@@ -32,6 +39,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const body = (await req.json()) as { dek?: unknown };
     dek = decodeDek(body?.dek);
   } catch (e) {
+    await auditService.record(user.id, {
+      action: 'crypto.unlock',
+      result: 'failure',
+      detail: { reason: 'decode' },
+      ...(await auditRequestMeta()),
+    });
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Bad request' },
       { status: 400 }
@@ -39,5 +52,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   setSessionDek(user.id, dek);
+  await auditService.record(user.id, {
+    action: 'crypto.unlock',
+    result: 'success',
+    ...(await auditRequestMeta()),
+  });
   return new NextResponse(null, { status: 204 });
 }

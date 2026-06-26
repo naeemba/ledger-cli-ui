@@ -1,8 +1,10 @@
 'use server';
 
 import type { TransactionActionState } from './types';
+import { auditService, auditRequestMeta } from '@/lib/audit';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
+import { getJournalDirSize } from '@/lib/journal/quota';
 import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 
@@ -36,13 +38,23 @@ export async function updateTransactionAction(
     return { ok: false, formError: 'Edit payload is not an object' };
   }
 
+  const bytesBefore = await getJournalDirSize(user.id);
   const result = await journalService.editTransaction(user.id, {
     kind: 'edit',
     uid,
     expectedFingerprint,
     draft: parsed as TransactionDraft,
   });
-
+  const bytesAfter = await getJournalDirSize(user.id);
+  await auditService.record(user.id, {
+    action: 'tx.edit',
+    result: result.ok ? 'success' : 'failure',
+    targetUid: uid,
+    bytesBefore,
+    bytesAfter,
+    detail: result.ok ? undefined : { reason: result.reason },
+    ...(await auditRequestMeta()),
+  });
   if (!result.ok) {
     return {
       ok: false,

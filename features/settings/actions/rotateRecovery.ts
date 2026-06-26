@@ -1,4 +1,5 @@
 'use server';
+import { auditService, auditRequestMeta } from '@/lib/audit';
 import { requireUser } from '@/lib/auth/require-user';
 import { getUserCryptoRepository } from '@/lib/crypto';
 import { rotateRecoverySchema } from '@/lib/crypto/rewrapSchema';
@@ -14,9 +15,21 @@ export async function rotateRecoveryAction(input: unknown): Promise<Result> {
   const parsed = rotateRecoverySchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: 'Invalid request.' };
   const repo = getUserCryptoRepository();
-  if (!(await repo.exists(user.id)))
+  if (!(await repo.exists(user.id))) {
+    await auditService.record(user.id, {
+      action: 'crypto.recovery-rotate',
+      result: 'failure',
+      detail: { reason: 'not-set-up' },
+      ...(await auditRequestMeta()),
+    });
     return { ok: false, message: 'Encryption is not set up.' };
+  }
   await repo.updateWrapRecovery(user.id, parsed.data.wrapRecovery);
   revalidatePath('/', 'layout');
+  await auditService.record(user.id, {
+    action: 'crypto.recovery-rotate',
+    result: 'success',
+    ...(await auditRequestMeta()),
+  });
   return { ok: true };
 }

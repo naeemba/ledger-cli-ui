@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildSecurityHeaders } from './headers';
 
 describe('buildSecurityHeaders', () => {
@@ -37,5 +37,24 @@ describe('buildSecurityHeaders', () => {
     const a = buildSecurityHeaders('one')['Content-Security-Policy'];
     const b = buildSecurityHeaders('two')['Content-Security-Policy'];
     expect(a).not.toBe(b);
+  });
+
+  describe('connect-src with NEXT_PUBLIC_SENTRY_DSN', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('appends the GlitchTip origin to connect-src when DSN is set', () => {
+      vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', 'https://abc@glitchtip.example/1');
+      const csp = buildSecurityHeaders('n')['Content-Security-Policy'];
+      expect(csp).toContain("connect-src 'self' https://glitchtip.example");
+    });
+
+    it('keeps connect-src unchanged when DSN is unset', () => {
+      vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', '');
+      const csp = buildSecurityHeaders('n')['Content-Security-Policy'];
+      expect(csp).toContain("connect-src 'self'");
+      expect(csp).not.toContain('glitchtip');
+    });
   });
 });

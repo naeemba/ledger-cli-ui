@@ -36,7 +36,12 @@ const PATH_TRAVERSAL = /(^|[/\\])\.\.([/\\]|$)/;
 
 export type AddTransactionResult =
   | { ok: true }
-  | { ok: false; fieldErrors: Record<string, string>; formError?: string };
+  | {
+      ok: false;
+      reason: 'invalid' | 'quota' | 'write-failed' | 'parse-failed' | 'stale';
+      fieldErrors: Record<string, string>;
+      formError?: string;
+    };
 
 export type WriteEditInput = {
   kind: 'edit';
@@ -145,7 +150,7 @@ export class JournalService {
         const key = issue.path.join('.') || 'form';
         if (!fieldErrors[key]) fieldErrors[key] = issue.message;
       }
-      return { ok: false, fieldErrors };
+      return { ok: false, reason: 'invalid', fieldErrors };
     }
 
     return withUserLock(userId, async () => {
@@ -161,6 +166,7 @@ export class JournalService {
       if (projected > journalQuotaBytes()) {
         return {
           ok: false,
+          reason: 'quota',
           fieldErrors: {},
           formError: `This transaction would exceed your ${journalQuotaMb()} MB journal limit.`,
         };
@@ -170,6 +176,7 @@ export class JournalService {
       } catch (e) {
         return {
           ok: false,
+          reason: 'write-failed',
           fieldErrors: {},
           formError: e instanceof Error ? e.message : 'Failed to write journal',
         };
@@ -180,6 +187,7 @@ export class JournalService {
         await this.repo.writeFileAtomic(mainPath, snapshot);
         return {
           ok: false,
+          reason: 'parse-failed',
           fieldErrors: {},
           formError: `Ledger rejected the new transaction: ${verify.firstLine}`,
         };
@@ -193,7 +201,7 @@ export class JournalService {
           e instanceof StorageConflictError
             ? e.message
             : 'Failed to save journal to storage.';
-        return { ok: false, fieldErrors: {}, formError };
+        return { ok: false, reason: 'stale', fieldErrors: {}, formError };
       }
       invalidateCache(userId);
       return { ok: true };

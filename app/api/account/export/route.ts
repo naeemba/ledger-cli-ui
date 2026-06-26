@@ -3,9 +3,12 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import { requireUser } from '@/lib/auth/require-user';
 import { getJournalDir } from '@/lib/journal/layout';
+import { createLogger } from '@/lib/log';
 import { listLocalRelPaths } from '@/lib/storage/manifest';
 import { pullLocked } from '@/lib/storage/sync';
 import { NextResponse } from 'next/server';
+
+const log = createLogger('export');
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +35,7 @@ export async function GET(): Promise<Response> {
       },
     });
   } catch (e) {
-    console.error('journal backup export failed', e);
+    log.error({ err: e }, 'journal backup export failed');
     return NextResponse.json(
       { error: 'Could not export your journal' },
       { status: 500 }

@@ -1,11 +1,14 @@
 import { requireUser } from '@/lib/auth/require-user';
 import { csvDownload } from '@/lib/csv';
+import { createLogger } from '@/lib/log';
 import { payeeRowsToCsv } from '@/lib/payees/csv';
 import { parsePayeeRows } from '@/lib/payees/parse';
 import { getBaseCurrency } from '@/lib/settings';
 import { parseISODateStrict } from '@/utils/date';
 import runLedger from '@/utils/runLedger';
 import { type NextRequest, NextResponse } from 'next/server';
+
+const log = createLogger('export');
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +32,7 @@ export async function GET(req: NextRequest): Promise<Response> {
         { status: 400 }
       );
     }
-    console.error('payees export failed', e);
+    log.error({ err: e }, 'payees export failed');
     return NextResponse.json(
       { error: 'Could not export payees' },
       { status: 500 }

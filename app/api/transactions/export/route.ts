@@ -5,8 +5,11 @@ import {
 import { requireUser } from '@/lib/auth/require-user';
 import { csvDownload } from '@/lib/csv';
 import { journalService } from '@/lib/journal';
+import { createLogger } from '@/lib/log';
 import { transactionsToCsv } from '@/lib/transactions/csv';
 import { type NextRequest, NextResponse } from 'next/server';
+
+const log = createLogger('export');
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +31,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     );
     return csvDownload(transactionsToCsv(filtered), 'transactions');
   } catch (e) {
-    console.error('csv export failed', e);
+    log.error({ err: e }, 'csv export failed');
     return NextResponse.json(
       { error: 'Could not export transactions' },
       { status: 500 }

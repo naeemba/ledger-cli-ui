@@ -3,6 +3,9 @@ import { requireUser } from '@/lib/auth/require-user';
 import { getUserCryptoRepository } from '@/lib/crypto';
 import { LockedError } from '@/lib/crypto/sessionKeys';
 import { journalService } from '@/lib/journal';
+import { createLogger } from '@/lib/log';
+
+const log = createLogger('crypto');
 
 export async function finalizeEncryption(): Promise<{
   ok: boolean;
@@ -22,7 +25,7 @@ export async function finalizeEncryption(): Promise<{
   } catch (e) {
     if (e instanceof LockedError)
       return { ok: false, error: 'Session is locked; unlock and retry.' };
-    console.error('finalizeEncryption failed', e);
+    log.error({ err: e }, 'finalizeEncryption failed');
     return {
       ok: false,
       error: 'Could not encrypt your journal. Please retry.',
