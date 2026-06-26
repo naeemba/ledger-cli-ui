@@ -1,7 +1,8 @@
 import path from 'path';
+import { auditService, auditRequestMeta } from '@/lib/audit';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
-import { journalQuotaMb } from '@/lib/journal/quota';
+import { journalQuotaMb, getJournalDirSize } from '@/lib/journal/quota';
 import { createLogger } from '@/lib/log';
 import { rateLimit, UPLOAD } from '@/lib/rate-limit';
 import { NextResponse, type NextRequest } from 'next/server';
@@ -40,6 +41,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const safeName = path.basename(file.name);
   const ext = path.extname(safeName).toLowerCase();
+  const bytesBefore = await getJournalDirSize(user.id);
+  const meta = await auditRequestMeta();
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -54,6 +57,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           { status: 413 }
         );
       }
+      const bytesAfter = await getJournalDirSize(user.id);
+      await auditService.record(user.id, {
+        action: 'journal.import',
+        result: 'success',
+        bytesBefore,
+        bytesAfter,
+        detail: {
+          kind: 'zip',
+          ...(result.parseFailure ? { parseFailure: true } : {}),
+        },
+        ...meta,
+      });
       return NextResponse.json({
         ok: true,
         mode: 'archive',
@@ -78,6 +93,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           { status: 413 }
         );
       }
+      const bytesAfter = await getJournalDirSize(user.id);
+      await auditService.record(user.id, {
+        action: 'journal.import',
+        result: 'success',
+        bytesBefore,
+        bytesAfter,
+        detail: {
+          kind: 'single',
+          ...(result.parseFailure ? { parseFailure: true } : {}),
+        },
+        ...meta,
+      });
       return NextResponse.json({
         ok: true,
         mode: 'single',
