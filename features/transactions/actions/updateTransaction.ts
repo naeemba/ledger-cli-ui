@@ -52,7 +52,7 @@ export async function updateTransactionAction(
     targetUid: uid,
     bytesBefore,
     bytesAfter,
-    detail: result.ok ? undefined : { reason: result.message },
+    detail: result.ok ? undefined : { reason: result.reason },
     ...(await auditRequestMeta()),
   });
   if (!result.ok) {

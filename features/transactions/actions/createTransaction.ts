@@ -35,7 +35,7 @@ export async function createTransactionAction(
     result: result.ok ? 'success' : 'failure',
     bytesBefore,
     bytesAfter,
-    detail: result.ok ? undefined : { reason: result.formError ?? 'invalid' },
+    detail: result.ok ? undefined : { reason: result.reason },
     ...(await auditRequestMeta()),
   });
   if (!result.ok) {
