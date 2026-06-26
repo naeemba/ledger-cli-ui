@@ -1,5 +1,6 @@
 'use server';
 
+import { auditService, auditRequestMeta } from '@/lib/audit';
 import { requireUser } from '@/lib/auth/require-user';
 import { getUserCryptoRepository } from '@/lib/crypto';
 import { setupCryptoSchema } from '@/lib/crypto/setupSchema';
@@ -13,6 +14,12 @@ export async function setupCrypto(input: unknown): Promise<Result> {
 
   const repo = getUserCryptoRepository();
   if (await repo.exists(user.id)) {
+    await auditService.record(user.id, {
+      action: 'crypto.enable',
+      result: 'failure',
+      detail: { reason: 'Encryption is already set up' },
+      ...(await auditRequestMeta()),
+    });
     return { ok: false, error: 'Encryption is already set up' };
   }
   await repo.create({
@@ -21,6 +28,11 @@ export async function setupCrypto(input: unknown): Promise<Result> {
     passSalt: parsed.data.passSalt,
     argonParams: parsed.data.argonParams,
     wrapRecovery: parsed.data.wrapRecovery,
+  });
+  await auditService.record(user.id, {
+    action: 'crypto.enable',
+    result: 'success',
+    ...(await auditRequestMeta()),
   });
   return { ok: true };
 }
