@@ -19,5 +19,6 @@ export default defineConfig({
     'price_fetch_run',
     'savedView',
     'encryptionResetChallenge',
+    'manual_price',
   ],
 });

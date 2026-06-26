@@ -3,6 +3,7 @@ import path from 'path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BANNER_MARKER } from './formatter';
 import { __resetPriceLockForTests } from './lock';
+import { ManualPriceRepository } from './manualRepository';
 import {
   CommodityPriceRepository,
   PriceFetchRunRepository,
@@ -43,6 +44,7 @@ describe('PriceService.refreshAll', () => {
       commodityRepo: new CommodityPriceRepository(ctx.db),
       runRepo: new PriceFetchRunRepository(ctx.db),
       journalRepo: new JournalRepository(ctx.db),
+      manualRepo: new ManualPriceRepository(ctx.db),
     });
   });
 
@@ -239,5 +241,132 @@ describe('PriceService.refreshAll', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(ra.status).toBe('success');
     expect(rb.status).toBe('success');
+  });
+});
+
+describe('PriceService manual prices', () => {
+  let ctx: TestDbContext;
+  let service: PriceService;
+
+  const make = () =>
+    new PriceService({
+      db: ctx.db,
+      commodityRepo: new CommodityPriceRepository(ctx.db),
+      runRepo: new PriceFetchRunRepository(ctx.db),
+      journalRepo: new JournalRepository(ctx.db),
+      manualRepo: new ManualPriceRepository(ctx.db),
+    });
+
+  beforeEach(async () => {
+    __resetPriceLockForTests();
+    ctx = await setupTestDb('prices-manual-svc-');
+    service = make();
+  });
+
+  afterEach(async () => {
+    await teardownTestDb(ctx);
+    vi.restoreAllMocks();
+  });
+
+  const readPriceDb = async (userId: string) =>
+    fs.readFile(path.join(getJournalDir(userId), 'price-db.ledger'), 'utf-8');
+
+  it('emits a never-transacted manual symbol into price-db', async () => {
+    await seedUser(
+      ctx,
+      'alice',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
+      'USD'
+    );
+    const result = await service.addManualPrices('alice', {
+      date: '2026-06-27',
+      quote: 'USD',
+      rows: [{ symbol: 'KIRT', price: 0.0000033 }],
+    });
+    expect(result).toEqual({ ok: true });
+    const file = await readPriceDb('alice');
+    expect(file).toContain('KIRT');
+    expect(file).toContain('0.0000033');
+    expect(file).toContain('2026/06/27 23:59:59');
+  });
+
+  it('normalizes $ to USD and rejects pricing a symbol in itself', async () => {
+    await seedUser(
+      ctx,
+      'alice',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
+      'USD'
+    );
+    const ok = await service.addManualPrices('alice', {
+      date: '2026-06-27',
+      quote: '$',
+      rows: [{ symbol: 'kirt', price: 2 }],
+    });
+    expect(ok).toEqual({ ok: true });
+    expect(await readPriceDb('alice')).toContain('KIRT 2 USD');
+
+    const bad = await service.addManualPrices('alice', {
+      date: '2026-06-27',
+      quote: 'USD',
+      rows: [{ symbol: 'USD', price: 2 }],
+    });
+    expect(bad.ok).toBe(false);
+  });
+
+  it('manual rate beats a same-day fetched rate via end-of-day ordering', async () => {
+    await seedUser(
+      ctx,
+      'alice',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
+      'USD'
+    );
+    await new CommodityPriceRepository(ctx.db).insert([
+      {
+        symbol: 'BTC',
+        quote: 'USD',
+        price: 60000,
+        fetchedAt: new Date('2026-06-27T12:00:00Z'),
+        fetchedDate: '2026-06-27',
+      },
+    ]);
+    await service.addManualPrices('alice', {
+      date: '2026-06-27',
+      quote: 'USD',
+      rows: [{ symbol: 'BTC', price: 65000 }],
+    });
+    const file = await readPriceDb('alice');
+    // both lines present; the 23:59:59 manual line sorts after the 12:00:00 one
+    const idxFetched = file.indexOf('60000');
+    const idxManual = file.indexOf('65000');
+    expect(idxFetched).toBeGreaterThan(-1);
+    expect(idxManual).toBeGreaterThan(idxFetched);
+  });
+
+  it('deleteManualPrice removes the row and regenerates without it', async () => {
+    await seedUser(
+      ctx,
+      'alice',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
+      'USD'
+    );
+    await service.addManualPrices('alice', {
+      date: '2026-06-27',
+      quote: 'USD',
+      rows: [{ symbol: 'KIRT', price: 3 }],
+    });
+    const row = (await service.listManualPrices('alice'))[0];
+    expect(await service.deleteManualPrice('alice', row.id)).toBe(true);
+    expect(await service.listManualPrices('alice')).toHaveLength(0);
+    expect(await readPriceDb('alice')).not.toContain('KIRT');
+  });
+
+  it('deleteManualPrice returns false for a non-existent / unowned row', async () => {
+    await seedUser(
+      ctx,
+      'alice',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
+      'USD'
+    );
+    expect(await service.deleteManualPrice('alice', 999999)).toBe(false);
   });
 });
