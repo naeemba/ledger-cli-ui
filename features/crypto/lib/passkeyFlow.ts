@@ -2,6 +2,7 @@ import { derivePrfKek, toBase64, unwrapDek, wrapDek } from './clientCrypto';
 import { getMaterial } from './cryptoMaterial';
 import { postDek } from './unlockFlow';
 import { assertPrfAny, assertPrfForCredential } from './webauthn';
+import { enablePasskeyUnlockAction } from '@/features/crypto/actions/enablePasskeyUnlock';
 import { authClient } from '@/lib/auth-client';
 
 export type EnablePasskeyInput = {
@@ -45,6 +46,22 @@ export const registerPasskey = async (
   return {
     credentialId: (res.data as { credentialID: string }).credentialID,
   };
+};
+
+/**
+ * Enroll a passkey for unlock: wrap the DEK with the passkey's PRF-derived KEK
+ * and persist the wrap. The caller already holds the DEK (wizard: in-memory;
+ * settings: obtained via an authorizer). Throws if the PRF assertion or the
+ * server action fails.
+ */
+export const enrollPasskeyForUnlock = async (
+  dek: Uint8Array,
+  credentialId: string,
+  label: string
+): Promise<void> => {
+  const input = await buildPasskeyWrap(dek, credentialId, label);
+  const res = await enablePasskeyUnlockAction(input);
+  if (!res.ok) throw new Error(res.message);
 };
 
 /** Unlock the session using any enrolled passkey. */
