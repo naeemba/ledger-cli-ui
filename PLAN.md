@@ -210,18 +210,19 @@ The Tier-2/3 items from `TODO.md` that need more than a weekend.
 
 Only relevant if this gets deployed to anyone other than you.
 
-- [ ] **Object storage (Garage):** journal files are stored in Garage (S3-compatible)
+- [x] **Object storage (Garage):** journal files are stored in Garage (S3-compatible)
   as the source of truth; local disk is an ephemeral cache synced via
   ListObjectsV2 + ETags. See `docs/deployment/garage.md` and
-  `docs/superpowers/specs/2026-06-24-garage-object-storage-design.md`.
-- [ ] **Encrypted user journals at rest** — envelope encryption with **session-scoped** decryption (zero-knowledge at rest, not full E2E). One per-user DEK encrypts the journal; wrapped by a passphrase + one-time recovery code (passkey-PRF wrap is a fast-follow). Encryption sits at the Garage push/pull seam (ciphertext in Garage/backups, plaintext on the ephemeral local working dir, shredded on lock); `runLedger`/repository untouched. DEK reaches the server in RAM only, for the session. Gated onboarding wizard (au-* design) + per-session unlock screen + manual Lock. v1 = passphrase; passkey-PRF fast-follow. Design: `docs/superpowers/specs/2026-06-25-encrypted-journals-v2-design.md` (supersedes the 2026-06-22 spec; both supersede the earlier `.env.example` "server master key" idea — that was not zero-knowledge).
+  `docs/superpowers/specs/2026-06-24-garage-object-storage-design.md`. _(Code merged via PR #23; Garage still needs deploying on new-raxel — infra, not code.)_
+- [x] **Encrypted user journals at rest** — envelope encryption with **session-scoped** decryption (zero-knowledge at rest, not full E2E). One per-user DEK encrypts the journal; wrapped by a passphrase + one-time recovery code + passkey-PRF. Encryption sits at the Garage push/pull seam (ciphertext in Garage/backups, plaintext on the ephemeral local working dir, shredded on lock); `runLedger`/repository untouched. DEK reaches the server in RAM only, for the session. Gated onboarding wizard (au-* design) + per-session unlock screen + manual Lock. Design: `docs/superpowers/specs/2026-06-25-encrypted-journals-v2-design.md`. _(All 4 unlock methods merged via PRs #28–32; ⚠️ live e2e against real Postgres+Garage still un-run.)_
 - [x] Rate limit `/api/upload` and any future write endpoint — in-memory per-user fixed-window limiter (lib/rate-limit/) on /api/upload + all mutating server actions; auth endpoints covered by better-auth.
-- [ ] Audit log of journal mutations (who, when, how many bytes)
+- [x] Audit log of journal mutations + security events — Postgres `auditLog` table behind a best-effort `AuditService.record()` (never throws), instrumented at the action/route boundary. Records tx add/edit/delete (with journal-dir byte deltas + uid), imports, and crypto unlock/lock/enable/passphrase-change/recovery-rotate/reset. Store-only (no viewer UI yet); `account.delete` is logger-only since audit rows cascade-delete with the user. `lib/audit/`. Spec: `docs/superpowers/specs/2026-06-26-structured-logging-and-audit-log-design.md`.
 - [x] Quota on per-user journal size — JOURNAL_QUOTA_MB (default 100) enforced in JournalService for imports + adds; lib/journal/quota.ts.
 - [x] Backup endpoint — `GET /api/account/export` streams a `.zip` of the user's journal directory (reuses `pullLocked` + `listLocalRelPaths` + `adm-zip`). (Restore-from-backup upload still pending; import covers re-upload.)
 - [x] **Account deletion** — self-service on `/settings` Danger Zone: emailed 6-digit code (hashed, 10-min expiry, 5-attempt cap, 30s resend throttle) → `purgeUserData` wipes Garage (`clearRemote`) + local journal dir + `db.delete(user)` cascade → sign-out + `/account/deleted`. Spec: `docs/superpowers/specs/2026-06-25-account-deletion-design.md`.
 - [x] CSP / security headers pass — strict nonce-based CSP + HSTS/X-Frame-Options/nosniff/Referrer-Policy/Permissions-Policy via proxy.ts (lib/security/headers.ts).
-- [ ] Structured logging + an error-tracking destination
+- [x] Structured logging + an error-tracking destination — pino logger (`lib/log/`) with mandatory secret redaction as the single node-runtime logging entry point (24 `console.*` calls migrated; `no-console` lint rule guards regressions). Error tracking via self-hosted GlitchTip through `@sentry/nextjs`, fully disabled when `SENTRY_DSN` is unset. Spec: `docs/superpowers/specs/2026-06-26-structured-logging-and-audit-log-design.md`.
+- [ ] _Future:_ audit-log retention/pruning cron + per-user Activity (`/settings`) viewer UI (`AuditRepository.listByUser` already exists). Also: record import quota-exceeded / hard-error failure paths (currently only the parse-failure import path is audited).
 
 Spec: docs/superpowers/specs/2026-06-25-phase7-hardening-design.md.
 
