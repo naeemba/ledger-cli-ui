@@ -44,6 +44,13 @@ export const confirmEncryptionResetAction = async (
       result: 'success',
       ...(await auditRequestMeta()),
     });
+  } else {
+    await auditService.record(user.id, {
+      action: 'crypto.reset',
+      result: 'failure',
+      detail: { reason: result.reason },
+      ...(await auditRequestMeta()),
+    });
   }
   return result;
 };
