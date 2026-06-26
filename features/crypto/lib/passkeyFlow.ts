@@ -12,6 +12,27 @@ export type EnablePasskeyInput = {
   label: string;
 };
 
+/** A passkey as returned by better-auth's list-user-passkeys endpoint. */
+export type AuthPasskey = { credentialID: string; name?: string };
+
+/**
+ * List the current user's registered passkeys via better-auth. Returns `[]` on
+ * any network/HTTP error so callers can treat "no passkeys" and "couldn't load"
+ * uniformly; callers that need to distinguish should fetch directly.
+ */
+export const fetchUserPasskeys = async (): Promise<AuthPasskey[]> => {
+  try {
+    const res = await fetch('/api/auth/passkey/list-user-passkeys', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!res.ok) return [];
+    return (await res.json()) as AuthPasskey[];
+  } catch {
+    return [];
+  }
+};
+
 /**
  * Build the wrap for a passkey. The caller must already hold the DEK (obtained
  * via obtainDek with a passphrase/recovery authorizer). Generates a fresh PRF
@@ -43,9 +64,11 @@ export const registerPasskey = async (
   if (!res || res.error || !res.data) {
     throw new Error(res?.error?.message ?? 'Could not create a passkey.');
   }
-  return {
-    credentialId: (res.data as { credentialID: string }).credentialID,
-  };
+  const id = (res.data as { credentialID?: unknown }).credentialID;
+  if (typeof id !== 'string' || !id) {
+    throw new Error('Could not create a passkey.');
+  }
+  return { credentialId: id };
 };
 
 /**

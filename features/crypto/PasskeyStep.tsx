@@ -4,7 +4,11 @@ import { CheckCircle2, KeyRound, Loader2, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CRYPTO_COPY } from './cryptoCopy';
 import { getMaterial } from './lib/cryptoMaterial';
-import { enrollPasskeyForUnlock, registerPasskey } from './lib/passkeyFlow';
+import {
+  enrollPasskeyForUnlock,
+  fetchUserPasskeys,
+  registerPasskey,
+} from './lib/passkeyFlow';
 
 type Row = { credentialId: string; name: string; enabled: boolean };
 
@@ -17,21 +21,6 @@ function friendlyError(err: unknown, fallback: string): string {
       : fallback;
   }
   return err instanceof Error && err.message ? err.message : fallback;
-}
-
-async function fetchPasskeys(): Promise<
-  { credentialID: string; name?: string }[]
-> {
-  try {
-    const res = await fetch('/api/auth/passkey/list-user-passkeys', {
-      method: 'GET',
-      credentials: 'include',
-    });
-    if (!res.ok) return [];
-    return (await res.json()) as { credentialID: string; name?: string }[];
-  } catch {
-    return [];
-  }
 }
 
 export function PasskeyStep({
@@ -49,34 +38,23 @@ export function PasskeyStep({
 
   useEffect(() => {
     void (async () => {
-      try {
-        const [passkeys, material] = await Promise.all([
-          fetchPasskeys(),
-          getMaterial(),
-        ]);
-        const enrolled = new Set(material.passkeys.map((p) => p.credentialId));
-        setRows(
-          passkeys.map((p) => ({
-            credentialId: p.credentialID,
-            name: p.name ?? 'Passkey',
-            enabled: enrolled.has(p.credentialID),
-          }))
-        );
-        setEnrolledCount(
-          passkeys.filter((p) => enrolled.has(p.credentialID)).length
-        );
-      } catch {
-        // Promise.all rejected (in practice only getMaterial can throw —
-        // fetchPasskeys swallows its own errors): list passkeys as not-enrolled.
-        const passkeys = await fetchPasskeys();
-        setRows(
-          passkeys.map((p) => ({
-            credentialId: p.credentialID,
-            name: p.name ?? 'Passkey',
-            enabled: false,
-          }))
-        );
-      }
+      // fetchUserPasskeys swallows its own errors; only getMaterial can throw.
+      // Resolve it separately so a getMaterial failure just means
+      // "list passkeys as not-enrolled" without re-fetching the list.
+      const passkeys = await fetchUserPasskeys();
+      const enrolled = await getMaterial()
+        .then((m) => new Set(m.passkeys.map((p) => p.credentialId)))
+        .catch(() => new Set<string>());
+      setRows(
+        passkeys.map((p) => ({
+          credentialId: p.credentialID,
+          name: p.name ?? 'Passkey',
+          enabled: enrolled.has(p.credentialID),
+        }))
+      );
+      setEnrolledCount(
+        passkeys.filter((p) => enrolled.has(p.credentialID)).length
+      );
     })();
   }, []);
 
