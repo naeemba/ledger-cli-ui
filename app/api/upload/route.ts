@@ -50,6 +50,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (ext === ZIP_EXT) {
       const result = await journalService.replaceFromZip(user.id, buffer);
       if (result.quotaExceeded) {
+        await auditService.record(user.id, {
+          action: 'journal.import',
+          result: 'failure',
+          bytesBefore,
+          bytesAfter: await getJournalDirSize(user.id),
+          detail: { kind: 'zip', reason: 'quota' },
+          ...meta,
+        });
         return NextResponse.json(
           {
             error: `Importing this would exceed your ${journalQuotaMb()} MB journal limit.`,
@@ -86,6 +94,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         buffer
       );
       if (result.quotaExceeded) {
+        await auditService.record(user.id, {
+          action: 'journal.import',
+          result: 'failure',
+          bytesBefore,
+          bytesAfter: await getJournalDirSize(user.id),
+          detail: { kind: 'single', reason: 'quota' },
+          ...meta,
+        });
         return NextResponse.json(
           {
             error: `Importing this would exceed your ${journalQuotaMb()} MB journal limit.`,
@@ -123,6 +139,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   } catch (e) {
     log.error({ err: e }, 'upload failed');
+    await auditService.record(user.id, {
+      action: 'journal.import',
+      result: 'failure',
+      bytesBefore,
+      bytesAfter: await getJournalDirSize(user.id),
+      detail: { reason: 'write-failed' },
+      ...meta,
+    });
     const message = e instanceof Error ? e.message : 'Upload failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }
