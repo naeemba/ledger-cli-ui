@@ -42,6 +42,25 @@ export const CRYPTO_COPY = {
     submitLabel: 'Enable encryption',
   },
 
+  // ── Passkey step (optional) ─────────────────────────────────────────────────
+  passkey: {
+    heading: 'Add a passkey',
+    body: 'Optionally let this device unlock your journal with a passkey, alongside your passphrase and recovery code. You can add more later in Settings.',
+    twiceNote:
+      "You'll be asked to confirm twice — once to create the passkey, once to link it.",
+    addLabel: 'Add this device',
+    addingLabel: 'Adding…',
+    enableLabel: 'Enable unlock',
+    enablingLabel: 'Enabling…',
+    enrolledLabel: 'Enabled',
+    skipLabel: 'Skip for now',
+    continueLabel: 'Continue',
+    errors: {
+      registerFailed: 'Could not create a passkey. Please try again.',
+      enrollFailed: 'Could not link the passkey. Please try again.',
+    },
+  },
+
   // ── Encrypting / progress step ──────────────────────────────────────────────
   encrypting: {
     heading: 'Encrypting your journal…',
