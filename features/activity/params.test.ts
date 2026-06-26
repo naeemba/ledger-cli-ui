@@ -21,19 +21,20 @@ describe('activity params', () => {
     expect(parseResult(undefined)).toBe('all');
   });
 
-  it('encode/decode cursor round-trips', () => {
-    const createdAt = new Date('2026-06-26T14:02:03.000Z');
-    const token = encodeCursor({ createdAt, id: '01HSAMPLE' });
-    const back = decodeCursor(token);
-    expect(back?.id).toBe('01HSAMPLE');
-    expect(back?.createdAt.getTime()).toBe(createdAt.getTime());
+  it('encode/decode cursor round-trips a ULID id', () => {
+    const id = '01KW2SBP2HX0HR2QGZ7QEGD50D';
+    const token = encodeCursor({ id });
+    expect(token).toBe(id);
+    expect(decodeCursor(token)).toEqual({ id });
   });
 
   it('decodeCursor rejects garbage', () => {
     expect(decodeCursor(undefined)).toBeUndefined();
     expect(decodeCursor('')).toBeUndefined();
-    expect(decodeCursor('notanumber_id')).toBeUndefined();
+    expect(decodeCursor('notaulid')).toBeUndefined();
     expect(decodeCursor('123')).toBeUndefined();
+    // Lowercase / wrong-length strings are not valid ULIDs.
+    expect(decodeCursor('01hsampleulid00000000000000')).toBeUndefined();
   });
 
   it('buildActivityQuery omits defaults and includes cursor', () => {
@@ -42,8 +43,8 @@ describe('activity params', () => {
       buildActivityQuery({
         type: 'security',
         result: 'failure',
-        before: '123_x',
+        before: '01KW2SBP2HX0HR2QGZ7QEGD50D',
       })
-    ).toBe('?type=security&result=failure&before=123_x');
+    ).toBe('?type=security&result=failure&before=01KW2SBP2HX0HR2QGZ7QEGD50D');
   });
 });

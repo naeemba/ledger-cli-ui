@@ -2,10 +2,8 @@ import ActivityRow from './ActivityRow';
 import { buildActivityQuery } from './params';
 import { buttonVariants } from '@/components/ui/button';
 import type { AuditLog } from '@/db/schema/auditLog';
-import type { ActivityType } from '@/lib/audit';
+import type { ActivityType, ResultFilter } from '@/lib/audit';
 import Link from 'next/link';
-
-type ResultFilter = 'all' | 'success' | 'failure';
 
 const TYPE_TABS: { value: ActivityType; label: string }[] = [
   { value: 'all', label: 'All' },

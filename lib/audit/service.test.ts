@@ -77,7 +77,7 @@ describe('AuditService.listForUser', () => {
   it('normalizes result=all to no result filter, forwards cursor + limit', async () => {
     const repo = listRepo();
     const svc = new AuditService(repo);
-    const before = { createdAt: new Date('2026-06-26T00:00:00Z'), id: 'x' };
+    const before = { id: '01KW2SBP2HX0HR2QGZ7QEGD50D' };
     await svc.listForUser('alice', { result: 'all', limit: 51, before });
     expect(repo.listByUser).toHaveBeenCalledWith(
       'alice',

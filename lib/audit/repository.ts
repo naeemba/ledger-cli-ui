@@ -1,11 +1,16 @@
-import { and, desc, eq, inArray, lt, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt } from 'drizzle-orm';
 import type { AuditAction } from './schema';
 import type { AuditEvent } from './schema';
 import { auditLog, type AuditLog } from '@/db/schema/auditLog';
 import type { DbInstance } from '@/lib/db/connection';
 import { generateUid } from '@/lib/journal/uid';
 
-export type AuditCursor = { createdAt: Date; id: string };
+// `id` is a ULID: unique and lexicographically time-ordered, so an id-only
+// keyset is a stable total order and serves desc-by-time pagination without
+// depending on `createdAt` timestamp precision (the postgres.js driver returns
+// ms-precision Dates while the column stores µs, so a createdAt cursor would
+// silently skip rows sharing a millisecond).
+export type AuditCursor = { id: string };
 
 type ListOpts = {
   limit?: number;
@@ -44,22 +49,14 @@ export class AuditRepository {
       .where(
         and(
           eq(auditLog.userId, userId),
-          before
-            ? or(
-                lt(auditLog.createdAt, before.createdAt),
-                and(
-                  eq(auditLog.createdAt, before.createdAt),
-                  lt(auditLog.id, before.id)
-                )
-              )
-            : undefined,
+          before ? lt(auditLog.id, before.id) : undefined,
           actions && actions.length > 0
             ? inArray(auditLog.action, actions)
             : undefined,
           result ? eq(auditLog.result, result) : undefined
         )
       )
-      .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
+      .orderBy(desc(auditLog.id))
       .limit(limit);
   }
 }

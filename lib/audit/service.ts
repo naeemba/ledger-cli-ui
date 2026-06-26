@@ -10,6 +10,11 @@ const log = createLogger('audit');
 
 export type ActivityType = 'all' | 'transactions' | 'imports' | 'security';
 
+/** Result-filter union: single source of truth shared by the param parser
+ * (features/activity) and the activity UI. */
+export const RESULT_FILTERS = ['all', 'success', 'failure'] as const;
+export type ResultFilter = (typeof RESULT_FILTERS)[number];
+
 const TYPE_ACTIONS: Record<Exclude<ActivityType, 'all'>, AuditAction[]> = {
   transactions: ['tx.add', 'tx.edit', 'tx.delete'],
   imports: ['journal.import'],
@@ -59,7 +64,7 @@ export class AuditService {
       limit?: number;
       before?: AuditCursor;
       type?: ActivityType;
-      result?: 'all' | 'success' | 'failure';
+      result?: ResultFilter;
     } = {}
   ): Promise<AuditLog[]> {
     const { limit = 50, before, type = 'all', result = 'all' } = opts;

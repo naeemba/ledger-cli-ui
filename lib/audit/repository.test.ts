@@ -51,24 +51,33 @@ describe('AuditRepository', () => {
     expect(rows.every((r) => r.userId === 'alice')).toBe(true);
   });
 
-  it('listByUser paginates with a composite cursor (no overlap)', async () => {
-    // Insert 3 rows oldest→newest; createdAt default now() is strictly increasing.
+  it('listByUser paginates with an id keyset cursor (no overlap, full coverage)', async () => {
+    // ULID ids form a stable, unique total order, so desc(id) keyset
+    // pagination must cover every row exactly once with no gap or repeat.
     await repo.insert('alice', { action: 'tx.add', result: 'success' });
     await repo.insert('alice', { action: 'tx.edit', result: 'success' });
     await repo.insert('alice', { action: 'tx.delete', result: 'success' });
 
+    const all = await repo.listByUser('alice');
+    // Rows come back ordered by id descending.
+    const idsDesc = [...all.map((r) => r.id)].sort().reverse();
+    expect(all.map((r) => r.id)).toEqual(idsDesc);
+
     const page1 = await repo.listByUser('alice', { limit: 2 });
     expect(page1).toHaveLength(2);
-    expect(page1[0].action).toBe('tx.delete'); // newest first
+    expect(page1).toEqual(all.slice(0, 2));
 
-    const last = page1[1];
     const page2 = await repo.listByUser('alice', {
       limit: 2,
-      before: { createdAt: last.createdAt, id: last.id },
+      before: { id: page1[1].id },
     });
     expect(page2).toHaveLength(1);
-    expect(page2[0].action).toBe('tx.add'); // oldest
-    expect(page2.map((r) => r.id)).not.toContain(last.id);
+    expect(page2[0].id).toBe(all[2].id);
+
+    // The two pages together cover all rows with no overlap.
+    const seen = [...page1, ...page2].map((r) => r.id);
+    expect(new Set(seen).size).toBe(3);
+    expect(seen).toEqual(all.map((r) => r.id));
   });
 
   it('listByUser filters by actions and result', async () => {
