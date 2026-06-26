@@ -3,7 +3,10 @@ import path from 'path';
 import { eq } from 'drizzle-orm';
 import 'server-only';
 import { renderPriceDb, hasGeneratedBanner } from './formatter';
+import type { CommodityPriceRow } from './formatter';
 import { withPriceLock } from './lock';
+import type { ManualPriceRepository } from './manualRepository';
+import { buildPricedAt, type ManualPriceDraft } from './manualSchema';
 import { parseLegacyPriceDb } from './migration';
 import { fetchPrices, type QuotePair } from './provider';
 import {
@@ -12,6 +15,7 @@ import {
 } from './repository';
 import { normalizeCommoditySymbol } from './symbols';
 import { userSetting } from '@/db/schema';
+import type { ManualPrice } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 import { env } from '@/lib/env';
 import { PRICE_DB_NAME, getJournalCacheTag } from '@/lib/journal/layout';
@@ -43,6 +47,7 @@ type Deps = {
   commodityRepo: CommodityPriceRepository;
   runRepo: PriceFetchRunRepository;
   journalRepo: JournalRepository;
+  manualRepo: ManualPriceRepository;
 };
 
 export class PriceService {
@@ -63,16 +68,81 @@ export class PriceService {
     const userSymbols = new Set(
       await this.listNormalizedSymbolsForUser(userId)
     );
-    const filtered = all.filter((r) => userSymbols.has(r.symbol));
-    const body = renderPriceDb(filtered);
+    const fetched = all.filter((r) => userSymbols.has(r.symbol));
+    const manual = await this.deps.manualRepo.listForUser(userId);
+    const manualRows: CommodityPriceRow[] = manual.map((m) => ({
+      symbol: m.symbol,
+      quote: m.quote,
+      price: m.price,
+      fetchedAt: m.pricedAt,
+      fetchedDate: utcDate(m.pricedAt),
+    }));
+    // Concatenate fetched-first, then stable-sort by instant: equal timestamps
+    // keep fetched before manual, so manual ends up later in the file and wins.
+    const merged = [...fetched, ...manualRows].sort(
+      (a, b) => a.fetchedAt.getTime() - b.fetchedAt.getTime()
+    );
+    const body = renderPriceDb(merged);
     const target = path.join(layout.dir, PRICE_DB_NAME);
     await this.deps.journalRepo.writeFileAtomic(target, body);
     try {
       revalidateTag(getJournalCacheTag(userId), 'max');
     } catch {
-      // revalidateTag throws outside a Next.js request context (e.g. cron, tests).
-      // This is acceptable — the cache will be invalidated on the next request.
+      // revalidateTag throws outside a Next.js request context (cron, tests).
+      // Acceptable — the cache invalidates on the next request.
     }
+  }
+
+  async addManualPrices(
+    userId: string,
+    draft: ManualPriceDraft
+  ): Promise<{ ok: true } | { ok: false; formError: string }> {
+    const quote = normalizeCommoditySymbol(draft.quote);
+    if (!quote) return { ok: false, formError: 'Invalid quote currency' };
+    const pricedAt = buildPricedAt(draft.date, draft.time);
+    if (!pricedAt) return { ok: false, formError: 'Invalid date or time' };
+
+    const byKey = new Map<
+      string,
+      {
+        userId: string;
+        symbol: string;
+        quote: string;
+        price: number;
+        pricedAt: Date;
+      }
+    >();
+    for (const row of draft.rows) {
+      const symbol = normalizeCommoditySymbol(row.symbol);
+      if (!symbol) {
+        return { ok: false, formError: `Invalid commodity: ${row.symbol}` };
+      }
+      if (symbol === quote) {
+        return { ok: false, formError: `Cannot price ${symbol} in itself` };
+      }
+      byKey.set(symbol, { userId, symbol, quote, price: row.price, pricedAt });
+    }
+
+    await this.deps.manualRepo.upsertMany([...byKey.values()]);
+    await this.regenerateUserPriceDb(userId);
+    return { ok: true };
+  }
+
+  async listManualPrices(userId: string): Promise<ManualPrice[]> {
+    return this.deps.manualRepo.listForUser(userId);
+  }
+
+  async deleteManualPrice(userId: string, id: number): Promise<void> {
+    await this.deps.manualRepo.deleteForUser(userId, id);
+    await this.regenerateUserPriceDb(userId);
+  }
+
+  async getBaseCurrency(userId: string): Promise<string> {
+    return this.resolveBaseCurrency(userId);
+  }
+
+  async listCommoditiesForUser(userId: string): Promise<string[]> {
+    return this.listNormalizedSymbolsForUser(userId);
   }
 
   private async runOnce(): Promise<RefreshResult> {
@@ -155,7 +225,7 @@ export class PriceService {
     return rows.map((r) => r.id);
   }
 
-  private async resolveBaseCurrency(userId: string): Promise<string> {
+  async resolveBaseCurrency(userId: string): Promise<string> {
     const rows = await this.deps.db
       .select({ baseCurrency: userSetting.baseCurrency })
       .from(userSetting)
@@ -164,9 +234,7 @@ export class PriceService {
     return rows[0]?.baseCurrency ?? env.DEFAULT_CURRENCY;
   }
 
-  private async listNormalizedSymbolsForUser(
-    userId: string
-  ): Promise<string[]> {
+  async listNormalizedSymbolsForUser(userId: string): Promise<string[]> {
     let stdout: string;
     try {
       stdout = await runLedgerForUser(
