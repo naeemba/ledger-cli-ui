@@ -5,6 +5,8 @@ export const AUDIT_ACTIONS = [
   'tx.edit',
   'tx.delete',
   'journal.import',
+  'price.add',
+  'price.delete',
   'crypto.enable',
   'crypto.unlock',
   'crypto.lock',
