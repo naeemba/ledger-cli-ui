@@ -57,6 +57,13 @@
       "when": 1782492438505,
       "tag": "0007_kind_zuras",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782504971594,
+      "tag": "0008_lowly_zarek",
+      "breakpoints": true
     }
   ]
 }

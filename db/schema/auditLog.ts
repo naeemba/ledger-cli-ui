@@ -35,9 +35,10 @@ export const auditLog = pgTable(
   },
   // This is the largest, most append-heavy table in the schema (a row per
   // journal mutation + security event). Postgres does not auto-index FK
-  // columns, so serve `listByUser` (filter userId, order createdAt desc)
-  // with a matching composite index instead of a full table scan.
-  (t) => [index('auditLog_user_createdAt').on(t.userId, t.createdAt.desc())]
+  // columns, so serve `listByUser` (filter userId, order/keyset by id desc —
+  // id is a ULID, so desc(id) orders newest-first) with a matching composite
+  // index instead of a full table scan.
+  (t) => [index('auditLog_user_id').on(t.userId, t.id.desc())]
 );
 
 export type AuditLog = typeof auditLog.$inferSelect;

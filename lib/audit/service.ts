@@ -1,10 +1,32 @@
 import 'server-only';
 import { AuditRepository } from './repository';
-import { auditEventSchema, type AuditEvent } from './schema';
+import type { AuditCursor } from './repository';
+import { auditEventSchema, type AuditEvent, type AuditAction } from './schema';
+import type { AuditLog } from '@/db/schema/auditLog';
 import { db } from '@/lib/db';
 import { createLogger } from '@/lib/log';
 
 const log = createLogger('audit');
+
+export type ActivityType = 'all' | 'transactions' | 'imports' | 'security';
+
+/** Result-filter union: single source of truth shared by the param parser
+ * (features/activity) and the activity UI. */
+export const RESULT_FILTERS = ['all', 'success', 'failure'] as const;
+export type ResultFilter = (typeof RESULT_FILTERS)[number];
+
+const TYPE_ACTIONS: Record<Exclude<ActivityType, 'all'>, AuditAction[]> = {
+  transactions: ['tx.add', 'tx.edit', 'tx.delete'],
+  imports: ['journal.import'],
+  security: [
+    'crypto.enable',
+    'crypto.unlock',
+    'crypto.lock',
+    'crypto.passphrase-change',
+    'crypto.recovery-rotate',
+    'crypto.reset',
+  ],
+};
 
 export class AuditService {
   constructor(private readonly repo: AuditRepository) {}
@@ -31,6 +53,27 @@ export class AuditService {
     } catch (err) {
       log.error({ err, action: parsed.data.action }, 'audit insert failed');
     }
+  }
+
+  /** Read a user's own audit events, newest first, with optional group/result
+   * filters and a keyset cursor. Reads are NOT best-effort — a query failure
+   * propagates so the route error boundary can surface it. */
+  async listForUser(
+    userId: string,
+    opts: {
+      limit?: number;
+      before?: AuditCursor;
+      type?: ActivityType;
+      result?: ResultFilter;
+    } = {}
+  ): Promise<AuditLog[]> {
+    const { limit = 50, before, type = 'all', result = 'all' } = opts;
+    return this.repo.listByUser(userId, {
+      limit,
+      before,
+      actions: type === 'all' ? undefined : TYPE_ACTIONS[type],
+      result: result === 'all' ? undefined : result,
+    });
   }
 }
 

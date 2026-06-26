@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AuditRepository } from './repository';
-import { AuditService } from './service';
+import { AuditService, type ActivityType } from './service';
 
 const okRepo = () =>
   ({
@@ -36,5 +36,59 @@ describe('AuditService.record', () => {
       svc.record('alice', { action: 'nope', result: 'success' })
     ).resolves.toBeUndefined();
     expect(repo.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe('AuditService.listForUser', () => {
+  const listRepo = () =>
+    ({
+      listByUser: vi.fn().mockResolvedValue([]),
+    }) as unknown as AuditRepository;
+
+  it('translates type=security to the crypto.* actions', async () => {
+    const repo = listRepo();
+    const svc = new AuditService(repo);
+    await svc.listForUser('alice', { type: 'security' });
+    expect(repo.listByUser).toHaveBeenCalledWith(
+      'alice',
+      expect.objectContaining({
+        actions: expect.arrayContaining(['crypto.unlock', 'crypto.reset']),
+      })
+    );
+  });
+
+  it('translates type=transactions to tx.* and omits actions for all', async () => {
+    const repo = listRepo();
+    const svc = new AuditService(repo);
+    await svc.listForUser('alice', { type: 'transactions' });
+    expect(repo.listByUser).toHaveBeenCalledWith(
+      'alice',
+      expect.objectContaining({ actions: ['tx.add', 'tx.edit', 'tx.delete'] })
+    );
+
+    repo.listByUser = vi.fn().mockResolvedValue([]);
+    await svc.listForUser('alice', { type: 'all' });
+    expect(repo.listByUser).toHaveBeenCalledWith(
+      'alice',
+      expect.objectContaining({ actions: undefined })
+    );
+  });
+
+  it('normalizes result=all to no result filter, forwards cursor + limit', async () => {
+    const repo = listRepo();
+    const svc = new AuditService(repo);
+    const before = { id: '01KW2SBP2HX0HR2QGZ7QEGD50D' };
+    await svc.listForUser('alice', { result: 'all', limit: 51, before });
+    expect(repo.listByUser).toHaveBeenCalledWith(
+      'alice',
+      expect.objectContaining({ result: undefined, limit: 51, before })
+    );
+
+    repo.listByUser = vi.fn().mockResolvedValue([]);
+    await svc.listForUser('alice', { result: 'failure' });
+    expect(repo.listByUser).toHaveBeenCalledWith(
+      'alice',
+      expect.objectContaining({ result: 'failure' })
+    );
   });
 });
