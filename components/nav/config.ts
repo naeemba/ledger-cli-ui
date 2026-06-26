@@ -13,6 +13,7 @@ import {
   PiggyBank,
   PlusCircle,
   Settings,
+  TrendingUp,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -177,6 +178,15 @@ export const getNavSections = (): NavSection[] => {
           description: 'Replace your journal from a file or .zip archive.',
           icon: FileUp,
           keywords: ['upload', 'replace', 'zip'],
+        },
+        {
+          id: 'prices',
+          title: 'Prices',
+          href: '/prices',
+          match: 'exact',
+          description: 'Record exchange rates for commodities like KIRT.',
+          icon: TrendingUp,
+          keywords: ['exchange', 'rate', 'commodity', 'currency', 'price'],
         },
       ],
     },
