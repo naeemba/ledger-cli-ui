@@ -53,8 +53,11 @@ Existing infrastructure (no changes needed to the recording path):
 No client component, no extra server action. Matches the project-wide "server
 component reads URL search params" convention (DateFilter, transactions, saved views).
 
-- Cursor is the opaque `id` (ULID, time-sortable) of the last row on the current page.
-- "Load more" is a plain `<Link>` to `?…&before=<lastId>` → full-page navigation.
+- Cursor is a **composite keyset** of the last row on the page: its `createdAt`
+  (epoch ms) and `id` (ULID) — encoded in the URL as `before=<epochMs>_<id>`. The
+  composite is required because ordering is `createdAt desc, id desc`; an id-only
+  cursor would skip or repeat rows that share a `createdAt`.
+- "Load more" is a plain `<Link>` to `?…&before=<epochMs>_<id>` → full-page navigation.
 - Page size: 50 (constant `ACTIVITY_PAGE_SIZE`).
 
 ### Filters — URL search params
@@ -74,23 +77,25 @@ component reads URL search params" convention (DateFilter, transactions, saved v
 Replace the `(userId, limit=100)` signature with `(userId, opts?)`:
 
 ```ts
+type Cursor = { createdAt: Date; id: string };
 type ListOpts = {
   limit?: number;          // default 100
-  before?: string;         // cursor: only rows with id < before
+  before?: Cursor;         // composite keyset cursor
   actions?: AuditAction[]; // restrict to these raw actions (filter group)
   result?: 'success' | 'failure';
 };
 async listByUser(userId: string, opts?: ListOpts): Promise<AuditLog[]>
 ```
 
-Query: `where userId = ?` AND (`before` ? `id < before`) AND
-(`actions` ? `action in (...)`) AND (`result` ? `result = ?`),
+Query: `where userId = ?` AND (`before` ?
+`(createdAt < before.createdAt OR (createdAt = before.createdAt AND id < before.id))`)
+AND (`actions` ? `action in (...)`) AND (`result` ? `result = ?`),
 `order by createdAt desc, id desc`, `limit`.
 
-The `id < before` tiebreak on a ULID gives stable keyset pagination consistent with
-`createdAt desc` ordering; the existing `(userId, createdAt desc)` index still serves
-the scan. The one existing caller (none yet outside tests — `listByUser` is currently
-only referenced by the repo's own tests) is updated to the new signature.
+The composite `(createdAt, id)` keyset gives stable pagination with no skips/repeats
+on tied timestamps; the existing `(userId, createdAt desc)` index serves the scan.
+The repository's own tests are the only existing callers; they are updated to the new
+signature.
 
 ### `AuditService` — read method
 
