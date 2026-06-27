@@ -9,6 +9,7 @@ import Card from '@/components/Card';
 import Help from '@/components/Help';
 import { buttonVariants } from '@/components/ui/button';
 import { Card as ShadcnCard } from '@/components/ui/card';
+import { TableScroll } from '@/components/ui/table';
 import { requireUser } from '@/lib/auth/require-user';
 import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency } from '@/lib/settings';
@@ -188,45 +189,47 @@ const Dashboard = async () => {
           </div>
         </div>
         <ShadcnCard className="gap-0 overflow-hidden p-0">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Payee</th>
-                <th>Account</th>
-                <th className="text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.length === 0 ? (
+          <TableScroll bleed={false}>
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-muted">
-                    No transactions
-                  </td>
+                  <th>Date</th>
+                  <th>Payee</th>
+                  <th>Account</th>
+                  <th className="text-right">Amount</th>
                 </tr>
-              ) : (
-                recent.map((row, idx) => (
-                  <tr key={idx}>
-                    <td className="whitespace-nowrap text-muted">
-                      {formatDate(row.date, Format.DATE)}
-                    </td>
-                    <td>{row.payee || '—'}</td>
-                    <td>
-                      <Link
-                        className="text-fg hover:text-accent"
-                        href={`/accounts/${encodeURIComponent(row.account)}`}
-                      >
-                        {row.account}
-                      </Link>
-                    </td>
-                    <td className="text-right">
-                      {formatAmount(row.amount, true)}
+              </thead>
+              <tbody>
+                {recent.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-muted">
+                      No transactions
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  recent.map((row, idx) => (
+                    <tr key={idx}>
+                      <td className="whitespace-nowrap text-muted">
+                        {formatDate(row.date, Format.DATE)}
+                      </td>
+                      <td>{row.payee || '—'}</td>
+                      <td>
+                        <Link
+                          className="text-fg hover:text-accent"
+                          href={`/accounts/${encodeURIComponent(row.account)}`}
+                        >
+                          {row.account}
+                        </Link>
+                      </td>
+                      <td className="text-right whitespace-nowrap">
+                        {formatAmount(row.amount, true)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </TableScroll>
         </ShadcnCard>
       </section>
 
@@ -241,7 +244,7 @@ const Dashboard = async () => {
             reconcile.
           </Help>
         </div>
-        <ShadcnCard className="grid grid-cols-2 gap-6 px-6 sm:grid-cols-3 lg:grid-cols-6">
+        <ShadcnCard className="grid grid-cols-1 gap-6 px-6 sm:grid-cols-3 lg:grid-cols-6">
           <Stat label="Postings" value={stats.postings} />
           <Stat label="Uncleared" value={stats.uncleared} />
           <Stat label="Last 7 days" value={stats.last7} />
