@@ -1,0 +1,63 @@
+# Local development backing services for ledger-cli-ui.
+#
+# Brought up by `pnpm app:dev` (see scripts/app-dev.sh), which waits for both
+# services to become healthy, assigns the Garage cluster layout, and then runs
+# the Next dev server on the host. The app itself is NOT containerised — it runs
+# via `next dev` so HMR is fast and it reuses the host `ledger` binary.
+#
+# Credentials here are dev-only and intentionally committed; never reuse them.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: ledger-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ledger_dev
+    ports:
+      # Host 5433 (not 5432) so this project's DB doesn't clash with other local
+      # Postgres containers. Must match the port in DATABASE_URL (.env.example).
+      - '5433:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d ledger_dev']
+      interval: 3s
+      timeout: 5s
+      retries: 15
+      start_period: 5s
+
+  garage:
+    # S3-compatible object store — canonical home for journal files in prod, and
+    # exercised locally so dev mirrors the STORAGE_BACKEND=s3 path. Image is
+    # distroless (no shell): the layout bootstrap in scripts/app-dev.sh invokes
+    # the /garage binary directly rather than `sh -c`.
+    image: dxflrs/garage:v2.3.0
+    container_name: ledger-garage
+    restart: unless-stopped
+    # The cluster layout, bucket ('ledger') and access key are provisioned by
+    # scripts/app-dev.sh after the node is healthy — a fresh node has no layout,
+    # so they can't be created at image-startup time. Those fixed dev access
+    # keys must match the S3_* values in .env.example.
+    ports:
+      - '3900:3900' # S3 API (used by the app on the host)
+      - '3903:3903' # admin API (optional, for debugging)
+    volumes:
+      - ./docker/garage.dev.toml:/etc/garage.toml:ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+    healthcheck:
+      # Passes once the local node is up — true before a layout is assigned,
+      # which is exactly what the bootstrap step needs.
+      test: ['CMD', '/garage', 'status']
+      interval: 3s
+      timeout: 5s
+      retries: 15
+      start_period: 5s
+
+volumes:
+  pgdata:
+  garage_meta:
+  garage_data:

@@ -4,7 +4,7 @@ import { EncryptionResetService } from './service';
 import { APP_NAME } from '@/lib/app';
 import { resetUserEncryption } from '@/lib/crypto/resetEncryption';
 import { db } from '@/lib/db';
-import { postalTransport } from '@/lib/email-transport';
+import { emailTransport } from '@/lib/email-transport';
 import { env } from '@/lib/env';
 
 const sendCode = async (email: string, code: string): Promise<void> => {
@@ -21,7 +21,7 @@ const sendCode = async (email: string, code: string): Promise<void> => {
     `<p>It expires in 10 minutes.</p>` +
     `<p><strong>Warning:</strong> confirming this will permanently delete your encrypted journal and reset encryption to &ldquo;not set up&rdquo;.</p>` +
     `<p>If you didn't request this, ignore this email — nothing will happen.</p>`;
-  await postalTransport({ to: email, from, subject, html, text });
+  await emailTransport({ to: email, from, subject, html, text });
 };
 
 const encryptionResetChallengeRepository =

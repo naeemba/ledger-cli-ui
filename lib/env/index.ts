@@ -27,12 +27,16 @@ const envSchema = clientEnvSchema
     // validated here so a bad value fails fast at startup.
     JOURNAL_QUOTA_MB: z.coerce.number().int().positive().default(100),
 
-    // Email (magic link). Delivered via the self-hosted Postal server (see
-    // lib/email-transport.ts). Both Postal vars are required so a missing/empty
-    // value fails fast at startup rather than the first time someone signs in.
+    // Email (magic link). 'postal' delivers via the self-hosted Postal server
+    // (see lib/email-transport.ts); 'console' prints the link/code to the dev
+    // server console and sends nothing — for local development. When 'postal',
+    // both POSTAL_* vars are required (enforced by the superRefine below) so a
+    // missing value fails fast at startup rather than the first time someone
+    // signs in.
+    EMAIL_TRANSPORT: z.enum(['postal', 'console']).default('postal'),
     EMAIL_FROM: z.string().default('auth@example.com'),
-    POSTAL_API_URL: z.string().url(),
-    POSTAL_API_KEY: z.string().min(1),
+    POSTAL_API_URL: z.string().url().optional(),
+    POSTAL_API_KEY: z.string().min(1).optional(),
 
     // Structured logging level (pino).
     LOG_LEVEL: z
@@ -74,6 +78,18 @@ const envSchema = clientEnvSchema
       .transform((v) => v === 'true'),
   })
   .superRefine((val, ctx) => {
+    if (val.EMAIL_TRANSPORT === 'postal') {
+      for (const key of ['POSTAL_API_URL', 'POSTAL_API_KEY'] as const) {
+        if (!val[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} is required when EMAIL_TRANSPORT=postal`,
+          });
+        }
+      }
+    }
+
     if (val.STORAGE_BACKEND !== 's3') return;
     const required = [
       'S3_ENDPOINT',

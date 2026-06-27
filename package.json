@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "app:dev": "./scripts/app-dev.sh",
+    "app:down": "docker compose down",
+    "app:reset": "docker compose down -v",
     "migrate": "next-starter migrate && drizzle-kit migrate",
     "predev": "dotenv -e .env -- pnpm migrate",
     "dev": "dotenv -e .env -- next dev",
