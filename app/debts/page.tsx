@@ -32,10 +32,12 @@ const Debts = async () => {
             </Help>
             <ExportButton href="/api/debts/export" />
           </div>
-          <p className="mt-1 text-sm text-muted">Outstanding credit by payee</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Outstanding credit by payee
+          </p>
         </div>
         <div className="text-right">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted">
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Total
           </div>
           <div className="text-2xl font-semibold tracking-tight">
@@ -58,7 +60,10 @@ const Debts = async () => {
             <tbody>
               {debts.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="py-6 text-center text-muted">
+                  <td
+                    colSpan={2}
+                    className="py-6 text-center text-muted-foreground"
+                  >
                     No debts
                   </td>
                 </tr>

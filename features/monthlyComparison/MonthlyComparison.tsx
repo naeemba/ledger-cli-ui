@@ -29,7 +29,9 @@ const MonthlyComparison = async () => {
           </Help>
           <ExportButton href="/api/monthly/export" />
         </div>
-        <p className="mt-1 text-sm text-muted">Income vs expenses by month</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Income vs expenses by month
+        </p>
       </div>
 
       <Card className="gap-0 overflow-hidden p-0">
@@ -52,7 +54,10 @@ const MonthlyComparison = async () => {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-muted">
+                  <td
+                    colSpan={4}
+                    className="py-6 text-center text-muted-foreground"
+                  >
                     No data
                   </td>
                 </tr>

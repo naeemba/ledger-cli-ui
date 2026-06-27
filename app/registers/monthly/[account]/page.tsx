@@ -62,7 +62,10 @@ const Monthly = async ({
             <tbody>
               {results.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="py-6 text-center text-muted">
+                  <td
+                    colSpan={2}
+                    className="py-6 text-center text-muted-foreground"
+                  >
                     No transactions
                   </td>
                 </tr>

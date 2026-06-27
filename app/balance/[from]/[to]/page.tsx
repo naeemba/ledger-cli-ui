@@ -60,7 +60,7 @@ const PeriodBalance = async ({
             filter below to pick a month, quarter, year, or custom span.
           </Help>
         </div>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-muted-foreground">
           {formatDate(from.toISOString(), Format.DATE)} –{' '}
           {formatDate(to.toISOString(), Format.DATE)}
         </p>
@@ -82,7 +82,7 @@ const PeriodBalance = async ({
         <h2 className="text-lg font-medium text-fg">Total Expenses</h2>
         <div className="flex items-end gap-3">
           <div className="text-right">
-            <div className="text-xs font-medium uppercase tracking-wider text-muted">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Total
             </div>
             <div className="text-2xl font-semibold tracking-tight">
@@ -108,7 +108,10 @@ const PeriodBalance = async ({
           <tbody>
             {results.length === 0 ? (
               <tr>
-                <td colSpan={2} className="py-6 text-center text-muted">
+                <td
+                  colSpan={2}
+                  className="py-6 text-center text-muted-foreground"
+                >
                   No expenses in this period
                 </td>
               </tr>

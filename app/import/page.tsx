@@ -86,7 +86,7 @@ export default function ImportPage() {
             MB.
           </Help>
         </div>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-muted-foreground">
           Replace your journal with an existing file or archive
         </p>
       </div>
@@ -120,7 +120,7 @@ export default function ImportPage() {
         )}
       </form>
 
-      <div className="rounded-2xl border border-border bg-card p-5 text-xs text-muted shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-5 text-xs text-muted-foreground shadow-sm">
         <div className="mb-2 font-medium text-fg">Tips</div>
         <ul className="list-disc space-y-1 pl-4">
           <li>

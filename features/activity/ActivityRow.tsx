@@ -4,7 +4,7 @@ import { describeAuditEvent } from '@/lib/audit/describe';
 
 const DetailLine = ({ label, value }: { label: string; value: string }) => (
   <div className="flex gap-2">
-    <span className="w-24 shrink-0 text-muted">{label}</span>
+    <span className="w-24 shrink-0 text-muted-foreground">{label}</span>
     <span className="break-all tabular-nums">{value}</span>
   </div>
 );
@@ -28,13 +28,13 @@ const ActivityRow = ({ row }: { row: AuditLog }) => {
         </span>
         <span className="flex-1">{label}</span>
         <time
-          className="shrink-0 text-muted"
+          className="shrink-0 text-muted-foreground"
           dateTime={new Date(row.createdAt).toISOString()}
         >
           {formatWhen(row.createdAt)}
         </time>
       </summary>
-      <div className="mt-2 flex flex-col gap-1 pl-6 text-muted">
+      <div className="mt-2 flex flex-col gap-1 pl-6 text-muted-foreground">
         {row.targetUid && <DetailLine label="uid" value={row.targetUid} />}
         {hasBytes && (
           <DetailLine

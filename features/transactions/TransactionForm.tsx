@@ -1,6 +1,12 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { toast } from 'sonner';
 import type { TransactionActionState } from './actions';
 import Combobox from '@/components/Combobox';
@@ -51,6 +57,13 @@ const todayISO = (): string => {
 
 const initialState: TransactionActionState = { ok: false };
 
+// Two blank postings — the minimum a transaction needs. Defined once so the
+// initial draft and `resetForm` stay in sync.
+const emptyPostings = (currency: string): Posting[] => [
+  { account: '', amount: '', currency },
+  { account: '', amount: '', currency },
+];
+
 const fieldError = (state: TransactionActionState | null, key: string) =>
   state?.fieldErrors?.[key];
 
@@ -80,23 +93,45 @@ const TransactionForm = ({
       account: p.account,
       amount: p.amount,
       currency: p.currency,
-    })) ?? [
-      { account: '', amount: '', currency: defaultCurrency },
-      { account: '', amount: '', currency: defaultCurrency },
-    ]
+    })) ?? emptyPostings(defaultCurrency)
   );
 
   const formRef = useRef<HTMLFormElement>(null);
+  // Set by the "Save & add another" button so the success effect resets the
+  // form in place instead of navigating away. Reset after each save.
+  const saveAndAddAnother = useRef(false);
+
+  const resetForm = useCallback(() => {
+    setDate(todayISO());
+    setPayee('');
+    setStatus('none');
+    setNote('');
+    setPostings(emptyPostings(defaultCurrency));
+  }, [defaultCurrency]);
 
   useEffect(() => {
-    if (state?.ok) {
-      toast.success(
-        mode === 'edit' ? 'Transaction updated' : 'Transaction saved'
-      );
-      router.push(mode === 'edit' ? '/transactions' : '/');
+    // Capture and clear on every settled result. If a "Save & add another"
+    // submit fails, leaving the ref set would make the next Enter-key submit
+    // reset in place instead of redirecting — contradicting the documented
+    // "Enter defaults to redirect" contract.
+    const addAnother = saveAndAddAnother.current;
+    saveAndAddAnother.current = false;
+    if (!state?.ok) return;
+    if (mode === 'edit') {
+      toast.success('Transaction updated');
+      router.push('/transactions');
       router.refresh();
+      return;
     }
-  }, [state, router, mode]);
+    toast.success('Transaction saved');
+    if (addAnother) {
+      resetForm();
+      router.refresh();
+      return;
+    }
+    router.push('/');
+    router.refresh();
+  }, [state, router, mode, resetForm]);
 
   useEffect(() => {
     if (templateMissing) {
@@ -315,7 +350,25 @@ const TransactionForm = ({
                 draft={templateDraft}
                 disabled={!canSaveTemplate}
               />
-              <Button type="submit" disabled={!canSubmit}>
+              {mode !== 'edit' && (
+                <Button
+                  type="submit"
+                  variant="outline"
+                  disabled={!canSubmit}
+                  onClick={() => {
+                    saveAndAddAnother.current = true;
+                  }}
+                >
+                  {isPending ? 'Saving…' : 'Save & add another'}
+                </Button>
+              )}
+              <Button
+                type="submit"
+                disabled={!canSubmit}
+                onClick={() => {
+                  saveAndAddAnother.current = false;
+                }}
+              >
                 {isPending
                   ? 'Saving…'
                   : mode === 'edit'
@@ -434,7 +487,7 @@ const BalanceIndicator = ({ balance }: { balance: Balance }) => {
   }
   if (balance.kind === 'auto-balance') {
     return (
-      <span className="text-xs text-muted">
+      <span className="text-xs text-muted-foreground">
         Blank posting will auto-balance
       </span>
     );

@@ -36,11 +36,13 @@ const Balance = async () => {
               drill into its transactions.
             </Help>
           </div>
-          <p className="mt-1 text-sm text-muted">Assets & liabilities</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Assets & liabilities
+          </p>
         </div>
         <div className="flex items-end gap-3">
           <div className="text-right">
-            <div className="text-xs font-medium uppercase tracking-wider text-muted">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Total
             </div>
             <div className="text-2xl font-semibold tracking-tight">
@@ -65,7 +67,10 @@ const Balance = async () => {
             <tbody>
               {result.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="py-6 text-center text-muted">
+                  <td
+                    colSpan={2}
+                    className="py-6 text-center text-muted-foreground"
+                  >
                     No data
                   </td>
                 </tr>

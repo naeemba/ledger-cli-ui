@@ -53,12 +53,12 @@ const NetWorth = async () => {
             </Help>
             <ExportButton href="/api/net-worth/export" />
           </div>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             Trend over the last {MONTHS_BACK} months
           </p>
         </div>
         <div className="text-right">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted">
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Current
           </div>
           <div className="text-2xl font-semibold tracking-tight">

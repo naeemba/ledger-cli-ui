@@ -61,7 +61,7 @@ const NewTransaction = async ({ templateId }: Props) => {
             amount blank to let ledger auto-balance it.
           </Help>
         </div>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-muted-foreground">
           A new entry is appended to your journal file. Reports refresh
           immediately.
         </p>

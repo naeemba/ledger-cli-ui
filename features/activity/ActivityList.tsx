@@ -75,7 +75,9 @@ const ActivityList = ({
     </div>
 
     {rows.length === 0 ? (
-      <p className="text-muted">No activity matches these filters yet.</p>
+      <p className="text-muted-foreground">
+        No activity matches these filters yet.
+      </p>
     ) : (
       <div className="flex flex-col">
         {rows.map((row) => (

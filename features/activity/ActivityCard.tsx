@@ -18,7 +18,7 @@ const ActivityCard = ({ rows }: { rows: AuditLog[] }) => (
     </CardHeader>
     <CardContent>
       {rows.length === 0 ? (
-        <p className="text-sm text-muted">No activity yet.</p>
+        <p className="text-sm text-muted-foreground">No activity yet.</p>
       ) : (
         <ul className="flex flex-col gap-2 text-sm">
           {rows.map((row) => {
@@ -33,7 +33,7 @@ const ActivityCard = ({ rows }: { rows: AuditLog[] }) => (
                 </span>
                 <span className="flex-1">{label}</span>
                 <time
-                  className="shrink-0 text-muted"
+                  className="shrink-0 text-muted-foreground"
                   dateTime={new Date(row.createdAt).toISOString()}
                 >
                   {formatWhen(row.createdAt)}
