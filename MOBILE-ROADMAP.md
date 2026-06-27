@@ -85,15 +85,15 @@ Wrap in scroll container + de-overflow (all 🟠 unless noted):
   dates. `app/accounts/[account]/page.tsx:41,62`
 - [x] 🟠 **Dashboard "recent"** — 4 cols + `whitespace-nowrap` date.
   `features/dashboard/Dashboard.tsx:191,210`
-- [ ] 🟠 **Prices** — 6 cols, timestamps overflow. `features/prices/PricesView.tsx:174`
-- [ ] 🟠 **Portfolio** — 4 cols, long account/commodity names.
+- [x] 🟠 **Prices** — 6 cols, timestamps overflow. `features/prices/PricesView.tsx:174`
+- [x] 🟠 **Portfolio** — 4 cols, long account/commodity names.
   `features/portfolio/Portfolio.tsx:116`
-- [ ] 🟠 **Cash flow / monthly comparison** — 4 cols, comma numbers overflow.
+- [x] 🟠 **Cash flow / monthly comparison** — 4 cols, comma numbers overflow.
   `features/monthlyComparison/MonthlyComparison.tsx:35`
 - [x] 🟠 **Balance** — 2 cols, long account names. `app/balance/page.tsx:54`
-- [ ] 🟠 **Debts** — 2 cols, long payee names. `app/debts/page.tsx:47`
-- [ ] 🟠 **Monthly register** — 2 cols. `app/registers/monthly/[account]/page.tsx:51`
-- [ ] 🟡 **Payees** — 2 cols, marginal. `features/payees/Payees.tsx:96`
+- [x] 🟠 **Debts** — 2 cols, long payee names. `app/debts/page.tsx:47`
+- [x] 🟠 **Monthly register** — 2 cols. `app/registers/monthly/[account]/page.tsx:51`
+- [x] 🟡 **Payees** — 2 cols, marginal. `features/payees/Payees.tsx:96`
 
 Grid/layout:
 
@@ -102,8 +102,10 @@ Grid/layout:
   `features/dashboard/Dashboard.tsx:244`
 - [x] 🟡 **Allow account-name wrapping** in narrow cells (drop `whitespace-nowrap`
   on the long text columns; keep it only on dates/amounts).
-- [ ] 🟡 **recharts responsiveness** — confirm charts use `<ResponsiveContainer>` and
-  don't set fixed pixel widths (portfolio / net-worth / monthly).
+- [x] 🟡 **recharts responsiveness** — confirm charts use `<ResponsiveContainer>` and
+  don't set fixed pixel widths (portfolio / net-worth / monthly). Verified: all
+  charts route through `Chart` → `ChartContainer` → `ResponsiveContainer` with a
+  `w-full` box and `height` set via CSS only; no fixed pixel widths anywhere.
 
 **Acceptance:** every table is either fully readable stacked, or scrolls smoothly
 inside a contained area with the rest of the page static. Numbers/dates never clip.

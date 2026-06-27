@@ -11,6 +11,7 @@ import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { TableScroll } from '@/components/ui/table';
 import { env } from '@/lib/env';
 import { getBaseCurrency } from '@/lib/settings';
 import { cn } from '@/lib/utils';
@@ -113,39 +114,43 @@ const Portfolio = async () => {
       </header>
 
       <Card className="gap-0 overflow-hidden p-0">
-        <table>
-          <thead>
-            <tr>
-              <th>Account</th>
-              <th className="text-right">Native</th>
-              <th className="text-right">
-                Value ({defaultCurrency.toUpperCase()})
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.account}>
-                <td>
-                  <Link
-                    className="block text-fg hover:text-accent"
-                    href={`/accounts/${encodeURIComponent(row.account)}`}
-                  >
-                    {row.account}
-                  </Link>
-                </td>
-                <td className="text-right">{formatAmount(row.native, true)}</td>
-                <td className="text-right">
-                  {row.converted ? (
-                    formatAmount(row.converted, true)
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
-                </td>
+        <TableScroll bleed={false}>
+          <table>
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th className="text-right whitespace-nowrap">Native</th>
+                <th className="text-right whitespace-nowrap">
+                  Value ({defaultCurrency.toUpperCase()})
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.account}>
+                  <td>
+                    <Link
+                      className="block text-fg hover:text-accent"
+                      href={`/accounts/${encodeURIComponent(row.account)}`}
+                    >
+                      {row.account}
+                    </Link>
+                  </td>
+                  <td className="text-right whitespace-nowrap">
+                    {formatAmount(row.native, true)}
+                  </td>
+                  <td className="text-right whitespace-nowrap">
+                    {row.converted ? (
+                      formatAmount(row.converted, true)
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </Card>
     </div>
   );

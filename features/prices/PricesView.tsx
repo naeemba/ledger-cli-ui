@@ -6,6 +6,7 @@ import Combobox from '@/components/Combobox/Combobox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TableScroll } from '@/components/ui/table';
 import type { ManualPrice } from '@/db/schema';
 import {
   addManualPricesAction,
@@ -176,41 +177,45 @@ export const PricesView = ({ prices, commodities, baseCurrency }: Props) => {
         {prices.length === 0 ? (
           <p className="text-muted-foreground text-sm">No manual prices yet.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-muted-foreground text-left">
-                <th className="py-1">When</th>
-                <th>Commodity</th>
-                <th className="text-right">Rate</th>
-                <th>Quote</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {prices.map((p) => (
-                <tr key={p.id} className="border-t">
-                  <td className="py-1">
-                    {formatLedgerInstant(new Date(p.pricedAt))}
-                  </td>
-                  <td>{p.symbol}</td>
-                  <td className="text-right tabular-nums">{p.price}</td>
-                  <td>{p.quote}</td>
-                  <td className="text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Delete ${p.symbol} rate`}
-                      disabled={isDeleting && deletingId === p.id}
-                      onClick={() => handleDelete(p.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </td>
+          <TableScroll>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-muted-foreground text-left">
+                  <th className="py-1 whitespace-nowrap">When</th>
+                  <th>Commodity</th>
+                  <th className="text-right whitespace-nowrap">Rate</th>
+                  <th>Quote</th>
+                  <th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {prices.map((p) => (
+                  <tr key={p.id} className="border-t">
+                    <td className="py-1 whitespace-nowrap">
+                      {formatLedgerInstant(new Date(p.pricedAt))}
+                    </td>
+                    <td>{p.symbol}</td>
+                    <td className="text-right tabular-nums whitespace-nowrap">
+                      {p.price}
+                    </td>
+                    <td>{p.quote}</td>
+                    <td className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Delete ${p.symbol} rate`}
+                        disabled={isDeleting && deletingId === p.id}
+                        onClick={() => handleDelete(p.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
         )}
       </section>
     </div>
