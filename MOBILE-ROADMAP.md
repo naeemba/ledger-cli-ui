@@ -79,28 +79,28 @@ tables, card-reflow for the read-first views (transactions, dashboard, balance).
 
 Wrap in scroll container + de-overflow (all 🟠 unless noted):
 
-- [ ] 🔴 **Transactions** — 7 cols, no scroll. `features/transactions/TransactionTable.tsx:37`
+- [x] 🔴 **Transactions** — 7 cols, no scroll. `features/transactions/TransactionTable.tsx:37`
   *(highest-traffic; do card-reflow here, not just scroll)*
-- [ ] 🔴 **Account register** — 5 cols, multi-currency overflow, `whitespace-nowrap`
+- [x] 🔴 **Account register** — 5 cols, multi-currency overflow, `whitespace-nowrap`
   dates. `app/accounts/[account]/page.tsx:41,62`
-- [ ] 🟠 **Dashboard "recent"** — 4 cols + `whitespace-nowrap` date.
+- [x] 🟠 **Dashboard "recent"** — 4 cols + `whitespace-nowrap` date.
   `features/dashboard/Dashboard.tsx:191,210`
 - [ ] 🟠 **Prices** — 6 cols, timestamps overflow. `features/prices/PricesView.tsx:174`
 - [ ] 🟠 **Portfolio** — 4 cols, long account/commodity names.
   `features/portfolio/Portfolio.tsx:116`
 - [ ] 🟠 **Cash flow / monthly comparison** — 4 cols, comma numbers overflow.
   `features/monthlyComparison/MonthlyComparison.tsx:35`
-- [ ] 🟠 **Balance** — 2 cols, long account names. `app/balance/page.tsx:54`
+- [x] 🟠 **Balance** — 2 cols, long account names. `app/balance/page.tsx:54`
 - [ ] 🟠 **Debts** — 2 cols, long payee names. `app/debts/page.tsx:47`
 - [ ] 🟠 **Monthly register** — 2 cols. `app/registers/monthly/[account]/page.tsx:51`
 - [ ] 🟡 **Payees** — 2 cols, marginal. `features/payees/Payees.tsx:96`
 
 Grid/layout:
 
-- [ ] 🟡 **Dashboard journal-health grid** collapses to 2-up on mobile for 6 stats;
+- [x] 🟡 **Dashboard journal-health grid** collapses to 2-up on mobile for 6 stats;
   go 1-col (or keep 2 but verify it isn't cramped).
   `features/dashboard/Dashboard.tsx:244`
-- [ ] 🟡 **Allow account-name wrapping** in narrow cells (drop `whitespace-nowrap`
+- [x] 🟡 **Allow account-name wrapping** in narrow cells (drop `whitespace-nowrap`
   on the long text columns; keep it only on dates/amounts).
 - [ ] 🟡 **recharts responsiveness** — confirm charts use `<ResponsiveContainer>` and
   don't set fixed pixel widths (portfolio / net-worth / monthly).
