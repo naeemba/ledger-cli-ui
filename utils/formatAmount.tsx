@@ -21,7 +21,7 @@ const formatAmountWithoutUnit = (str: string, unit?: string) => {
 
 const formatAmount = (str: string | undefined | null, withUnit: boolean) => {
   if (!str || !str.trim()) {
-    return <span className="text-muted">—</span>;
+    return <span className="text-muted-foreground">—</span>;
   }
   const splitted = str.split(' ');
   if (splitted.length < 2) {
