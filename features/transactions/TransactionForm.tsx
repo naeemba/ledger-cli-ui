@@ -176,7 +176,7 @@ const TransactionForm = ({
             />
           )}
 
-          <div className="grid gap-8 lg:grid-cols-[minmax(280px,360px)_1fr]">
+          <div className="grid gap-6 md:grid-cols-[minmax(240px,1fr)_1.6fr] md:gap-8 lg:grid-cols-[minmax(280px,360px)_1fr]">
             <section className="flex flex-col gap-5">
               <SectionLabel>Details</SectionLabel>
 
@@ -243,7 +243,7 @@ const TransactionForm = ({
               </Field>
             </section>
 
-            <section className="flex flex-col gap-3 lg:border-l lg:border-border lg:pl-8">
+            <section className="flex flex-col gap-3 md:border-l md:border-border md:pl-8">
               <div className="flex items-baseline justify-between">
                 <SectionLabel>Postings</SectionLabel>
                 <BalanceIndicator balance={balance} />
@@ -331,7 +331,7 @@ const TransactionForm = ({
 };
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:text-[0.7rem]">
     {children}
   </div>
 );
@@ -367,37 +367,40 @@ const PostingRow = ({
   onChange: (patch: Partial<Posting>) => void;
   onRemove: () => void;
 }) => (
-  <div className="grid grid-cols-[1fr_140px_90px_auto] items-center gap-2">
+  <div className="grid grid-cols-1 items-center gap-2 rounded-lg border border-border p-2 sm:grid-cols-[1fr_140px_90px_auto] sm:rounded-none sm:border-0 sm:p-0">
     <Combobox
       value={posting.account}
       onChange={(v) => onChange({ account: v })}
       options={accounts}
       placeholder="Account (e.g. Expenses:Food)"
     />
-    <Input
-      type="text"
-      inputMode="decimal"
-      value={posting.amount}
-      onChange={(e) => onChange({ amount: e.target.value })}
-      placeholder="Amount"
-      className="text-right tabular-nums"
-    />
-    <Input
-      type="text"
-      value={posting.currency}
-      onChange={(e) => onChange({ currency: e.target.value })}
-      placeholder="Currency"
-    />
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      onClick={onRemove}
-      disabled={!canRemove}
-      title={canRemove ? 'Remove posting' : 'At least two postings required'}
-    >
-      ×
-    </Button>
+    <div className="flex items-center gap-2 sm:contents">
+      <Input
+        type="text"
+        inputMode="decimal"
+        value={posting.amount}
+        onChange={(e) => onChange({ amount: e.target.value })}
+        placeholder="Amount"
+        className="flex-1 text-right tabular-nums sm:flex-none"
+      />
+      <Input
+        type="text"
+        value={posting.currency}
+        onChange={(e) => onChange({ currency: e.target.value })}
+        placeholder="Currency"
+        className="w-24 sm:w-auto"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        onClick={onRemove}
+        disabled={!canRemove}
+        title={canRemove ? 'Remove posting' : 'At least two postings required'}
+      >
+        ×
+      </Button>
+    </div>
   </div>
 );
 

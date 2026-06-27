@@ -112,7 +112,10 @@ export const PricesView = ({ prices, commodities, baseCurrency }: Props) => {
 
         <div className="space-y-2">
           {rows.map((row, i) => (
-            <div key={i} className="flex items-end gap-2">
+            <div
+              key={i}
+              className="flex flex-col gap-2 rounded-lg border p-2 sm:flex-row sm:items-end sm:rounded-none sm:border-0 sm:p-0"
+            >
               <div className="flex-1 space-y-1">
                 {i === 0 && <Label>Commodity</Label>}
                 <Combobox
@@ -123,29 +126,31 @@ export const PricesView = ({ prices, commodities, baseCurrency }: Props) => {
                   allowFreeText
                 />
               </div>
-              <div className="flex-1 space-y-1">
-                {i === 0 && <Label htmlFor={`price-${i}`}>Rate</Label>}
-                <Input
-                  id={`price-${i}`}
-                  type="number"
-                  step="any"
-                  min="0"
-                  inputMode="decimal"
-                  value={row.price}
-                  onChange={(e) => updateRow(i, { price: e.target.value })}
-                  placeholder="0.0000033"
-                />
+              <div className="flex items-end gap-2 sm:contents">
+                <div className="flex-1 space-y-1">
+                  {i === 0 && <Label htmlFor={`price-${i}`}>Rate</Label>}
+                  <Input
+                    id={`price-${i}`}
+                    type="number"
+                    step="any"
+                    min="0"
+                    inputMode="decimal"
+                    value={row.price}
+                    onChange={(e) => updateRow(i, { price: e.target.value })}
+                    placeholder="0.0000033"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Remove row"
+                  onClick={() => removeRow(i)}
+                  disabled={rows.length === 1}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Remove row"
-                onClick={() => removeRow(i)}
-                disabled={rows.length === 1}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={addRow}>
