@@ -112,16 +112,16 @@ inside a contained area with the rest of the page static. Numbers/dates never cl
 
 ## M2 — Forms & authoring
 
-- [ ] 🔴 **Transaction posting grid** `grid-cols-[1fr_140px_90px_auto]` is fixed-pixel
+- [x] 🔴 **Transaction posting grid** `grid-cols-[1fr_140px_90px_auto]` is fixed-pixel
   and overflows < ~360px; the core authoring flow breaks. Reflow to stacked rows
   on mobile (`grid-cols-1` / wrap), full-width on phones.
   `features/transactions/TransactionForm.tsx:370`
-- [ ] 🟡 **Transaction form two-column** `lg:grid-cols-[minmax(280px,360px)_1fr]` —
+- [x] 🟡 **Transaction form two-column** `lg:grid-cols-[minmax(280px,360px)_1fr]` —
   verify it collapses cleanly before `lg`; details col is cramped on tablets.
   `features/transactions/TransactionForm.tsx:179`
-- [ ] 🟡 **Prices add-rate form** `sm:grid-cols-3` date/time/quote inputs are narrow
+- [x] 🟡 **Prices add-rate form** `sm:grid-cols-3` date/time/quote inputs are narrow
   pre-`sm`; verify stacked layout on phones. `features/prices/PricesView.tsx:68`
-- [ ] 🟡 **Textarea / labels** — `min-h-16` textarea and `text-[0.7rem]` labels are
+- [x] 🟡 **Textarea / labels** — `min-h-16` textarea and `text-[0.7rem]` labels are
   cramped on phones; bump on mobile. `TransactionForm.tsx:334`, `ui/textarea.tsx:9`
 
 **Acceptance:** add/edit transaction is fully usable thumb-only on a 375px phone,
