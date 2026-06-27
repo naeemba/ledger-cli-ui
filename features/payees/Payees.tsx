@@ -3,6 +3,7 @@ import DateFilter from '@/components/DateFilter';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import { Card, CardContent } from '@/components/ui/card';
+import { TableScroll } from '@/components/ui/table';
 import SaveViewButton from '@/features/savedViews/SaveViewButton';
 import { requireUser } from '@/lib/auth/require-user';
 import { parsePayeeRows } from '@/lib/payees/parse';
@@ -93,32 +94,36 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
       />
 
       <Card className="gap-0 overflow-hidden p-0">
-        <table>
-          <thead>
-            <tr>
-              <th>Payee</th>
-              <th className="text-right">Total ({currency})</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.length === 0 ? (
+        <TableScroll bleed={false}>
+          <table>
+            <thead>
               <tr>
-                <td colSpan={2} className="py-6 text-center text-muted">
-                  No payee data in this period
-                </td>
+                <th>Payee</th>
+                <th className="text-right whitespace-nowrap">
+                  Total ({currency})
+                </th>
               </tr>
-            ) : (
-              sorted.map((r) => (
-                <tr key={r.payee}>
-                  <td>{r.payee}</td>
-                  <td className="text-right tabular-nums text-negative">
-                    {formatNumber(r.total)}
+            </thead>
+            <tbody>
+              {sorted.length === 0 ? (
+                <tr>
+                  <td colSpan={2} className="py-6 text-center text-muted">
+                    No payee data in this period
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                sorted.map((r) => (
+                  <tr key={r.payee}>
+                    <td>{r.payee}</td>
+                    <td className="text-right tabular-nums whitespace-nowrap text-negative">
+                      {formatNumber(r.total)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </TableScroll>
       </Card>
 
       {sorted.length > 0 && (

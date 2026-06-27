@@ -1,5 +1,6 @@
 import Chart from '@/components/Chart';
 import { Card, CardContent } from '@/components/ui/card';
+import { TableScroll } from '@/components/ui/table';
 import RegisterHeader from '@/features/registers/monthly/RegisterHeader';
 import { requireUser } from '@/lib/auth/require-user';
 import { savedViewService } from '@/lib/savedViews';
@@ -48,35 +49,41 @@ const Monthly = async ({
       />
 
       <Card className="gap-0 overflow-hidden p-0">
-        <table>
-          <thead>
-            <tr>
-              <th>Month</th>
-              <th className="text-right">Balance ({defaultCurrency})</th>
-            </tr>
-          </thead>
-          <tbody>
-            {results.length === 0 ? (
+        <TableScroll bleed={false}>
+          <table>
+            <thead>
               <tr>
-                <td colSpan={2} className="py-6 text-center text-muted">
-                  No transactions
-                </td>
+                <th className="whitespace-nowrap">Month</th>
+                <th className="text-right whitespace-nowrap">
+                  Balance ({defaultCurrency})
+                </th>
               </tr>
-            ) : (
-              results.map((item, index) => {
-                const columns = item.split('|');
-                return (
-                  <tr key={index}>
-                    <td>{formatDate(columns[0], Format.MONTH_YEAR)}</td>
-                    <td className="text-right">
-                      {formatAmount(columns[1], false)}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {results.length === 0 ? (
+                <tr>
+                  <td colSpan={2} className="py-6 text-center text-muted">
+                    No transactions
+                  </td>
+                </tr>
+              ) : (
+                results.map((item, index) => {
+                  const columns = item.split('|');
+                  return (
+                    <tr key={index}>
+                      <td className="whitespace-nowrap">
+                        {formatDate(columns[0], Format.MONTH_YEAR)}
+                      </td>
+                      <td className="text-right whitespace-nowrap">
+                        {formatAmount(columns[1], false)}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </TableScroll>
       </Card>
 
       {results.length > 0 && (

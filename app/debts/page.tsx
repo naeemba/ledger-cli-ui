@@ -1,5 +1,6 @@
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import { TableScroll } from '@/components/ui/table';
 import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
 import runLedger from '@/utils/runLedger';
@@ -44,44 +45,46 @@ const Debts = async () => {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <table>
-          <thead>
-            <tr>
-              <th>Payee</th>
-              <th className="text-right">
-                Amount ({defaultCurrency.toUpperCase()})
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {debts.length === 0 ? (
+        <TableScroll bleed={false}>
+          <table>
+            <thead>
               <tr>
-                <td colSpan={2} className="py-6 text-center text-muted">
-                  No debts
-                </td>
+                <th>Payee</th>
+                <th className="text-right whitespace-nowrap">
+                  Amount ({defaultCurrency.toUpperCase()})
+                </th>
               </tr>
-            ) : (
-              debts.map((debt, idx) => {
-                const columns = debt.split('|').map((each) => each.trim());
-                return (
-                  <tr key={idx}>
-                    <td>
-                      <Link
-                        className="block text-fg hover:text-accent"
-                        href={`/accounts/${encodeURIComponent(columns[0])}`}
-                      >
-                        {columns[0]}
-                      </Link>
-                    </td>
-                    <td className="text-right">
-                      {formatAmount(columns[1], false)}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {debts.length === 0 ? (
+                <tr>
+                  <td colSpan={2} className="py-6 text-center text-muted">
+                    No debts
+                  </td>
+                </tr>
+              ) : (
+                debts.map((debt, idx) => {
+                  const columns = debt.split('|').map((each) => each.trim());
+                  return (
+                    <tr key={idx}>
+                      <td>
+                        <Link
+                          className="block text-fg hover:text-accent"
+                          href={`/accounts/${encodeURIComponent(columns[0])}`}
+                        >
+                          {columns[0]}
+                        </Link>
+                      </td>
+                      <td className="text-right whitespace-nowrap">
+                        {formatAmount(columns[1], false)}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </TableScroll>
       </div>
     </div>
   );
