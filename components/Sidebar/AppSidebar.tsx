@@ -14,6 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { APP_NAME } from '@/lib/app';
 import Link from 'next/link';
@@ -23,6 +24,17 @@ const AppSidebar = () => {
   const pathname = usePathname();
   const sections = React.useMemo(() => getNavSections(), []);
   const { isActive } = useActiveMenu(pathname);
+  const { setOpenMobile } = useSidebar();
+
+  // Close the mobile drawer whenever navigation lands on a new route. The
+  // shadcn SidebarMenuButton only fires onClick and never dismisses the
+  // overlay, so without this the drawer stays open on top of the content
+  // after tapping a nav link. Keying off the pathname covers every entry
+  // point (nav links, command palette, breadcrumbs, browser back/forward),
+  // not just the menu buttons.
+  React.useEffect(() => {
+    setOpenMobile(false);
+  }, [pathname, setOpenMobile]);
 
   return (
     <Sidebar collapsible="icon">

@@ -133,17 +133,23 @@ including adding/removing posting rows, with the submit button reachable.
 
 ## M3 — Navigation & chrome
 
-- [ ] 🟠 **Sidebar drawer doesn't auto-close on navigation.** `SidebarMenuButton`
+- [x] 🟠 **Sidebar drawer doesn't auto-close on navigation.** `SidebarMenuButton`
   fires `onClick` but never calls `setOpenMobile(false)`, so the drawer stays
   open over the content after tapping a nav link. Close it on mobile navigation
   (either in `SidebarMenuButton` or via a pathname effect in `AppSidebar`).
   `components/ui/sidebar.tsx:255-288`, `components/Sidebar/AppSidebar.tsx`
-- [ ] 🟡 **Mobile sidebar width** `SIDEBAR_WIDTH_MOBILE = '18rem'` (288px ≈ 77% of a
+  → Done via a pathname `useEffect` in `AppSidebar` (least intrusive; leaves the
+  shared `SidebarMenuButton` primitive untouched; covers every navigation entry
+  point — nav links, command palette, breadcrumbs, browser back/forward).
+- [x] 🟡 **Mobile sidebar width** `SIDEBAR_WIDTH_MOBILE = '18rem'` (288px ≈ 77% of a
   375px screen). Acceptable since it's an overlay that auto-closes after M3.1;
   optionally trim to ~16rem. `components/ui/sidebar.tsx:30`
+  → Kept at 18rem: now that it auto-closes the overlay width is acceptable, and
+  trimming risks truncating longer labels ("Add transaction", "Periodic Balance").
 - [ ] ⚪ **Header height / safe area** — `h-14` sticky header has no notch awareness;
   fold into M5 safe-area work. `components/Header/AppHeader.tsx:51`
-- [ ] ⚪ **Content bottom padding** `pb-20` is heavy on short mobile viewports; make
+  → Deferred to M5 (safe-area / `viewport-fit=cover` work lands there).
+- [x] ⚪ **Content bottom padding** `pb-20` is heavy on short mobile viewports; make
   responsive (`pb-12 sm:pb-20`). `components/AppShell/AppShell.tsx:54`
 
 **Acceptance:** tapping a nav item navigates *and* dismisses the drawer; nav usable
