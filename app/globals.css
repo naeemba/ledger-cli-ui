@@ -149,7 +149,11 @@ html,
 body {
   background: var(--bg);
   color: var(--fg);
-  min-height: 100vh;
+  min-height: 100dvh;
+  /* Horizontal-overflow guard: a single wide offender can't make the whole
+     page pannable. Intentional horizontal scroll lives inside TableScroll. */
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
