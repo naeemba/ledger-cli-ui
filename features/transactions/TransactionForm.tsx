@@ -1,6 +1,12 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { toast } from 'sonner';
 import type { TransactionActionState } from './actions';
 import Combobox from '@/components/Combobox';
@@ -87,16 +93,39 @@ const TransactionForm = ({
   );
 
   const formRef = useRef<HTMLFormElement>(null);
+  // Set by the "Save & add another" button so the success effect resets the
+  // form in place instead of navigating away. Reset after each save.
+  const saveAndAddAnother = useRef(false);
+
+  const resetForm = useCallback(() => {
+    setDate(todayISO());
+    setPayee('');
+    setStatus('none');
+    setNote('');
+    setPostings([
+      { account: '', amount: '', currency: defaultCurrency },
+      { account: '', amount: '', currency: defaultCurrency },
+    ]);
+  }, [defaultCurrency]);
 
   useEffect(() => {
-    if (state?.ok) {
-      toast.success(
-        mode === 'edit' ? 'Transaction updated' : 'Transaction saved'
-      );
-      router.push(mode === 'edit' ? '/transactions' : '/');
+    if (!state?.ok) return;
+    if (mode === 'edit') {
+      toast.success('Transaction updated');
+      router.push('/transactions');
       router.refresh();
+      return;
     }
-  }, [state, router, mode]);
+    toast.success('Transaction saved');
+    if (saveAndAddAnother.current) {
+      saveAndAddAnother.current = false;
+      resetForm();
+      router.refresh();
+      return;
+    }
+    router.push('/');
+    router.refresh();
+  }, [state, router, mode, resetForm]);
 
   useEffect(() => {
     if (templateMissing) {
@@ -315,7 +344,25 @@ const TransactionForm = ({
                 draft={templateDraft}
                 disabled={!canSaveTemplate}
               />
-              <Button type="submit" disabled={!canSubmit}>
+              {mode !== 'edit' && (
+                <Button
+                  type="submit"
+                  variant="outline"
+                  disabled={!canSubmit}
+                  onClick={() => {
+                    saveAndAddAnother.current = true;
+                  }}
+                >
+                  {isPending ? 'Saving…' : 'Save & add another'}
+                </Button>
+              )}
+              <Button
+                type="submit"
+                disabled={!canSubmit}
+                onClick={() => {
+                  saveAndAddAnother.current = false;
+                }}
+              >
                 {isPending
                   ? 'Saving…'
                   : mode === 'edit'
