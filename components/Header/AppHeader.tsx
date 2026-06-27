@@ -46,7 +46,7 @@ const AppHeader = ({ slot }: Props) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-bg/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-bg/60 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-3 border-b border-border bg-bg/95 px-[max(1rem,env(safe-area-inset-left))] pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-bg/60 sm:px-[max(1.5rem,env(safe-area-inset-left))] lg:px-[max(2rem,env(safe-area-inset-left))]">
       <SidebarTrigger />
 
       <NavigationMenu className="hidden md:flex" align="start">
