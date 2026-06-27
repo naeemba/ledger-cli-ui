@@ -146,9 +146,10 @@ including adding/removing posting rows, with the submit button reachable.
   optionally trim to ~16rem. `components/ui/sidebar.tsx:30`
   → Kept at 18rem: now that it auto-closes the overlay width is acceptable, and
   trimming risks truncating longer labels ("Add transaction", "Periodic Balance").
-- [ ] ⚪ **Header height / safe area** — `h-14` sticky header has no notch awareness;
-  fold into M5 safe-area work. `components/Header/AppHeader.tsx:51`
-  → Deferred to M5 (safe-area / `viewport-fit=cover` work lands there).
+- [x] ⚪ **Header height / safe area** — `h-14` sticky header now folds in
+  `env(safe-area-inset-top)` (height + `pt`) and `env(safe-area-inset-left)`
+  (px), so notched devices clear the cutout. Done in M5 alongside the
+  `viewport-fit=cover` export. `components/Header/AppHeader.tsx:51`
 - [x] ⚪ **Content bottom padding** `pb-20` is heavy on short mobile viewports; make
   responsive (`pb-12 sm:pb-20`). `components/AppShell/AppShell.tsx:54`
 
@@ -161,16 +162,21 @@ one-handed.
 
 These mostly matter on the smallest phones (≤ 320px) and in landscape.
 
-- [ ] 🟠 **Popover fixed `w-72`** (288px) overflows < 320px. Make responsive
+- [x] 🟠 **Popover fixed `w-72`** (288px) overflows < 320px. Made responsive
   (`w-[min(18rem,calc(100vw-2rem))]`). `components/ui/popover.tsx:39`
-- [ ] 🟡 **Select `min-w-36`** dropdown can clip near screen edge; verify Base UI
-  flip + cap to viewport. `components/ui/select.tsx:86`
-- [ ] 🟡 **Command palette `max-h-72`** eats ~40% of portrait height; make it
+- [x] 🟡 **Select `min-w-36`** dropdown can clip near screen edge; Base UI
+  Positioner already flips/repositions — added `max-w-[calc(100vw-1rem)]` so the
+  popup can never exceed the viewport. `components/ui/select.tsx:86`
+- [x] 🟡 **Command palette `max-h-72`** eats ~40% of portrait height; made it
   viewport-relative (`max-h-[60dvh]`). `components/ui/command.tsx:96`
-- [ ] 🟡 **Dialog tablet breakpoint** — `sm:max-w-sm` (448px) can exceed landscape
-  tablet width; add a sane upper cap. `components/ui/dialog.tsx:55`
-- [ ] 🟡 **Generic Sheet `w-3/4`** — only used outside the sidebar; verify any such
-  usages aren't dominating small screens. `components/ui/sheet.tsx:55`
+- [x] 🟡 **Dialog tablet breakpoint** — `sm:max-w-sm` (448px) is already capped by
+  the base `max-w-[calc(100%-2rem)]` so it never exceeds the viewport; also added
+  `max-h-[calc(100dvh-2rem)] overflow-y-auto` so tall dialogs scroll on short
+  screens instead of overflowing. `components/ui/dialog.tsx:55`
+- [x] 🟡 **Generic Sheet `w-3/4`** — its only consumer is the sidebar drawer, which
+  overrides width via `--sidebar-width` (18rem). The generic left/right `w-3/4`
+  is already capped by `data-[side=*]:sm:max-w-sm`, so no usage dominates a small
+  screen. Left as-is (verified). `components/ui/sheet.tsx:55`
 
 **Acceptance:** open every overlay on a 320px device — nothing renders off-screen
 or clips its content.
@@ -179,14 +185,33 @@ or clips its content.
 
 ## M5 — Polish & PWA
 
-- [ ] ⚪ **Explicit `viewport` export** with `viewportFit: 'cover'` + `themeColor`
-  (light/dark) and safe-area-inset padding on the sticky header / bottom of
-  scroll areas (`env(safe-area-inset-*)`) for notched devices. `app/layout.tsx`
-- [ ] ⚪ **PWA metadata** — `mobile-web-app-capable`, theme color, apple touch icon.
-- [ ] ⚪ **Tablet (768–1023px) pass** — several layouts only optimize at `lg:`;
-  add `md:` adjustments for iPad / landscape phone.
-- [ ] ⚪ **Hover-only affordances** — ensure `:active`/`focus-visible` parity for
-  touch where the UI relies on `hover:` (sidebar items, links).
+- [x] ⚪ **Explicit `viewport` export** with `viewportFit: 'cover'` + `themeColor`
+  (light/dark `#fbfaf7` / `#0a1016`, via `prefers-color-scheme` media) added to
+  `app/layout.tsx`. Sticky header now grows by `env(safe-area-inset-top)`
+  (`h-[calc(3.5rem+env(safe-area-inset-top))]` + matching `pt`) and uses
+  `px-[max(…,env(safe-area-inset-left))]` so content clears the notch; the
+  scroll-area bottom padding folds in `env(safe-area-inset-bottom)`
+  (`pb-[max(3rem,env(safe-area-inset-bottom))]`). This also covers M3's deferred
+  header/safe-area item. `app/layout.tsx`, `components/Header/AppHeader.tsx`,
+  `components/AppShell/AppShell.tsx`
+- [x] ⚪ **PWA metadata** — added `mobile-web-app-capable: yes`, `appleWebApp`
+  (capable + title), `applicationName`, and `themeColor`. **Apple-touch / manifest
+  icon deferred:** no icon asset exists in `public/` or `app/`; referencing one
+  would 404, so it is left as a follow-up (drop `app/apple-icon.png` +
+  `app/icon.png` and Next wires them automatically). `app/layout.tsx`
+- [x] ⚪ **Tablet (768–1023px) pass** — audited every `lg:`/`md:` grid in-app. The
+  read-first views are tables (already handled by `TableScroll` in M1); the
+  dashboard stat/health grids ramp cleanly `sm:grid-cols-2/3 → lg:grid-cols-3/6`
+  (2-/3-up on tablet is comfortable) and the transaction form already gained its
+  `md:` two-column layout in M2. No in-app layout was found cramped enough to
+  need a new `md:` breakpoint; remaining `lg:`-only splits are full-bleed
+  marketing/auth pages (intentional). No change required.
+- [x] ⚪ **Hover-only affordances** — verified `:active`/`focus-visible` parity. The
+  mobile nav (`SidebarMenuButton`) base class already carries `active:bg-…` +
+  `focus-visible:ring-2` (so all cva variants inherit touch feedback); the
+  `SidebarMenuSubButton` likewise. The header mega-menu is desktop-only
+  (`hidden md:flex`). No hover-only affordance is invisible to touch; no change
+  required.
 
 ---
 
