@@ -108,7 +108,9 @@
     /* Project palette dark overrides */
     --bg: oklch(17% 0.015 250);
     --fg: oklch(94% 0.01 250);
-    --muted: oklch(66% 0.018 250);
+    /* Subtle elevated surface (bg-muted, skeletons). Sits just above --card
+       (22%) / --bg (17%); muted *text* uses --muted-foreground, not this. */
+    --muted: oklch(27% 0.015 250);
     --card: oklch(22% 0.018 250);
     --card-fg: oklch(94% 0.01 250);
     --border: oklch(29% 0.015 250);
@@ -188,7 +190,7 @@ table thead td {
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--muted-foreground);
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
 }

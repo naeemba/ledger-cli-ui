@@ -32,7 +32,7 @@ const Accounts = async () => {
           </Help>
           <ExportButton href="/api/accounts/export" />
         </div>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-muted-foreground">
           {accounts.length} account{accounts.length === 1 ? '' : 's'}
         </p>
       </div>

@@ -34,7 +34,7 @@ const Reconcile = async () => {
             </Help>
             <ExportButton href="/api/reconcile/export" />
           </div>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             {rows.length} uncleared posting{rows.length === 1 ? '' : 's'}
             {stale > 0 && (
               <span className="text-negative">
@@ -60,18 +60,21 @@ const Reconcile = async () => {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-muted">
+                <td
+                  colSpan={5}
+                  className="py-6 text-center text-muted-foreground"
+                >
                   Nothing to reconcile
                 </td>
               </tr>
             ) : (
               rows.map((row, idx) => (
                 <tr key={idx}>
-                  <td className="whitespace-nowrap text-muted">
+                  <td className="whitespace-nowrap text-muted-foreground">
                     {formatDate(row.date, Format.DATE)}
                   </td>
                   <td
-                    className={`text-right tabular-nums ${row.days > STALE_DAYS ? 'text-negative' : 'text-muted'}`}
+                    className={`text-right tabular-nums ${row.days > STALE_DAYS ? 'text-negative' : 'text-muted-foreground'}`}
                   >
                     {row.days}d
                   </td>

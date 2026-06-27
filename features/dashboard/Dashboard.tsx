@@ -32,7 +32,7 @@ const RECENT_LIMIT = 10;
 
 const Stat = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="flex flex-col gap-1">
-    <span className="text-xs font-medium uppercase tracking-wider text-muted">
+    <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
       {label}
     </span>
     <span className="text-lg font-semibold tabular-nums">{value || '—'}</span>
@@ -117,7 +117,7 @@ const Dashboard = async () => {
             to your default currency.
           </Help>
         </div>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-muted-foreground">
           {formatDate(now.toISOString(), Format.MONTH_YEAR)} overview
         </p>
       </div>
@@ -138,13 +138,13 @@ const Dashboard = async () => {
           value={
             highestAccount ? (
               <span className="flex flex-col gap-1">
-                <span className="text-base font-medium text-muted">
+                <span className="text-base font-medium text-muted-foreground">
                   {highestAccount}
                 </span>
                 <span>{formatAmount(highestAmount, true)}</span>
               </span>
             ) : (
-              <span className="text-base font-normal text-muted">
+              <span className="text-base font-normal text-muted-foreground">
                 No expenses this month
               </span>
             )
@@ -202,14 +202,17 @@ const Dashboard = async () => {
               <tbody>
                 {recent.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-6 text-center text-muted">
+                    <td
+                      colSpan={4}
+                      className="py-6 text-center text-muted-foreground"
+                    >
                       No transactions
                     </td>
                   </tr>
                 ) : (
                   recent.map((row, idx) => (
                     <tr key={idx}>
-                      <td className="whitespace-nowrap text-muted">
+                      <td className="whitespace-nowrap text-muted-foreground">
                         {formatDate(row.date, Format.DATE)}
                       </td>
                       <td>{row.payee || '—'}</td>

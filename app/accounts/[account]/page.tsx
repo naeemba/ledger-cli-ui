@@ -45,7 +45,7 @@ const Account = async ({
           too wide for a phone, so reflow to a readable stack below md. */}
       <ul className="flex flex-col gap-3 md:hidden">
         {rows.length === 0 ? (
-          <li className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted shadow-sm">
+          <li className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
             No transactions
           </li>
         ) : (
@@ -58,13 +58,13 @@ const Account = async ({
                 <span className="min-w-0 break-words font-medium">
                   {columns[2]}
                 </span>
-                <span className="shrink-0 whitespace-nowrap text-xs text-muted">
+                <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
                   {formatDate(columns[0], Format.DATE)}
                 </span>
               </div>
               <dl className="mt-3 flex flex-col gap-1 text-sm">
                 <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-xs uppercase tracking-wide text-muted">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                     Amount
                   </dt>
                   <dd className="text-right tabular-nums">
@@ -72,7 +72,7 @@ const Account = async ({
                   </dd>
                 </div>
                 <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-xs uppercase tracking-wide text-muted">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                     Total
                   </dt>
                   <dd className="text-right tabular-nums">
@@ -102,14 +102,17 @@ const Account = async ({
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-muted">
+                  <td
+                    colSpan={4}
+                    className="py-6 text-center text-muted-foreground"
+                  >
                     No transactions
                   </td>
                 </tr>
               ) : (
                 rows.map((columns, idx) => (
                   <tr key={idx}>
-                    <td className="whitespace-nowrap text-muted">
+                    <td className="whitespace-nowrap text-muted-foreground">
                       {formatDate(columns[0], Format.DATE)}
                     </td>
                     <td>{columns[2]}</td>

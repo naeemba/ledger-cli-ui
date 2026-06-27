@@ -24,7 +24,7 @@ type Props = {
 };
 
 const sectionLabel =
-  'text-[0.65rem] font-semibold uppercase tracking-wider text-muted';
+  'text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground';
 
 const inputClasses =
   'block rounded-md border border-border bg-bg px-3 py-1.5 text-sm text-fg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/40';

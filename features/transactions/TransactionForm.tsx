@@ -481,7 +481,7 @@ const BalanceIndicator = ({ balance }: { balance: Balance }) => {
   }
   if (balance.kind === 'auto-balance') {
     return (
-      <span className="text-xs text-muted">
+      <span className="text-xs text-muted-foreground">
         Blank posting will auto-balance
       </span>
     );

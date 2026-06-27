@@ -14,7 +14,7 @@ const RegisterHeader = ({ account, balance, existingViewNames }: Props) => {
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <div className="flex items-center gap-2">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted">
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Monthly report
           </div>
           <Help label="About monthly report">
@@ -28,7 +28,7 @@ const RegisterHeader = ({ account, balance, existingViewNames }: Props) => {
       </div>
       <div className="flex items-end gap-3">
         <div className="text-right">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted">
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Balance
           </div>
           <div className="text-2xl font-semibold tracking-tight">

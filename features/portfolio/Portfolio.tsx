@@ -94,12 +94,12 @@ const Portfolio = async () => {
               </Help>
               <ExportButton href="/api/portfolio/export" />
             </div>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-sm text-muted-foreground">
               <code>{prefix}</code>
             </p>
           </div>
           <div className="text-right">
-            <div className="text-xs font-medium uppercase tracking-wider text-muted">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Total ({defaultCurrency.toUpperCase()})
             </div>
             <div className="text-2xl font-semibold tracking-tight">
