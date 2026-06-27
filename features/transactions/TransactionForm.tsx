@@ -110,6 +110,12 @@ const TransactionForm = ({
   }, [defaultCurrency]);
 
   useEffect(() => {
+    // Capture and clear on every settled result. If a "Save & add another"
+    // submit fails, leaving the ref set would make the next Enter-key submit
+    // reset in place instead of redirecting — contradicting the documented
+    // "Enter defaults to redirect" contract.
+    const addAnother = saveAndAddAnother.current;
+    saveAndAddAnother.current = false;
     if (!state?.ok) return;
     if (mode === 'edit') {
       toast.success('Transaction updated');
@@ -118,8 +124,7 @@ const TransactionForm = ({
       return;
     }
     toast.success('Transaction saved');
-    if (saveAndAddAnother.current) {
-      saveAndAddAnother.current = false;
+    if (addAnother) {
       resetForm();
       router.refresh();
       return;
