@@ -57,6 +57,13 @@ const todayISO = (): string => {
 
 const initialState: TransactionActionState = { ok: false };
 
+// Two blank postings — the minimum a transaction needs. Defined once so the
+// initial draft and `resetForm` stay in sync.
+const emptyPostings = (currency: string): Posting[] => [
+  { account: '', amount: '', currency },
+  { account: '', amount: '', currency },
+];
+
 const fieldError = (state: TransactionActionState | null, key: string) =>
   state?.fieldErrors?.[key];
 
@@ -86,10 +93,7 @@ const TransactionForm = ({
       account: p.account,
       amount: p.amount,
       currency: p.currency,
-    })) ?? [
-      { account: '', amount: '', currency: defaultCurrency },
-      { account: '', amount: '', currency: defaultCurrency },
-    ]
+    })) ?? emptyPostings(defaultCurrency)
   );
 
   const formRef = useRef<HTMLFormElement>(null);
@@ -102,10 +106,7 @@ const TransactionForm = ({
     setPayee('');
     setStatus('none');
     setNote('');
-    setPostings([
-      { account: '', amount: '', currency: defaultCurrency },
-      { account: '', amount: '', currency: defaultCurrency },
-    ]);
+    setPostings(emptyPostings(defaultCurrency));
   }, [defaultCurrency]);
 
   useEffect(() => {
