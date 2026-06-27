@@ -4,6 +4,7 @@ import RowActions from './RowActions';
 import { TableScroll } from '@/components/ui/table';
 import type { Transaction } from '@/lib/journal/parser';
 import formatAmount from '@/utils/formatAmount';
+import { Format, formatDateWithLocale } from '@/utils/formatDateCore';
 import Link from 'next/link';
 
 type Props = { transactions: Transaction[] };
@@ -13,13 +14,6 @@ const statusBadge = (status: Transaction['status']) => {
   if (status === 'pending') return <span className="text-warning">!</span>;
   return null;
 };
-
-const formatTxDate = (date: string) =>
-  new Date(date).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
 
 const accountsSummary = (t: Transaction) =>
   `${t.postings
@@ -72,7 +66,7 @@ const TransactionTable = ({ transactions }: Props) => {
                   )}
                 </div>
                 <div className="mt-0.5 text-xs tabular-nums text-muted-foreground">
-                  {formatTxDate(t.date)}
+                  {formatDateWithLocale(t.date, Format.DATE)}
                 </div>
               </div>
               <div className="shrink-0">
@@ -124,7 +118,7 @@ const TransactionTable = ({ transactions }: Props) => {
                 className="border-t border-border"
               >
                 <td className="py-2 whitespace-nowrap tabular-nums">
-                  {formatTxDate(t.date)}
+                  {formatDateWithLocale(t.date, Format.DATE)}
                 </td>
                 <td className="py-2">{statusBadge(t.status)}</td>
                 <td className="py-2">

@@ -10,6 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BETTER_AUTH_SECRET: ci-dummy-secret-32-chars-minimum-XX
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ledger_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -32,3 +46,15 @@ jobs:
       - run: pnpm type-check
 
       - run: pnpm test
+
+      # Production build — catches client/server import violations (e.g. a
+      # `'use client'` component pulling in a `server-only` module) that lint,
+      # type-check, and unit tests do not. Runs migrations against the Postgres
+      # service first via the `prebuild` hook.
+      - name: Build
+        run: pnpm build
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/ledger_ci
+          BETTER_AUTH_URL: http://localhost:3000
+          POSTAL_API_URL: https://postal.example.com
+          POSTAL_API_KEY: ci-dummy-postal-key
