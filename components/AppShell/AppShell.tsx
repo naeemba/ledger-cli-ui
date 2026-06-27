@@ -51,7 +51,7 @@ const AppShell = ({ children, headerSlot, bannerSlot }: Props) => {
           <AppSidebar />
           <SidebarInset>
             <AppHeader slot={headerSlot} />
-            <div className="mx-auto w-full max-w-7xl px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-8 sm:px-6 sm:pb-[max(5rem,env(safe-area-inset-bottom))] lg:px-8">
+            <div className="app-content-box mx-auto w-full max-w-7xl px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-8 sm:px-6 sm:pb-[max(5rem,env(safe-area-inset-bottom))] lg:px-8">
               {bannerSlot}
               {children}
             </div>

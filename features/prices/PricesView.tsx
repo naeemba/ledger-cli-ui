@@ -13,7 +13,7 @@ import {
   deleteManualPriceAction,
   type PriceActionState,
 } from '@/features/prices/actions';
-import { formatLedgerInstant } from '@/utils/formatDate';
+import { formatLedgerInstant } from '@/utils/formatDateCore';
 
 type Row = { symbol: string; price: string };
 

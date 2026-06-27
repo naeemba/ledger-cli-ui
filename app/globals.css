@@ -149,9 +149,20 @@ html,
 body {
   background: var(--bg);
   color: var(--fg);
+  /* Progressive enhancement: keep the 100vh fallback for engines without
+     dynamic-viewport-unit support, then override with 100dvh where available. */
+  min-height: 100vh;
   min-height: 100dvh;
-  /* Horizontal-overflow guard: a single wide offender can't make the whole
-     page pannable. Intentional horizontal scroll lives inside TableScroll. */
+}
+
+/* Horizontal-overflow guard: a single wide offender can't make the whole
+   page pannable. Intentional horizontal scroll lives inside TableScroll.
+   Scoped to the inner content box — a *sibling* of the sticky AppHeader, not
+   an ancestor — so neither the viewport nor any ancestor of the header becomes
+   an overflow scroll container. (Setting overflow on the scroll root, or on an
+   ancestor of a `position: sticky` element, demotes the header to a no-op in
+   some engines, notably Safari.) */
+.app-content-box {
   max-width: 100%;
   overflow-x: hidden;
 }
