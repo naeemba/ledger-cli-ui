@@ -1,0 +1,25 @@
+# Garage configuration for LOCAL DEVELOPMENT ONLY.
+#
+# Single-node, replication factor 1. The secrets below are fixed dev values so
+# the stack is reproducible without a bootstrap step that mutates the repo — do
+# NOT reuse them anywhere real. The production template lives in
+# deploy/garage/garage.toml.
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "lmdb"
+
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+rpc_secret = "4f3b2a1c8e7d6f5a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "[::]:3903"
+admin_token = "dev-garage-admin-token"
