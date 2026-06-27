@@ -43,25 +43,25 @@ good.
 Small, mostly one-file changes to shared primitives + globals. Do these first;
 several fix dozens of screens at once.
 
-- [ ] 🔴 **Reusable responsive table wrapper.** Add a `<TableScroll>` (or extend the
+- [x] 🔴 **Reusable responsive table wrapper.** Add a `<TableScroll>` (or extend the
   shadcn `Table` wrapper) that provides `overflow-x-auto` + `-mx` bleed +
   momentum scroll (`[-webkit-overflow-scrolling:touch]`). This is the single
   highest-leverage change. — `components/ui/table.tsx`
-- [ ] 🔴 **Fix `min-height: 100vh` → `100dvh`** on `body` so the keyboard / mobile
+- [x] 🔴 **Fix `min-height: 100vh` → `100dvh`** on `body` so the keyboard / mobile
   browser chrome doesn't push the footer + submit buttons off-screen.
   — `app/globals.css:152`
-- [ ] 🔴 **Default table card padding on mobile.** The `p-0 gap-0` table cards leave
+- [x] 🔴 **Default table card padding on mobile.** The `p-0 gap-0` table cards leave
   text flush against the border. Add a responsive default (e.g. `p-0` body but a
   small inner gutter, or `px-3 sm:px-0` on the scroll wrapper) so content breathes.
   — affects every table card (see M1 list)
-- [ ] 🟠 **Touch targets ≥ 44px in primitives.** Bump the default control heights so
+- [x] 🟠 **Touch targets ≥ 44px in primitives.** Bump the default control heights so
   the whole app benefits:
   - `components/ui/input.tsx:11` — `h-8` (32px) → `h-10`/`h-11` on mobile (keep
     `text-base` to avoid iOS zoom; the current `md:text-sm` is correct).
   - `components/ui/button.tsx:27-32` — `icon-xs` (24px) / `icon-sm` (28px) icon
     buttons miss the 44px minimum; raise mobile sizes or add a min hit-area.
   - `components/ui/sidebar.tsx:476` — sidebar items `size-8`/`size-7`.
-- [ ] 🟡 **Horizontal-overflow guard.** Add `overflow-x: hidden` / `max-width: 100%`
+- [x] 🟡 **Horizontal-overflow guard.** Add `overflow-x: hidden` / `max-width: 100%`
   safety to `html, body` so any single offender can't make the whole page
   pannable. — `app/globals.css`
 
