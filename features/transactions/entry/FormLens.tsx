@@ -21,6 +21,7 @@ type Props = {
   accounts: string[];
   payees: string[];
   defaultCurrency: string;
+  fieldErrors?: Record<string, string>;
 };
 
 export function FormLens({
@@ -29,6 +30,7 @@ export function FormLens({
   accounts,
   payees,
   defaultCurrency,
+  fieldErrors,
 }: Props): React.JSX.Element {
   const balance = computeBalance(draft.postings);
 
@@ -37,7 +39,7 @@ export function FormLens({
       <section className="flex flex-col gap-5">
         <SectionLabel>Details</SectionLabel>
 
-        <Field label="Date" htmlFor="tx-date">
+        <Field label="Date" htmlFor="tx-date" error={fieldErrors?.['date']}>
           <Input
             id="tx-date"
             type="date"
@@ -49,6 +51,7 @@ export function FormLens({
                 value: e.target.value,
               })
             }
+            aria-invalid={!!fieldErrors?.['date']}
             required
           />
         </Field>
@@ -81,7 +84,7 @@ export function FormLens({
           </ToggleGroup>
         </Field>
 
-        <Field label="Payee">
+        <Field label="Payee" error={fieldErrors?.['payee']}>
           <Combobox
             value={draft.payee}
             onChange={(v) =>
@@ -92,7 +95,11 @@ export function FormLens({
           />
         </Field>
 
-        <Field label="Note (optional)" htmlFor="tx-note">
+        <Field
+          label="Note (optional)"
+          htmlFor="tx-note"
+          error={fieldErrors?.['note']}
+        >
           <Textarea
             id="tx-note"
             value={draft.note}
@@ -105,6 +112,7 @@ export function FormLens({
             }
             rows={4}
             placeholder="Comment lines — written below the payee with a ; prefix"
+            aria-invalid={!!fieldErrors?.['note']}
           />
         </Field>
       </section>
@@ -142,6 +150,11 @@ export function FormLens({
           >
             + Add posting
           </Button>
+          {fieldErrors?.['postings'] && (
+            <span className="text-xs text-destructive">
+              {fieldErrors['postings']}
+            </span>
+          )}
         </div>
       </section>
     </div>
@@ -159,15 +172,18 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 const Field = ({
   label,
   htmlFor,
+  error,
   children,
 }: {
   label: string;
   htmlFor?: string;
+  error?: string;
   children: React.ReactNode;
 }) => (
   <div className="flex flex-col gap-1.5">
     <Label htmlFor={htmlFor}>{label}</Label>
     {children}
+    {error && <span className="text-xs text-destructive">{error}</span>}
   </div>
 );
 
