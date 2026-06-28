@@ -3,6 +3,14 @@ import { argon2id } from 'hash-wasm';
 const GCM_NONCE = 12;
 const RECOVERY_INFO = new TextEncoder().encode('ledger-recovery-v1');
 const PASSKEY_INFO = new TextEncoder().encode('ledger-passkey-v1');
+/**
+ * Fixed PRF eval input for passkey-derived KEKs. Not a secret and not entropy:
+ * the PRF output is already uniquely bound to (authenticator secret, rpId) by the
+ * hardware, and domain separation is handled by derivePrfKek's HKDF info. A fixed
+ * value lets the login ceremony request PRF without a pre-auth salt fetch. The
+ * version suffix leaves a rotation handle.
+ */
+export const PRF_SALT: Uint8Array = new TextEncoder().encode('ledger-prf-v1');
 
 export const toBase64 = (b: Uint8Array): string =>
   btoa(String.fromCharCode(...b));

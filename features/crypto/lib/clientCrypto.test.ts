@@ -5,6 +5,7 @@ import {
   generateDek,
   generateRecoveryCode,
   parseRecoveryCode,
+  PRF_SALT,
   recoveryHkdfKey,
   unwrapDek,
   wrapDek,
@@ -80,5 +81,11 @@ describe('derivePrfKek', () => {
         await derivePrfKek(crypto.getRandomValues(new Uint8Array(32)))
       )
     ).rejects.toBeTruthy();
+  });
+});
+
+describe('PRF_SALT', () => {
+  it('is the fixed versioned salt bytes', () => {
+    expect(new TextDecoder().decode(PRF_SALT)).toBe('ledger-prf-v1');
   });
 });
