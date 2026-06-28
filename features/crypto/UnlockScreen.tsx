@@ -41,6 +41,10 @@ function CryptoBrandPanel() {
       {/* wordmark */}
       <Link
         href="/"
+        // Locked users get bounced /→/dashboard→/crypto/unlock, so prefetching
+        // this wordmark replays that redirect chain on a loop in production
+        // (a storm of `unlock?_rsc` requests). Home is one click away; skip it.
+        prefetch={false}
         className="au-rise relative z-10 flex items-center gap-2.5"
         style={{ ['--d' as string]: '0.05s' }}
         aria-label={`${APP_NAME} home`}
@@ -312,6 +316,7 @@ export function UnlockScreen() {
           {/* compact wordmark — only visible on mobile (brand panel hidden) */}
           <Link
             href="/"
+            prefetch={false}
             className="au-rise flex items-center gap-2.5 lg:invisible"
             style={{ ['--d' as string]: '0.05s' }}
             aria-label={`${APP_NAME} home`}

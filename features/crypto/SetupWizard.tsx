@@ -78,6 +78,10 @@ function SetupBrandPanel() {
       {/* wordmark */}
       <Link
         href="/"
+        // Pre-unlock users get bounced /→/dashboard→/crypto/setup, so
+        // prefetching this wordmark replays that redirect chain on a loop in
+        // production. Home is one click away; skip the prefetch. (see UnlockScreen)
+        prefetch={false}
         className="au-rise relative z-10 flex items-center gap-2.5"
         style={{ ['--d' as string]: '0.05s' }}
         aria-label={`${APP_NAME} home`}
@@ -791,6 +795,7 @@ export function SetupWizard() {
           {/* compact wordmark — only visible on mobile */}
           <Link
             href="/"
+            prefetch={false}
             className="au-rise flex items-center gap-2.5 lg:invisible"
             style={{ ['--d' as string]: '0.05s' }}
             aria-label={`${APP_NAME} home`}
