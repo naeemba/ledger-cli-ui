@@ -21,7 +21,18 @@ describe('formatAmount', () => {
   it('formats a negative unit-less amount with the negative color class and parens', () => {
     const out = html(formatAmount('-42', true));
     expect(out).toContain('text-negative');
-    expect(out).toMatch(/\(42\.000\)/);
+    expect(out).toMatch(/\(42\)/);
+  });
+
+  it('groups positive amounts with comma thousands separators', () => {
+    const out = html(formatAmount('1997.5', true));
+    expect(out).toContain('text-positive');
+    expect(out).toMatch(/1,997\.5/);
+  });
+
+  it('preserves the original decimal precision on both signs', () => {
+    expect(html(formatAmount('20000.0', true))).toMatch(/20,000\.0/);
+    expect(html(formatAmount('-20000.0', true))).toMatch(/\(20,000\.0\)/);
   });
 
   it('renders unit prefix when withUnit is true and stdout has a unit', () => {
@@ -39,6 +50,6 @@ describe('formatAmount', () => {
   it('formats a negative amount with comma thousands', () => {
     const out = html(formatAmount('USD -1234567.89', true));
     expect(out).toContain('text-negative');
-    expect(out).toMatch(/1,234,567\.890/);
+    expect(out).toMatch(/1,234,567\.89/);
   });
 });

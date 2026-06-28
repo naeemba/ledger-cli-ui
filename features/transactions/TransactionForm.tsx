@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import { toast } from 'sonner';
+import AmountInput from './AmountInput';
 import type { TransactionActionState } from './actions';
 import Combobox from '@/components/Combobox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -428,11 +429,9 @@ const PostingRow = ({
       placeholder="Account (e.g. Expenses:Food)"
     />
     <div className="flex items-center gap-2 sm:contents">
-      <Input
-        type="text"
-        inputMode="decimal"
+      <AmountInput
         value={posting.amount}
-        onChange={(e) => onChange({ amount: e.target.value })}
+        onChange={(amount) => onChange({ amount })}
         placeholder="Amount"
         className="flex-1 text-right tabular-nums sm:flex-none"
       />
