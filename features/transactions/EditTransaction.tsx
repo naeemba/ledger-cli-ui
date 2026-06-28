@@ -1,6 +1,6 @@
 import 'server-only';
-import TransactionForm from './TransactionForm';
 import { updateTransactionAction } from './actions';
+import TransactionEntry from './entry/TransactionEntry';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { fingerprintDraft } from '@/lib/journal/fingerprint';
@@ -38,7 +38,7 @@ const EditTransaction = async ({ uid }: { uid: string }) => {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">Edit transaction</h1>
-      <TransactionForm
+      <TransactionEntry
         mode="edit"
         initialDraft={initialDraft}
         uid={uid}

@@ -1,5 +1,5 @@
-import TransactionForm from './TransactionForm';
 import { createTransactionAction } from './actions';
+import TransactionEntry from './entry/TransactionEntry';
 import Help from '@/components/Help';
 import TemplatePicker from '@/features/templates/TemplatePicker';
 import { requireUser } from '@/lib/auth/require-user';
@@ -23,7 +23,7 @@ const NewTransaction = async ({ templateId }: Props) => {
   const defaultCurrency = await getBaseCurrency();
 
   // Note: we intentionally do NOT seed `date` here. The client computes today's
-  // date in the user's local timezone (`TransactionForm` falls back to its own
+  // date in the user's local timezone (`TransactionEntry` falls back to its own
   // `todayISO`), avoiding a server/client tz skew at midnight boundaries.
   let initialDraft:
     | (Omit<TransactionDraft, 'date'> & { date?: string })
@@ -69,7 +69,7 @@ const NewTransaction = async ({ templateId }: Props) => {
 
       <TemplatePicker templates={templates} />
 
-      <TransactionForm
+      <TransactionEntry
         accounts={accounts}
         payees={payees}
         defaultCurrency={defaultCurrency}
