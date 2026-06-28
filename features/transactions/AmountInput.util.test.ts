@@ -3,7 +3,7 @@ import {
   cleanAmountInput,
   groupAmountInput,
   caretAfterFormat,
-} from './AmountInput';
+} from './AmountInput.util';
 
 describe('cleanAmountInput', () => {
   it('strips comma separators back to a raw number string', () => {

@@ -2,7 +2,7 @@
 // while preserving its original decimal places. Operates on the string (not a
 // parsed Number) so ledger's display precision — including trailing zeros — is
 // kept intact.
-const groupThousands = (absNumStr: string): string => {
+export const groupThousands = (absNumStr: string): string => {
   const [intPart, decPart] = absNumStr.split('.');
   const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return decPart !== undefined ? `${grouped}.${decPart}` : grouped;
