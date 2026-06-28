@@ -193,3 +193,43 @@ describe('parseBlock', () => {
     expect(parseBlock(block)!.unparsedLines).toEqual([]);
   });
 });
+
+describe('parsePostingLine — cost and assertion', () => {
+  it('parses a total-cost (@@) posting', () => {
+    expect(parsePostingLine('    Assets:EUR-Wallet   EUR 92 @@ $ 100')).toEqual(
+      {
+        account: 'Assets:EUR-Wallet',
+        amount: '92',
+        currency: 'EUR',
+        cost: { amount: '100', currency: '$' },
+      }
+    );
+  });
+  it('parses a bare balance-assertion posting (no amount)', () => {
+    expect(parsePostingLine('    Assets:Checking   = $ 1234.56')).toEqual({
+      account: 'Assets:Checking',
+      amount: '',
+      currency: '',
+      assertion: { amount: '1234.56', currency: '$' },
+    });
+  });
+  it('still parses a plain amount posting with no cost/assertion', () => {
+    expect(parsePostingLine('    Expenses:Groceries   USD 42.50')).toEqual({
+      account: 'Expenses:Groceries',
+      amount: '42.50',
+      currency: 'USD',
+    });
+  });
+  it('still parses a bare posting (no amount at all)', () => {
+    expect(parsePostingLine('    Equity:Adjustments')).toEqual({
+      account: 'Equity:Adjustments',
+      amount: '',
+      currency: '',
+    });
+  });
+  it('returns null when the cost side is malformed', () => {
+    expect(
+      parsePostingLine('    Assets:EUR-Wallet   EUR 92 @@ garbage')
+    ).toBeNull();
+  });
+});
