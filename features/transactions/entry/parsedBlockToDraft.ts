@@ -10,7 +10,7 @@ import type { ParsedBlock } from '@/lib/journal/parser';
  * edit-mode concurrency guard depends on.
  */
 export const parsedBlockToDraft = (
-  block: ParsedBlock,
+  block: Omit<ParsedBlock, 'unparsedLines'>,
   prev?: DraftState
 ): DraftState => ({
   date: block.date,

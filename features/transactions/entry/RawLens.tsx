@@ -4,11 +4,16 @@ import { useEffect, useState } from 'react';
 import type { DraftState, DraftAction } from './draftReducer';
 import { parsedBlockToDraft } from './parsedBlockToDraft';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
 import { parseBlock } from '@/lib/journal/parser';
 import { formatTransaction } from '@/lib/transactions/schema';
 
 const PARSE_ERROR =
   'Could not parse this as a transaction. Check the date/payee header and that each posting has an account.';
+
+const unparsedLineError = (line: string): string =>
+  `Could not parse this line: "${line.trim()}". Each posting needs an account, ` +
+  'and an amount must be separated from the account by two or more spaces.';
 
 export function RawLens({
   draft,
@@ -37,6 +42,14 @@ export function RawLens({
       onError?.(PARSE_ERROR);
       return;
     }
+    // parseBlock silently drops indented lines it can't read as a posting; flag
+    // them here so a typo on the fast path can't quietly discard a posting.
+    if (block.unparsedLines.length > 0) {
+      const message = unparsedLineError(block.unparsedLines[0]);
+      setError(message);
+      onError?.(message);
+      return;
+    }
     setError(null);
     onError?.(null);
     dispatch({ type: 'replaceAll', state: parsedBlockToDraft(block, draft) });
@@ -44,12 +57,12 @@ export function RawLens({
 
   return (
     <div className="flex flex-col gap-2">
-      <textarea
+      <Textarea
         value={text}
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
         rows={10}
-        className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 font-mono text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="resize-y font-mono leading-relaxed"
         aria-label="Transaction ledger text"
       />
       {error && (

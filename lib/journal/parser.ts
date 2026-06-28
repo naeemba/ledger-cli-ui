@@ -68,6 +68,12 @@ export type ParsedBlock = {
   payee: string;
   note: string | null;
   postings: ParsedPosting[];
+  /**
+   * Non-empty lines after the header that were neither a uid, a comment, nor a
+   * valid posting. Journal-file parsing tolerates these (junk is skipped), but
+   * an interactive editor can use them to flag silently-dropped content.
+   */
+  unparsedLines: string[];
 };
 
 const COMMENT_LINE_REGEX = /^\s*;\s?(.*)$/;
@@ -81,6 +87,7 @@ export const parseBlock = (block: string): ParsedBlock | null => {
   let uid: string | null = null;
   const noteLines: string[] = [];
   const postings: ParsedPosting[] = [];
+  const unparsedLines: string[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
@@ -98,6 +105,8 @@ export const parseBlock = (block: string): ParsedBlock | null => {
     const posting = parsePostingLine(line);
     if (posting) {
       postings.push(posting);
+    } else {
+      unparsedLines.push(line);
     }
   }
 
@@ -108,6 +117,7 @@ export const parseBlock = (block: string): ParsedBlock | null => {
     payee: header.payee,
     note: noteLines.length > 0 ? noteLines.join('\n') : null,
     postings,
+    unparsedLines,
   };
 };
 

@@ -176,6 +176,28 @@ describe('parseBlock', () => {
     expect(parseBlock('    Expenses:Food  USD 10')).toBeNull();
     expect(parseBlock('')).toBeNull();
   });
+
+  it('reports non-empty lines it cannot parse as postings', () => {
+    const block = [
+      '2024-09-01 lunch',
+      '    Expenses:Food  USD 10',
+      'Assets:Cash', // un-indented: not a header, comment, or posting
+    ].join('\n');
+    const result = parseBlock(block);
+    expect(result!.postings).toEqual([
+      { account: 'Expenses:Food', amount: '10', currency: 'USD' },
+    ]);
+    expect(result!.unparsedLines).toEqual(['Assets:Cash']);
+  });
+
+  it('leaves unparsedLines empty for a clean block', () => {
+    const block = [
+      '2024-09-01 lunch',
+      '    Expenses:Food  USD 10',
+      '    Assets:Cash',
+    ].join('\n');
+    expect(parseBlock(block)!.unparsedLines).toEqual([]);
+  });
 });
 
 const fixturePath = (...parts: string[]) =>
