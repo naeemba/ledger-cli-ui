@@ -12,6 +12,7 @@ import {
   type Method,
 } from './authState';
 import { resolveCallbackUrl } from './callbackUrl';
+import { signInWithPasskey } from '@/features/crypto/lib/passkeyFlow';
 import { authClient } from '@/lib/auth-client';
 import { useWebAuthnSupported } from '@naeemba/next-starter/client';
 import Link from 'next/link';
@@ -107,15 +108,12 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   function onPasskey() {
-    const passkey = authClient.signIn.passkey;
-    return runAttempt(
-      'passkey',
-      () => passkey(),
-      () => {
-        const callbackURL = resolveCallbackUrl('callbackUrl', CALLBACK_URL);
-        window.location.assign(callbackURL);
-      }
-    );
+    // signInWithPasskey runs the ceremony and a best-effort single-tap unlock
+    // (never throws on unlock failure); on success we redirect to the dashboard.
+    return runAttempt('passkey', signInWithPasskey, () => {
+      const callbackURL = resolveCallbackUrl('callbackUrl', CALLBACK_URL);
+      window.location.assign(callbackURL);
+    });
   }
 
   if (state.status.magicLink === 'sent') {

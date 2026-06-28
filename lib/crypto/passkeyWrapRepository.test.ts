@@ -26,7 +26,6 @@ describe('PasskeyWrapRepository', () => {
     id: 'wrap-1',
     userId: 'alice',
     credentialId: 'cred-A',
-    prfSalt: 'c2FsdA==',
     wrap: 'd3JhcA==',
     label: 'Laptop',
     ...over,
@@ -58,13 +57,11 @@ describe('PasskeyWrapRepository', () => {
         id: 'wrap-2',
         credentialId: 'cred-A',
         wrap: 'new==',
-        prfSalt: 's2==',
       })
     );
     const all = await repo.listByUser('alice');
     expect(all).toHaveLength(1);
     expect(all[0].wrap).toBe('new==');
-    expect(all[0].prfSalt).toBe('s2==');
   });
 
   it('deleteByCredential removes only the matching row', async () => {

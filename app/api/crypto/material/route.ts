@@ -24,7 +24,6 @@ export async function GET(): Promise<NextResponse> {
     wrapRecovery: row.wrapRecovery,
     passkeys: wraps.map((w) => ({
       credentialId: w.credentialId,
-      prfSalt: w.prfSalt,
       wrap: w.wrap,
     })),
   };

@@ -71,6 +71,13 @@
       "when": 1782513743588,
       "tag": "0009_odd_sunfire",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782606834501,
+      "tag": "0010_plain_ink",
+      "breakpoints": true
     }
   ]
 }

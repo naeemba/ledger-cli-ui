@@ -19,7 +19,6 @@ const b64url = z
 
 export const enablePasskeyUnlockSchema = z.object({
   credentialId: b64url,
-  prfSalt: b64,
   wrap: b64,
   label: z.string().min(1).max(100),
 });

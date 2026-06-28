@@ -24,7 +24,6 @@ export type SetupCryptoInput = z.infer<typeof setupCryptoSchema>;
 
 export type PasskeyMaterial = {
   credentialId: string;
-  prfSalt: string;
   wrap: string;
 };
 

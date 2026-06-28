@@ -23,7 +23,7 @@ export class PasskeyWrapRepository {
       .values(input)
       .onConflictDoUpdate({
         target: [cryptoPasskeyWrap.userId, cryptoPasskeyWrap.credentialId],
-        set: { prfSalt: input.prfSalt, wrap: input.wrap, label: input.label },
+        set: { wrap: input.wrap, label: input.label },
       });
   }
 

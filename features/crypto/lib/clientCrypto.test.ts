@@ -5,6 +5,7 @@ import {
   generateDek,
   generateRecoveryCode,
   parseRecoveryCode,
+  prfSalt,
   recoveryHkdfKey,
   unwrapDek,
   wrapDek,
@@ -80,5 +81,18 @@ describe('derivePrfKek', () => {
         await derivePrfKek(crypto.getRandomValues(new Uint8Array(32)))
       )
     ).rejects.toBeTruthy();
+  });
+});
+
+describe('prfSalt', () => {
+  it('is the fixed versioned salt bytes', () => {
+    expect(new TextDecoder().decode(prfSalt())).toBe('ledger-prf-v1');
+  });
+  it('returns a fresh copy each call so the shared buffer stays immutable', () => {
+    const a = prfSalt();
+    const b = prfSalt();
+    expect(a).not.toBe(b);
+    a[0] = 0;
+    expect(new TextDecoder().decode(prfSalt())).toBe('ledger-prf-v1');
   });
 });

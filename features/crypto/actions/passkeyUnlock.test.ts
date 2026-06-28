@@ -23,7 +23,6 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 const validEnable = {
   credentialId: 'cred-A',
-  prfSalt: 'c2FsdA==',
   wrap: 'd3JhcA==',
   label: 'Laptop',
 };
