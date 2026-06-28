@@ -48,7 +48,6 @@ describe('GET /api/crypto/material', () => {
         id: 'w1',
         userId: 'alice',
         credentialId: 'cred-A',
-        prfSalt: 'c2FsdA==',
         wrap: 'd3JhcA==',
         label: 'Laptop',
         createdAt: new Date(),
@@ -58,11 +57,10 @@ describe('GET /api/crypto/material', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.passkeys).toEqual([
-      { credentialId: 'cred-A', prfSalt: 'c2FsdA==', wrap: 'd3JhcA==' },
+      { credentialId: 'cred-A', wrap: 'd3JhcA==' },
     ]);
     expect(Object.keys(body.passkeys[0]).sort()).toEqual([
       'credentialId',
-      'prfSalt',
       'wrap',
     ]);
   });

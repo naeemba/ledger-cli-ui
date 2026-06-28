@@ -4,6 +4,7 @@ import {
   assertPrfForCredential,
   assertPrfAny,
 } from './webauthn';
+import { PRF_SALT } from './clientCrypto';
 
 // Minimal fake of a PublicKeyCredential carrying a PRF result.
 const fakeCred = (id: string, first: ArrayBuffer | undefined) => ({
@@ -29,26 +30,32 @@ describe('base64urlToBytes', () => {
 });
 
 describe('assertPrfForCredential', () => {
-  it('returns the PRF output for the credential', async () => {
+  it('returns the PRF output and sends the fixed salt', async () => {
     const out = new Uint8Array(32).fill(7).buffer;
-    stubGet(() => fakeCred('cred-A', out));
-    const res = await assertPrfForCredential('cred-A', new Uint8Array(32));
+    let opts: CredentialRequestOptions | undefined;
+    stubGet((o) => {
+      opts = o;
+      return fakeCred('cred-A', out);
+    });
+    const res = await assertPrfForCredential('cred-A');
     expect(res.credentialId).toBe('cred-A');
     expect(res.prfOutput).toHaveLength(32);
+    const first = new Uint8Array(
+      opts!.publicKey!.extensions!.prf!.eval!.first as ArrayBuffer
+    );
+    expect(Array.from(first)).toEqual(Array.from(PRF_SALT));
   });
 
   it('throws a clear error when PRF is unsupported', async () => {
     stubGet(() => fakeCred('cred-A', undefined));
-    await expect(
-      assertPrfForCredential('cred-A', new Uint8Array(32))
-    ).rejects.toThrow(/does not support/i);
+    await expect(assertPrfForCredential('cred-A')).rejects.toThrow(
+      /does not support/i
+    );
   });
 
   it('throws when the prompt is dismissed (null credential)', async () => {
     stubGet(() => null);
-    await expect(
-      assertPrfForCredential('cred-A', new Uint8Array(32))
-    ).rejects.toThrow(/dismissed/i);
+    await expect(assertPrfForCredential('cred-A')).rejects.toThrow(/dismissed/i);
   });
 });
 
@@ -56,10 +63,7 @@ describe('assertPrfAny', () => {
   it('identifies which credential answered and returns its PRF output', async () => {
     const out = new Uint8Array(32).fill(9).buffer;
     stubGet(() => fakeCred('cred-B', out));
-    const res = await assertPrfAny([
-      { credentialId: 'cred-A', prfSalt: 'c2FsdEE=' },
-      { credentialId: 'cred-B', prfSalt: 'c2FsdEI=' },
-    ]);
+    const res = await assertPrfAny(['cred-A', 'cred-B']);
     expect(res.credentialId).toBe('cred-B');
     expect(res.prfOutput).toHaveLength(32);
   });

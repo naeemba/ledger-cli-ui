@@ -25,7 +25,6 @@ export async function enablePasskeyUnlockAction(
     id: ulid(),
     userId: user.id,
     credentialId: parsed.data.credentialId,
-    prfSalt: parsed.data.prfSalt,
     wrap: parsed.data.wrap,
     label: parsed.data.label,
   });
