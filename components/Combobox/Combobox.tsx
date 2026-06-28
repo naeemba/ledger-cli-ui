@@ -5,19 +5,13 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Command,
+  CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import {
   Popover,
   PopoverContent,
@@ -80,7 +74,7 @@ const Combobox = ({
   );
 
   const list = (
-    <Command>
+    <>
       <CommandInput
         placeholder={placeholder}
         value={search}
@@ -103,28 +97,28 @@ const Combobox = ({
           ))}
         </CommandGroup>
       </CommandList>
-    </Command>
+    </>
   );
 
   // On touch screens a floating popover is fragile: the soft keyboard reflows
   // the layout and Base UI's hardcoded "sloppy" touch dismissal closes the
   // popup mid-tap, discarding the search. A modal dialog keeps the input and
-  // list anchored so the create-new affordance stays reachable.
+  // list anchored so the create-new affordance stays reachable. CommandDialog
+  // supplies its own Command wrapper plus sr-only title/description, so the
+  // trigger stays a sibling driven by the existing open state.
   if (isMobile) {
     return (
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger render={trigger} />
-        <DialogContent
-          showCloseButton={false}
-          className="top-1/4 translate-y-0 gap-0 overflow-hidden p-0"
+      <>
+        {React.cloneElement(trigger, { onClick: () => setOpen(true) })}
+        <CommandDialog
+          open={open}
+          onOpenChange={handleOpenChange}
+          title={placeholder}
+          description="Search the list or type a new value"
         >
-          <DialogTitle className="sr-only">{placeholder}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {placeholder}
-          </DialogDescription>
           {list}
-        </DialogContent>
-      </Dialog>
+        </CommandDialog>
+      </>
     );
   }
 
@@ -132,7 +126,7 @@ const Combobox = ({
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger render={trigger} />
       <PopoverContent className="w-(--anchor-width) min-w-56 p-0" align="start">
-        {list}
+        <Command>{list}</Command>
       </PopoverContent>
     </Popover>
   );
