@@ -53,7 +53,9 @@ describe('verifyJournalParseable', () => {
     const result = await verifyJournalParseable(file);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.firstLine.length).toBeGreaterThan(0);
+      // Surface ledger's actual diagnostic, not just the (often useless) first
+      // "In file included from"/"While parsing" context line.
+      expect(result.message).toMatch(/Error: Transaction does not balance/);
     }
   });
 
@@ -69,8 +71,29 @@ describe('verifyJournalParseable', () => {
     const result = await verifyJournalParseable(file);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.firstLine).not.toContain(tmp);
-      expect(result.firstLine).not.toMatch(/\/[A-Za-z]+\/[A-Za-z]/);
+      expect(result.message).not.toContain(tmp);
+      expect(result.message).not.toMatch(/\/[A-Za-z]+\/[A-Za-z]/);
+    }
+  });
+
+  it('surfaces the real error, not the "In file included from" context, for an included file', async () => {
+    // Reproduces the reported bug: an unbalanced transaction lives in an
+    // included file, so ledger's FIRST stderr line is the unhelpful
+    // "In file included from ... line N:". The message must carry the actual
+    // diagnostic instead.
+    const main = path.join(tmp, 'main.ledger');
+    const sub = path.join(tmp, 'sub.ledger');
+    await fs.writeFile(main, 'include ./sub.ledger\n');
+    await fs.writeFile(
+      sub,
+      '2024-09-01 oops\n    Expenses:Food  USD 10\n    Assets:Cash  USD -7\n'
+    );
+    const result = await verifyJournalParseable(main);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toMatch(/Error: Transaction does not balance/);
+      expect(result.message).not.toMatch(/^In file included from/);
+      expect(result.message).not.toContain(tmp);
     }
   });
 
