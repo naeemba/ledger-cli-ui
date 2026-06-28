@@ -125,13 +125,13 @@ const TransactionEntry = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const _balanceKind = computeBalance(draft.postings).kind;
+  const balanceKind = computeBalance(draft.postings).kind;
   const canSubmit =
     !isPending &&
     draft.date !== '' &&
     draft.payee.trim() !== '' &&
     draft.postings.every((p) => p.account.trim() !== '') &&
-    (_balanceKind === 'balanced' || _balanceKind === 'auto-balance');
+    (balanceKind === 'balanced' || balanceKind === 'auto-balance');
 
   const templateDraft: TemplateDraft = {
     payee: draft.payee.trim() || '—',
