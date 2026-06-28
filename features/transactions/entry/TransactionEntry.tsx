@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import type { TransactionActionState } from '../actions';
 import { FormLens } from './FormLens';
 import { TabBar } from './TabBar';
+import { computeBalance } from './balance';
 import {
   draftReducer,
   emptyPostings,
@@ -124,25 +125,13 @@ const TransactionEntry = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const _balanceKind = computeBalance(draft.postings).kind;
   const canSubmit =
     !isPending &&
     draft.date !== '' &&
     draft.payee.trim() !== '' &&
     draft.postings.every((p) => p.account.trim() !== '') &&
-    (() => {
-      const blanks = draft.postings.filter(
-        (p) => p.amount.trim() === ''
-      ).length;
-      if (blanks > 1) return false;
-      if (blanks === 1) return true; // auto-balance
-      const byCurrency = new Map<string, number>();
-      for (const p of draft.postings) {
-        const value = Number(p.amount);
-        if (!Number.isFinite(value)) return false;
-        byCurrency.set(p.currency, (byCurrency.get(p.currency) ?? 0) + value);
-      }
-      return [...byCurrency.values()].every((total) => Math.abs(total) <= 1e-9);
-    })();
+    (_balanceKind === 'balanced' || _balanceKind === 'auto-balance');
 
   const templateDraft: TemplateDraft = {
     payee: draft.payee.trim() || '—',
