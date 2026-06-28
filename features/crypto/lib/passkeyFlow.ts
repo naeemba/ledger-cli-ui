@@ -125,7 +125,10 @@ export const tryUnlockFromWebAuthn = async (
   const credentialId = webauthn?.response?.id;
   if (!first || !credentialId) return;
   try {
-    await unlockWithPrfOutput(credentialId, new Uint8Array(first as ArrayBuffer));
+    await unlockWithPrfOutput(
+      credentialId,
+      new Uint8Array(first as ArrayBuffer)
+    );
   } catch {
     // Not enrolled for unlock / no encryption — fall through to passphrase unlock.
   }

@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PRF_SALT } from './clientCrypto';
 import {
   base64urlToBytes,
   assertPrfForCredential,
   assertPrfAny,
 } from './webauthn';
-import { PRF_SALT } from './clientCrypto';
 
 // Minimal fake of a PublicKeyCredential carrying a PRF result.
 const fakeCred = (id: string, first: ArrayBuffer | undefined) => ({
@@ -55,7 +55,9 @@ describe('assertPrfForCredential', () => {
 
   it('throws when the prompt is dismissed (null credential)', async () => {
     stubGet(() => null);
-    await expect(assertPrfForCredential('cred-A')).rejects.toThrow(/dismissed/i);
+    await expect(assertPrfForCredential('cred-A')).rejects.toThrow(
+      /dismissed/i
+    );
   });
 });
 
