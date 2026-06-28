@@ -27,12 +27,16 @@ export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [message, setMessage] = useState<string | null>(null);
+  // Verbatim ledger diagnostic (when the import lands but won't parse), shown in
+  // a distinct monospace block below the summary so the user can act on it.
+  const [detail, setDetail] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
     setPhase('uploading');
     setMessage(null);
+    setDetail(null);
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -50,23 +54,27 @@ export default function ImportPage() {
           : `Imported ${(result.bytes ?? 0).toLocaleString()} bytes${tagged}. Reports refresh on next view.`;
       if (result.parseFailure) {
         // Files landed on disk but ledger can't parse them. Don't claim
-        // success — the user needs to know reports will be broken.
+        // success — the user needs to know reports will be broken — and show
+        // the actual ledger diagnostic so they can fix the offending entry.
         setPhase('error');
         setMessage(
-          `${description} Ledger rejected the resulting journal: ${result.parseFailure}`
+          `${description} Ledger could not parse the imported journal — reports will be broken until this is fixed:`
         );
+        setDetail(result.parseFailure);
         toast.error('Journal imported but not parseable', {
           description: result.parseFailure,
         });
       } else {
         setPhase('done');
         setMessage(description);
+        setDetail(null);
         toast.success('Journal imported', { description });
       }
       router.refresh();
     } catch (err) {
       setPhase('error');
       setMessage(err instanceof Error ? err.message : 'Upload failed');
+      setDetail(null);
     }
   };
 
@@ -115,7 +123,14 @@ export default function ImportPage() {
 
         {message && (
           <Alert variant={phase === 'error' ? 'destructive' : 'default'}>
-            <AlertDescription>{message}</AlertDescription>
+            <AlertDescription>
+              <span>{message}</span>
+              {detail && (
+                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md bg-destructive/10 p-2 font-mono text-xs leading-relaxed">
+                  {detail}
+                </pre>
+              )}
+            </AlertDescription>
           </Alert>
         )}
       </form>

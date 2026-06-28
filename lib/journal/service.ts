@@ -189,7 +189,7 @@ export class JournalService {
           ok: false,
           reason: 'parse-failed',
           fieldErrors: {},
-          formError: `Ledger rejected the new transaction: ${verify.firstLine}`,
+          formError: `Ledger rejected the new transaction: ${verify.message}`,
         };
       }
       try {
@@ -275,7 +275,7 @@ export class JournalService {
       }
       return {
         uidsAdded: backfill.uidsAdded,
-        ...(verify.ok ? {} : { parseFailure: verify.firstLine }),
+        ...(verify.ok ? {} : { parseFailure: verify.message }),
       };
     });
   }
@@ -363,7 +363,7 @@ export class JournalService {
         mainFile,
         fileCount: entries.length,
         uidsAdded: backfill.uidsAdded,
-        ...(verify.ok ? {} : { parseFailure: verify.firstLine }),
+        ...(verify.ok ? {} : { parseFailure: verify.message }),
       };
     });
   }
@@ -449,7 +449,7 @@ export class JournalService {
       return {
         ok: false,
         reason: 'parse-failed',
-        message: `Ledger rejected the edit: ${verify.firstLine}`,
+        message: `Ledger rejected the edit: ${verify.message}`,
       };
     }
     try {
@@ -532,7 +532,7 @@ export class JournalService {
       return {
         ok: false,
         reason: 'parse-failed',
-        message: `Ledger rejected the delete: ${verify.firstLine}`,
+        message: `Ledger rejected the delete: ${verify.message}`,
       };
     }
     try {
