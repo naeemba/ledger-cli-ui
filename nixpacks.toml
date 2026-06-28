@@ -1,6 +1,17 @@
 # The app shells out to the `ledger` CLI (ledger-cli 3.x) to compute
 # balances/stats from journal files (see lib/journal/*). Nixpacks installs
-# Node deps but not system binaries, so install `ledger` via apt here or the
+# Node deps but not system binaries, so `ledger` must be provided here or the
 # production container fails at runtime with `spawn ledger ENOENT`.
+#
+# We pull ledger from nixpkgs (pinned) rather than apt. Debian/Ubuntu apt ships
+# ledger 3.3.2, whose transaction balancing is stricter about sub-precision
+# rounding than the 3.4.1 most journals are authored against locally — so a
+# journal that parses on a dev machine can be REJECTED on the server (e.g. a BTC
+# transfer that's off by a rounding remainder). Pinning nixpkgs to a commit that
+# packages ledger 3.4.1 keeps server-side parsing identical to local `ledger`.
+#
+# nixpkgsArchive is the nixpkgs revision used for this phase; the pinned commit
+# below packages ledger 3.4.1 (verify: pkgs/by-name/le/ledger/package.nix).
 [phases.setup]
-aptPkgs = ["ledger"]
+nixPkgs = ["ledger"]
+nixpkgsArchive = "e73de5be04e0eff4190a1432b946d469c794e7b4"
