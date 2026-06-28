@@ -16,7 +16,6 @@ export const cryptoPasskeyWrap = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     credentialId: text('credentialId').notNull(),
-    prfSalt: text('prfSalt').notNull(), // base64, 32 bytes
     wrap: text('wrap').notNull(), // opaque base64; DEK wrapped by the PRF-derived KEK
     label: text('label').notNull(), // mirrors the passkey name, for the UI
     createdAt: timestamp('createdAt')
