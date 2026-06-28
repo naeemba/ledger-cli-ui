@@ -1,4 +1,4 @@
-import { derivePrfKek, unwrapDek, wrapDek } from './clientCrypto';
+import { derivePrfKek, prfSalt, unwrapDek, wrapDek } from './clientCrypto';
 import { getMaterial } from './cryptoMaterial';
 import { postDek } from './unlockFlow';
 import { assertPrfAny, assertPrfForCredential } from './webauthn';
@@ -132,6 +132,33 @@ export const tryUnlockFromWebAuthn = async (
   } catch {
     // Not enrolled for unlock / no encryption — fall through to passphrase unlock.
   }
+};
+
+/**
+ * Drive the passkey login ceremony and the best-effort single-tap unlock from
+ * one assertion. Requests PRF with the fixed salt, surfaces any better-auth
+ * error to the caller (so the AuthForm can show it and skip the redirect), and
+ * otherwise attempts to unlock the journal from the ceremony's PRF output before
+ * the caller redirects. Unlock is best-effort and never blocks login: when PRF
+ * or an enrolled wrap is unavailable, the user falls through to passphrase
+ * unlock. Returns the better-auth result so callers can inspect `error`.
+ */
+export const signInWithPasskey = async (): Promise<{
+  error: { message?: string | null } | null | undefined;
+}> => {
+  const res = await authClient.signIn.passkey({
+    extensions: {
+      prf: { eval: { first: prfSalt() as unknown as BufferSource } },
+    },
+    returnWebAuthnResponse: true,
+  } as Parameters<typeof authClient.signIn.passkey>[0]);
+  if (res?.error) return { error: res.error };
+  let webauthn: WebAuthnResult | undefined;
+  if (res && 'webauthn' in res && res.webauthn) {
+    webauthn = res.webauthn as unknown as WebAuthnResult;
+  }
+  await tryUnlockFromWebAuthn(webauthn);
+  return { error: null };
 };
 
 /** Unlock the session using any enrolled passkey (standalone unlock screen). */

@@ -8,6 +8,7 @@ import {
   tryUnlockFromWebAuthn,
   registerPasskey,
   enrollPasskeyForUnlock,
+  signInWithPasskey,
 } from './passkeyFlow';
 import { postDek } from './unlockFlow';
 import { assertPrfForCredential, assertPrfAny } from './webauthn';
@@ -18,7 +19,10 @@ vi.mock('./webauthn');
 vi.mock('./cryptoMaterial');
 vi.mock('./unlockFlow');
 vi.mock('@/lib/auth-client', () => ({
-  authClient: { passkey: { addPasskey: vi.fn() } },
+  authClient: {
+    passkey: { addPasskey: vi.fn() },
+    signIn: { passkey: vi.fn() },
+  },
 }));
 vi.mock('@/features/crypto/actions/enablePasskeyUnlock');
 
@@ -230,5 +234,91 @@ describe('enrollPasskeyForUnlock', () => {
     await expect(
       enrollPasskeyForUnlock(generateDek(), 'cred-A', 'L')
     ).rejects.toThrow('rate limited');
+  });
+});
+
+describe('signInWithPasskey', () => {
+  const signInPasskey = () =>
+    authClient.signIn.passkey as MockedFunction<
+      typeof authClient.signIn.passkey
+    >;
+
+  it('requests PRF with the fixed salt and unlocks from the assertion', async () => {
+    // Arrange: a passkey enrolled for unlock with a known PRF output.
+    const prf = new Uint8Array(32).fill(5);
+    const dek = generateDek();
+    const wrap = await wrapDek(dek, await derivePrfKek(prf));
+    (getMaterial as MockedFunction<typeof getMaterial>).mockResolvedValue({
+      passSalt: 'salt',
+      argonParams: { m: 19, t: 2, p: 1 },
+      wrapPassphrase: 'pp',
+      wrapRecovery: 'rec',
+      passkeys: [{ credentialId: 'cred-B', wrap }],
+    });
+    signInPasskey().mockResolvedValue({
+      error: null,
+      webauthn: {
+        response: { id: 'cred-B' },
+        clientExtensionResults: { prf: { results: { first: prf.buffer } } },
+      },
+    } as never);
+
+    const res = await signInWithPasskey();
+
+    expect(res.error).toBeNull();
+    expect(postDek).toHaveBeenCalledTimes(1);
+    // PRF was requested with the fixed versioned salt.
+    const opts = signInPasskey().mock.calls[0][0] as {
+      extensions: { prf: { eval: { first: ArrayBufferView } } };
+    };
+    const sentSalt = new Uint8Array(
+      opts.extensions.prf.eval.first as unknown as ArrayBuffer
+    );
+    expect(new TextDecoder().decode(sentSalt)).toBe('ledger-prf-v1');
+  });
+
+  it('returns the better-auth error and never attempts unlock', async () => {
+    signInPasskey().mockResolvedValue({
+      error: { message: 'cancelled' },
+    } as never);
+
+    const res = await signInWithPasskey();
+
+    expect(res.error).toEqual({ message: 'cancelled' });
+    expect(postDek).not.toHaveBeenCalled();
+  });
+
+  it('resolves without error when no webauthn/PRF is returned (redirect still proceeds)', async () => {
+    signInPasskey().mockResolvedValue({ error: null } as never);
+
+    const res = await signInWithPasskey();
+
+    expect(res.error).toBeNull();
+    expect(postDek).not.toHaveBeenCalled();
+  });
+
+  it('swallows an unlock failure and still reports success', async () => {
+    // PRF present but the credential is not enrolled for unlock.
+    (getMaterial as MockedFunction<typeof getMaterial>).mockResolvedValue({
+      passSalt: 'salt',
+      argonParams: { m: 19, t: 2, p: 1 },
+      wrapPassphrase: 'pp',
+      wrapRecovery: 'rec',
+      passkeys: [],
+    });
+    signInPasskey().mockResolvedValue({
+      error: null,
+      webauthn: {
+        response: { id: 'cred-Z' },
+        clientExtensionResults: {
+          prf: { results: { first: new Uint8Array(32).buffer } },
+        },
+      },
+    } as never);
+
+    const res = await signInWithPasskey();
+
+    expect(res.error).toBeNull();
+    expect(postDek).not.toHaveBeenCalled();
   });
 });

@@ -12,11 +12,7 @@ import {
   type Method,
 } from './authState';
 import { resolveCallbackUrl } from './callbackUrl';
-import { PRF_SALT } from '@/features/crypto/lib/clientCrypto';
-import {
-  tryUnlockFromWebAuthn,
-  type WebAuthnResult,
-} from '@/features/crypto/lib/passkeyFlow';
+import { signInWithPasskey } from '@/features/crypto/lib/passkeyFlow';
 import { authClient } from '@/lib/auth-client';
 import { useWebAuthnSupported } from '@naeemba/next-starter/client';
 import Link from 'next/link';
@@ -112,29 +108,12 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   function onPasskey() {
-    let webauthn: WebAuthnResult | undefined;
-    return runAttempt(
-      'passkey',
-      async () => {
-        const res = await authClient.signIn.passkey({
-          extensions: {
-            prf: { eval: { first: PRF_SALT as unknown as BufferSource } },
-          },
-          returnWebAuthnResponse: true,
-        } as Parameters<typeof authClient.signIn.passkey>[0]);
-        if (res && 'webauthn' in res && res.webauthn) {
-          webauthn = res.webauthn as unknown as WebAuthnResult;
-        }
-        return res;
-      },
-      async () => {
-        // Best-effort: unlock the journal from the same ceremony's PRF output.
-        // Never throws; falls through to passphrase unlock when unavailable.
-        await tryUnlockFromWebAuthn(webauthn);
-        const callbackURL = resolveCallbackUrl('callbackUrl', CALLBACK_URL);
-        window.location.assign(callbackURL);
-      }
-    );
+    // signInWithPasskey runs the ceremony and a best-effort single-tap unlock
+    // (never throws on unlock failure); on success we redirect to the dashboard.
+    return runAttempt('passkey', signInWithPasskey, () => {
+      const callbackURL = resolveCallbackUrl('callbackUrl', CALLBACK_URL);
+      window.location.assign(callbackURL);
+    });
   }
 
   if (state.status.magicLink === 'sent') {
