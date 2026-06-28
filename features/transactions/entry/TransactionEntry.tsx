@@ -9,8 +9,9 @@ import {
   useState,
 } from 'react';
 import { toast } from 'sonner';
-import type { TransactionActionState } from '../actions';
+import type { SubmitAction, TransactionActionState } from '../actions';
 import { FormLens } from './FormLens';
+import { RawLens } from './RawLens';
 import { TabBar } from './TabBar';
 import { computeBalance } from './balance';
 import {
@@ -26,11 +27,6 @@ import SaveAsTemplateButton from '@/features/templates/SaveAsTemplateButton';
 import type { TemplateDraft } from '@/lib/templates/schema';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 import { useRouter } from 'next/navigation';
-
-type SubmitAction = (
-  prev: TransactionActionState | null,
-  formData: FormData
-) => Promise<TransactionActionState>;
 
 export type TransactionEntryProps = {
   accounts: string[];
@@ -54,7 +50,10 @@ const todayISO = (): string => {
 
 const initialState: TransactionActionState = { ok: false };
 
-const TABS = [{ id: 'form', label: 'Form' }];
+const TABS = [
+  { id: 'form', label: 'Form' },
+  { id: 'raw', label: 'Raw' },
+];
 
 const TransactionEntry = ({
   accounts,
@@ -81,6 +80,7 @@ const TransactionEntry = ({
   );
 
   const [active, setActive] = useState('form');
+  const [rawError, setRawError] = useState<string | null>(null);
 
   const formRef = useRef<HTMLFormElement>(null);
   // Set by the "Save & add another" button so the success effect resets the
@@ -131,7 +131,8 @@ const TransactionEntry = ({
     draft.date !== '' &&
     draft.payee.trim() !== '' &&
     draft.postings.every((p) => p.account.trim() !== '') &&
-    (balanceKind === 'balanced' || balanceKind === 'auto-balance');
+    (balanceKind === 'balanced' || balanceKind === 'auto-balance') &&
+    !(active === 'raw' && rawError !== null);
 
   const templateDraft: TemplateDraft = {
     payee: draft.payee.trim() || '—',
@@ -183,6 +184,10 @@ const TransactionEntry = ({
               defaultCurrency={defaultCurrency}
               fieldErrors={fieldErrors}
             />
+          )}
+
+          {active === 'raw' && (
+            <RawLens draft={draft} dispatch={dispatch} onError={setRawError} />
           )}
 
           {state?.formError ===

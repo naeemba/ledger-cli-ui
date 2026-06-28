@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getJournalDir } from './layout';
-import { parseJournal } from './parser';
+import { parseJournal } from './loader';
 import { JournalRepository } from './repository';
 import { JournalService } from './service';
 import { resetObjectStore, push } from '@/lib/storage';

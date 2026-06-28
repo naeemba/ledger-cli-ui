@@ -24,6 +24,24 @@ describe('TransactionEntry', () => {
     expect(out).toContain('role="tab"');
   });
 
+  it('registers a Raw tab', () => {
+    const out = html(
+      <TransactionEntry
+        {...common}
+        initialDraft={{
+          date: '2026-06-29',
+          payee: 'Acme',
+          status: 'none',
+          postings: [
+            { account: 'Income:Salary', amount: '-100', currency: 'USD' },
+            { account: 'Assets:Checking', amount: '100', currency: 'USD' },
+          ],
+        }}
+      />
+    );
+    expect(out).toContain('Raw');
+  });
+
   it('renders posting accounts from initialDraft', () => {
     const out = html(
       <TransactionEntry

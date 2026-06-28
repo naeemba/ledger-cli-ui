@@ -1,5 +1,3 @@
-import { promises as fs } from 'fs';
-import path from 'path';
 import { fingerprintDraft } from './fingerprint';
 import { UID_LINE_REGEX } from './uid';
 
@@ -68,6 +66,12 @@ export type ParsedBlock = {
   payee: string;
   note: string | null;
   postings: ParsedPosting[];
+  /**
+   * Non-empty lines after the header that were neither a uid, a comment, nor a
+   * valid posting. Journal-file parsing tolerates these (junk is skipped), but
+   * an interactive editor can use them to flag silently-dropped content.
+   */
+  unparsedLines: string[];
 };
 
 const COMMENT_LINE_REGEX = /^\s*;\s?(.*)$/;
@@ -81,6 +85,7 @@ export const parseBlock = (block: string): ParsedBlock | null => {
   let uid: string | null = null;
   const noteLines: string[] = [];
   const postings: ParsedPosting[] = [];
+  const unparsedLines: string[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
@@ -98,6 +103,8 @@ export const parseBlock = (block: string): ParsedBlock | null => {
     const posting = parsePostingLine(line);
     if (posting) {
       postings.push(posting);
+    } else {
+      unparsedLines.push(line);
     }
   }
 
@@ -108,37 +115,8 @@ export const parseBlock = (block: string): ParsedBlock | null => {
     payee: header.payee,
     note: noteLines.length > 0 ? noteLines.join('\n') : null,
     postings,
+    unparsedLines,
   };
-};
-
-const INCLUDE_LINE_REGEX = /^\s*include\s+(\S.*?)\s*$/;
-
-export const resolveIncludes = async (mainPath: string): Promise<string[]> => {
-  const seen = new Set<string>();
-  const order: string[] = [];
-
-  const visit = async (filePath: string, stack: string[]): Promise<void> => {
-    const abs = path.resolve(filePath);
-    if (stack.includes(abs)) {
-      throw new Error(
-        `Include cycle detected: ${[...stack, abs].join(' -> ')}`
-      );
-    }
-    if (seen.has(abs)) return;
-    seen.add(abs);
-    order.push(abs);
-    const text = await fs.readFile(abs, 'utf-8');
-    for (const line of text.split('\n')) {
-      const m = line.match(INCLUDE_LINE_REGEX);
-      if (m) {
-        const target = path.resolve(path.dirname(abs), m[1]);
-        await visit(target, [...stack, abs]);
-      }
-    }
-  };
-
-  await visit(mainPath, []);
-  return order;
 };
 
 export type Transaction = {
@@ -218,21 +196,4 @@ export const parseJournalFile = (
   }
   flush(lines.length - 1);
   return transactions;
-};
-
-export const parseJournal = async (
-  mainPath: string
-): Promise<ParsedJournal> => {
-  const filePaths = await resolveIncludes(mainPath);
-  const files: Array<{ path: string; mtimeMs: number }> = [];
-  const transactions: Transaction[] = [];
-  for (const filePath of filePaths) {
-    const [stat, text] = await Promise.all([
-      fs.stat(filePath),
-      fs.readFile(filePath, 'utf-8'),
-    ]);
-    files.push({ path: filePath, mtimeMs: stat.mtimeMs });
-    transactions.push(...parseJournalFile(filePath, text));
-  }
-  return { files, transactions };
 };
