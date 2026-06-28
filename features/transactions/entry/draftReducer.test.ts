@@ -119,4 +119,10 @@ describe('serializeDraftJson', () => {
     );
     expect(json.uid).toBe('ULID123');
   });
+  it('omits uid in create mode even when present on state', () => {
+    const json = JSON.parse(
+      serializeDraftJson({ ...base, uid: 'ULID123' }, 'create')
+    );
+    expect(json.uid).toBeUndefined();
+  });
 });
