@@ -1,4 +1,4 @@
-import { PRF_SALT } from './clientCrypto';
+import { prfSalt } from './clientCrypto';
 
 export const base64urlToBytes = (s: string): Uint8Array<ArrayBuffer> => {
   const pad = s.length % 4 === 0 ? '' : '='.repeat(4 - (s.length % 4));
@@ -17,7 +17,7 @@ const readPrf = (cred: PublicKeyCredential): Uint8Array => {
 };
 
 const prfExtensions = () => ({
-  prf: { eval: { first: PRF_SALT as unknown as BufferSource } },
+  prf: { eval: { first: prfSalt() as unknown as BufferSource } },
 });
 
 /** Single-credential PRF assertion — used when enabling a specific passkey. */

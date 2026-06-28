@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PRF_SALT } from './clientCrypto';
+import { prfSalt } from './clientCrypto';
 import {
   base64urlToBytes,
   assertPrfForCredential,
@@ -43,7 +43,7 @@ describe('assertPrfForCredential', () => {
     const first = new Uint8Array(
       opts!.publicKey!.extensions!.prf!.eval!.first as ArrayBuffer
     );
-    expect(Array.from(first)).toEqual(Array.from(PRF_SALT));
+    expect(Array.from(first)).toEqual(Array.from(prfSalt()));
   });
 
   it('throws a clear error when PRF is unsupported', async () => {
