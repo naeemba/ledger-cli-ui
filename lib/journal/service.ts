@@ -9,10 +9,10 @@ import {
   VALID_EXTS,
   getJournalDir,
 } from './layout';
+import { resolveIncludes } from './loader';
 import { withUserLock } from './mutex';
 import {
   parseJournalFile,
-  resolveIncludes,
   type ParsedJournal,
   type Transaction,
 } from './parser';
