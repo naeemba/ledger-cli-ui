@@ -20,38 +20,73 @@ export const parseHeader = (line: string): ParsedHeader | null => {
   return { date: `${y}-${mo}-${d}`, status, payee };
 };
 
+/** A posting annotation: a total-cost (`@@`) or a balance assertion (`=`). */
+export type Annotation = { amount: string; currency: string };
+
 export type ParsedPosting = {
   account: string;
   amount: string;
   currency: string;
+  cost?: Annotation;
+  assertion?: Annotation;
 };
 
 const POSTING_BARE_REGEX = /^\s+([^;\s][^\t]*?)\s*$/;
-const POSTING_AMOUNT_REGEX =
-  /^\s+([^\t;]+?)(?:\s{2,}|\t+)([^\s;]+\s+[-\d.,]+|[-\d.,]+\s+[^\s;]+)\s*$/;
 
 const stripCommas = (s: string): string => s.replace(/,/g, '');
 const isAmount = (s: string): boolean => /^-?\d[\d,]*(?:\.\d+)?$/.test(s);
 
-export const parsePostingLine = (line: string): ParsedPosting | null => {
-  const amountMatch = line.match(POSTING_AMOUNT_REGEX);
-  if (amountMatch) {
-    const [, account, valueRaw] = amountMatch;
-    const parts = valueRaw.trim().split(/\s+/);
-    if (parts.length !== 2) return null;
-    const [first, second] = parts;
-    let amount: string, currency: string;
-    if (isAmount(first) && !isAmount(second)) {
-      amount = stripCommas(first);
-      currency = second;
-    } else if (!isAmount(first) && isAmount(second)) {
-      amount = stripCommas(second);
-      currency = first;
-    } else {
-      return null;
-    }
-    return { account: account.trim(), amount, currency };
+const splitAccountRest = (
+  line: string
+): { account: string; rest: string } | null => {
+  const m = line.match(/^\s+(\S[^\t;]*?)(?:\s{2,}|\t+)(\S.*?)\s*$/);
+  if (!m) return null;
+  return { account: m[1].trim(), rest: m[2].trim() };
+};
+
+const parseAmtCur = (
+  s: string
+): { amount: string; currency: string } | null => {
+  const parts = s.split(/\s+/);
+  if (parts.length !== 2) return null;
+  const [first, second] = parts;
+  if (isAmount(first) && !isAmount(second)) {
+    return { amount: stripCommas(first), currency: second };
   }
+  if (!isAmount(first) && isAmount(second)) {
+    return { amount: stripCommas(second), currency: first };
+  }
+  return null;
+};
+
+export const parsePostingLine = (line: string): ParsedPosting | null => {
+  const split = splitAccountRest(line);
+  if (split) {
+    const { account, rest } = split;
+
+    // Bare assertion: "= AMT CUR" (no posting amount).
+    if (rest.startsWith('=')) {
+      const assertion = parseAmtCur(rest.slice(1).trim());
+      if (!assertion) return null;
+      return { account, amount: '', currency: '', assertion };
+    }
+
+    // Total-cost annotation: "AMT CUR @@ AMT CUR".
+    const atAt = rest.split('@@');
+    if (atAt.length === 2) {
+      const main = parseAmtCur(atAt[0].trim());
+      const cost = parseAmtCur(atAt[1].trim());
+      if (!main || !cost) return null;
+      return { account, amount: main.amount, currency: main.currency, cost };
+    }
+    if (atAt.length > 2) return null;
+
+    // Plain amount posting.
+    const main = parseAmtCur(rest);
+    if (!main) return null;
+    return { account, amount: main.amount, currency: main.currency };
+  }
+
   const bareMatch = line.match(POSTING_BARE_REGEX);
   if (bareMatch) {
     return { account: bareMatch[1].trim(), amount: '', currency: '' };

@@ -68,11 +68,28 @@ const uidSchema = z
   )
   .optional();
 
+const annotationAmountSchema = z
+  .string()
+  .trim()
+  .regex(/^-?\d+(\.\d+)?$/, 'Amount must be a number');
+
+const annotationSchema = z
+  .object({
+    amount: annotationAmountSchema,
+    currency: currencySchema.refine(
+      (s) => s.trim() !== '',
+      'Currency is required'
+    ),
+  })
+  .optional();
+
 export const postingSchema = z
   .object({
     account: accountSchema,
     amount: amountSchema,
     currency: currencySchema,
+    cost: annotationSchema,
+    assertion: annotationSchema,
   })
   .refine((p) => p.amount === '' || p.currency.trim() !== '', {
     message: 'Currency is required',
@@ -92,7 +109,12 @@ export const transactionDraftSchema = z
       .max(MAX_POSTINGS, `At most ${MAX_POSTINGS} postings are allowed`),
   })
   .superRefine((draft, ctx) => {
-    const blanks = draft.postings.filter((p) => p.amount === '').length;
+    // Assertion-only postings (no amount) check a balance; they do not
+    // participate in the transaction's own balancing.
+    const active = draft.postings.filter(
+      (p) => !(p.assertion && p.amount === '')
+    );
+    const blanks = active.filter((p) => p.amount === '').length;
     if (blanks > 1) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -103,12 +125,22 @@ export const transactionDraftSchema = z
     }
     if (blanks === 1) return; // ledger will balance the blank line
 
-    // All amounts filled — they must sum to zero per currency.
     const byCurrency = new Map<string, number>();
-    for (const p of draft.postings) {
-      const value = Number(p.amount);
-      if (!Number.isFinite(value)) return; // amount schema will surface this
-      byCurrency.set(p.currency, (byCurrency.get(p.currency) ?? 0) + value);
+    for (const p of active) {
+      if (p.cost) {
+        const cost = Number(p.cost.amount);
+        const amount = Number(p.amount);
+        if (!Number.isFinite(cost) || !Number.isFinite(amount)) return;
+        const sign = amount < 0 ? -1 : 1;
+        byCurrency.set(
+          p.cost.currency,
+          (byCurrency.get(p.cost.currency) ?? 0) + sign * cost
+        );
+      } else {
+        const value = Number(p.amount);
+        if (!Number.isFinite(value)) return;
+        byCurrency.set(p.currency, (byCurrency.get(p.currency) ?? 0) + value);
+      }
     }
     for (const [currency, total] of byCurrency) {
       if (Math.abs(total) > 1e-9) {
@@ -128,13 +160,17 @@ const ACCOUNT_COLUMN = 48;
 
 const formatPosting = (p: PostingDraft): string => {
   const indent = '    ';
+  const pad = (account: string) =>
+    ' '.repeat(Math.max(2, ACCOUNT_COLUMN - indent.length - account.length));
+
+  if (p.assertion && p.amount === '') {
+    const value = `= ${p.assertion.currency} ${p.assertion.amount}`;
+    return `${indent}${p.account}${pad(p.account)}${value}`;
+  }
   if (p.amount === '') return `${indent}${p.account}`;
-  const amount = `${p.currency} ${p.amount}`;
-  const padding = Math.max(
-    2,
-    ACCOUNT_COLUMN - indent.length - p.account.length
-  );
-  return `${indent}${p.account}${' '.repeat(padding)}${amount}`;
+  let value = `${p.currency} ${p.amount}`;
+  if (p.cost) value += ` @@ ${p.cost.currency} ${p.cost.amount}`;
+  return `${indent}${p.account}${pad(p.account)}${value}`;
 };
 
 const statusMarker = (status: TransactionDraft['status']): string => {

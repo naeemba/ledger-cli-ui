@@ -105,6 +105,35 @@ describe('parsedBlockToDraft', () => {
     expect(parsedBlockToDraft(block!)).toEqual(draft);
   });
 
+  it('carries cost and assertion through from the parsed block', () => {
+    const draft = parsedBlockToDraft({
+      uid: null,
+      date: '2026-06-29',
+      status: 'none',
+      payee: 'Currency exchange',
+      note: null,
+      postings: [
+        {
+          account: 'Assets:EUR',
+          amount: '92',
+          currency: 'EUR',
+          cost: { amount: '100', currency: 'USD' },
+        },
+        {
+          account: 'Assets:Checking',
+          amount: '',
+          currency: '',
+          assertion: { amount: '5', currency: 'USD' },
+        },
+      ],
+    });
+    expect(draft.postings[0].cost).toEqual({ amount: '100', currency: 'USD' });
+    expect(draft.postings[1].assertion).toEqual({
+      amount: '5',
+      currency: 'USD',
+    });
+  });
+
   it('round-trips the uid line for an edited transaction', () => {
     const draft = initDraft(
       {

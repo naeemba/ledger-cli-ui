@@ -1,7 +1,11 @@
+import type { Annotation } from '@/lib/journal/parser';
+
 export type DraftPosting = {
   account: string;
   amount: string;
   currency: string;
+  cost?: Annotation;
+  assertion?: Annotation;
 };
 
 export type DraftStatus = 'cleared' | 'pending' | 'none';
@@ -92,5 +96,21 @@ export const serializeDraftJson = (
       account: p.account.trim(),
       amount: p.amount.trim(),
       currency: p.currency.trim(),
+      ...(p.cost
+        ? {
+            cost: {
+              amount: p.cost.amount.trim(),
+              currency: p.cost.currency.trim(),
+            },
+          }
+        : {}),
+      ...(p.assertion
+        ? {
+            assertion: {
+              amount: p.assertion.amount.trim(),
+              currency: p.assertion.currency.trim(),
+            },
+          }
+        : {}),
     })),
   });
