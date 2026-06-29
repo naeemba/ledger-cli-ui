@@ -12,6 +12,10 @@
 #
 # nixpkgsArchive is the nixpkgs revision used for this phase; the pinned commit
 # below packages ledger 3.4.1 (verify: pkgs/by-name/le/ledger/package.nix).
+# "..." preserves the Node provider's auto-detected nix packages (nodejs/npm);
+# without it, `nixPkgs` REPLACES them and the build fails at `npm: command not
+# found` during the corepack/pnpm install step. (apt packages are additive and
+# never had this issue.)
 [phases.setup]
-nixPkgs = ["ledger"]
+nixPkgs = ["...", "ledger"]
 nixpkgsArchive = "e73de5be04e0eff4190a1432b946d469c794e7b4"
