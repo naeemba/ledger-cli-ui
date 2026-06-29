@@ -3,11 +3,12 @@
 
 import React, { useState } from 'react';
 import { ExchangeForm } from './typeForms/ExchangeForm';
-import { ExpenseForm, type TypeFormProps } from './typeForms/ExpenseForm';
+import { ExpenseForm } from './typeForms/ExpenseForm';
 import { FixBalanceForm } from './typeForms/FixBalanceForm';
 import { IncomeForm } from './typeForms/IncomeForm';
 import { TransferForm } from './typeForms/TransferForm';
 import { isEmptyDraft } from './typeForms/isEmptyDraft';
+import type { TypeFormProps } from './typeForms/props';
 import { TYPE_ADAPTERS, detectType } from './types/registry';
 import { Button } from '@/components/ui/button';
 

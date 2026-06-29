@@ -5,9 +5,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AmountInput from '../../AmountInput';
 import { headerOf } from '../types/adapter';
 import { fixBalanceAdapter, type FixBalanceFields } from '../types/fixBalance';
-import type { TypeFormProps } from './ExpenseForm';
 import { HeaderFieldsEditor } from './HeaderFields';
 import { Field, SectionLabel, AccountField } from './fields';
+import type { TypeFormProps } from './props';
 import { Input } from '@/components/ui/input';
 
 export type FixBalanceFormProps = TypeFormProps & {
@@ -44,18 +44,21 @@ export function FixBalanceForm({
   useEffect(() => {
     const account = fields.account.trim();
     const id = ++reqId.current;
-    let t: ReturnType<typeof setTimeout> | undefined;
-    if (account) {
-      t = setTimeout(() => {
+    // Deferred so the empty-account clear doesn't setState synchronously in
+    // the effect body; the debounce only matters when there's a fetch to make.
+    const t = setTimeout(
+      () => {
+        if (id !== reqId.current) return;
+        if (!account) {
+          setCurrent(null);
+          return;
+        }
         void getAccountBalance(account, fields.targetCurrency).then((bal) => {
           if (id === reqId.current) setCurrent(bal);
         });
-      }, 300);
-    } else {
-      t = setTimeout(() => {
-        if (id === reqId.current) setCurrent(null);
-      }, 0);
-    }
+      },
+      account ? 300 : 0
+    );
     return () => clearTimeout(t);
   }, [fields.account, fields.targetCurrency, getAccountBalance]);
 

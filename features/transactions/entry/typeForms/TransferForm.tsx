@@ -5,9 +5,9 @@ import React, { useMemo, useState } from 'react';
 import AmountInput from '../../AmountInput';
 import { headerOf } from '../types/adapter';
 import { transferAdapter, type TransferFields } from '../types/transfer';
-import type { TypeFormProps } from './ExpenseForm';
 import { HeaderFieldsEditor } from './HeaderFields';
 import { Field, SectionLabel, AccountField } from './fields';
+import type { TypeFormProps } from './props';
 import { Input } from '@/components/ui/input';
 
 export function TransferForm({

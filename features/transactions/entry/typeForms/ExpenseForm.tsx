@@ -3,20 +3,12 @@
 
 import React, { useMemo, useState } from 'react';
 import AmountInput from '../../AmountInput';
-import type { DraftAction, DraftState } from '../draftReducer';
 import { headerOf } from '../types/adapter';
 import { expenseAdapter, type ExpenseFields } from '../types/expense';
 import { HeaderFieldsEditor } from './HeaderFields';
 import { Field, SectionLabel, AccountField } from './fields';
+import type { TypeFormProps } from './props';
 import { Input } from '@/components/ui/input';
-
-export type TypeFormProps = {
-  draft: DraftState;
-  dispatch: (a: DraftAction) => void;
-  accounts: string[];
-  payees: string[];
-  defaultCurrency: string;
-};
 
 export function ExpenseForm({
   draft,
