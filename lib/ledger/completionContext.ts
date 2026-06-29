@@ -46,7 +46,6 @@ export const completionAt = (
 
   // An amount gap (2+ spaces or a tab after the account) splits the line into
   // account region (before) and amount/commodity region (after).
-  const gap = upToCaret.match(/\s{2,}|\t+/g);
   const hasAmountGap = / {2,}|\t/.test(upToCaret.replace(/^\s+/, ''));
 
   if (hasAmountGap) {
@@ -59,6 +58,5 @@ export const completionAt = (
   // Account region: token = the indented account text typed so far.
   const token = upToCaret.replace(/^\s+/, '');
   const from = pos - token.length;
-  void gap;
   return result(from, filterList(lists.accounts, token));
 };
