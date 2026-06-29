@@ -5,9 +5,8 @@ import AmountInput from '../../AmountInput';
 import { headerOf } from '../types/adapter';
 import { exchangeAdapter, type ExchangeFields } from '../types/exchange';
 import { HeaderFieldsEditor } from './HeaderFields';
-import { Field, SectionLabel, AccountField } from './fields';
+import { Field, SectionLabel, AccountField, CurrencyCombobox } from './fields';
 import type { TypeFormProps } from './props';
-import { Input } from '@/components/ui/input';
 
 export function ExchangeForm({
   draft,
@@ -15,6 +14,7 @@ export function ExchangeForm({
   accounts,
   payees,
   defaultCurrency,
+  currencies = [],
 }: TypeFormProps): React.JSX.Element {
   const ctx = useMemo(() => ({ defaultCurrency }), [defaultCurrency]);
   const [fields, setFields] = useState<ExchangeFields>(
@@ -42,11 +42,10 @@ export function ExchangeForm({
         placeholder="Amount"
         className="flex-1 text-right tabular-nums"
       />
-      <Input
-        type="text"
+      <CurrencyCombobox
         value={currency}
-        onChange={(e) => onCurrency(e.target.value)}
-        placeholder="Currency"
+        onChange={onCurrency}
+        currencies={currencies}
         className="w-24"
       />
     </div>

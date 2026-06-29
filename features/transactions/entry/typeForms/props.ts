@@ -7,4 +7,6 @@ export type TypeFormProps = {
   accounts: string[];
   payees: string[];
   defaultCurrency: string;
+  /** Commodities already used in the journal, for currency autocomplete. */
+  currencies?: string[];
 };

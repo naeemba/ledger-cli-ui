@@ -4,7 +4,7 @@ import { getAccountBalance } from './entry/actions/getAccountBalance';
 import Help from '@/components/Help';
 import TemplatePicker from '@/features/templates/TemplatePicker';
 import { requireUser } from '@/lib/auth/require-user';
-import { getBaseCurrency, getEntryTabOrder } from '@/lib/settings';
+import { getAvailableCurrencies, getEntryTabOrder } from '@/lib/settings';
 import { templateRepository } from '@/lib/templates';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 import {
@@ -21,8 +21,8 @@ const NewTransaction = async ({ templateId }: Props) => {
     getPayeeSuggestions(),
     templateRepository.list(user.id),
   ]);
-  const [defaultCurrency, tabOrder] = await Promise.all([
-    getBaseCurrency(),
+  const [{ currencies, base: defaultCurrency }, tabOrder] = await Promise.all([
+    getAvailableCurrencies(),
     getEntryTabOrder(),
   ]);
 
@@ -77,6 +77,7 @@ const NewTransaction = async ({ templateId }: Props) => {
         accounts={accounts}
         payees={payees}
         defaultCurrency={defaultCurrency}
+        currencies={currencies}
         tabOrder={tabOrder}
         submitAction={createTransactionAction}
         getAccountBalance={getAccountBalance}

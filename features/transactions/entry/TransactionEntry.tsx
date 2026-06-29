@@ -40,6 +40,8 @@ export type TransactionEntryProps = {
   accounts: string[];
   payees: string[];
   defaultCurrency: string;
+  /** Commodities already used in the journal, for currency autocomplete. */
+  currencies?: string[];
   mode?: 'create' | 'edit';
   // `date` is optional on the prop so server-side template prefill can omit it
   // and let the client compute today's date in the user's local timezone.
@@ -64,6 +66,7 @@ const TransactionEntry = ({
   accounts,
   payees,
   defaultCurrency,
+  currencies = [],
   mode,
   initialDraft,
   uid,
@@ -194,6 +197,7 @@ const TransactionEntry = ({
               accounts={accounts}
               payees={payees}
               defaultCurrency={defaultCurrency}
+              currencies={currencies}
               getAccountBalance={getAccountBalance ?? defaultGetAccountBalance}
             />
           )}
@@ -205,6 +209,7 @@ const TransactionEntry = ({
               accounts={accounts}
               payees={payees}
               defaultCurrency={defaultCurrency}
+              currencies={currencies}
               fieldErrors={fieldErrors}
             />
           )}

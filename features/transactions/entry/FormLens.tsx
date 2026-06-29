@@ -9,7 +9,7 @@ import type {
   DraftState,
   DraftStatus,
 } from './draftReducer';
-import { Field, SectionLabel } from './typeForms/fields';
+import { CurrencyCombobox, Field, SectionLabel } from './typeForms/fields';
 import Combobox from '@/components/Combobox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ type Props = {
   accounts: string[];
   payees: string[];
   defaultCurrency: string;
+  currencies?: string[];
   fieldErrors?: Record<string, string>;
 };
 
@@ -31,6 +32,7 @@ export function FormLens({
   accounts,
   payees,
   defaultCurrency,
+  currencies = [],
   fieldErrors,
 }: Props): React.JSX.Element {
   const balance = computeBalance(draft.postings);
@@ -130,6 +132,7 @@ export function FormLens({
               key={idx}
               posting={posting}
               accounts={accounts}
+              currencies={currencies}
               canRemove={draft.postings.length > 2}
               onChange={(patch) =>
                 dispatch({ type: 'setPosting', index: idx, patch })
@@ -167,12 +170,14 @@ export function FormLens({
 const PostingRow = ({
   posting,
   accounts,
+  currencies,
   canRemove,
   onChange,
   onRemove,
 }: {
   posting: DraftPosting;
   accounts: string[];
+  currencies: string[];
   canRemove: boolean;
   onChange: (patch: Partial<DraftPosting>) => void;
   onRemove: () => void;
@@ -191,11 +196,10 @@ const PostingRow = ({
         placeholder="Amount"
         className="flex-1 text-right tabular-nums sm:flex-none"
       />
-      <Input
-        type="text"
+      <CurrencyCombobox
         value={posting.currency}
-        onChange={(e) => onChange({ currency: e.target.value })}
-        placeholder="Currency"
+        onChange={(currency) => onChange({ currency })}
+        currencies={currencies}
         className="w-24 sm:w-auto"
       />
       <Button
