@@ -129,8 +129,9 @@ export const transactionDraftSchema = z
     for (const p of active) {
       if (p.cost) {
         const cost = Number(p.cost.amount);
-        if (!Number.isFinite(cost)) return;
-        const sign = Number(p.amount) < 0 ? -1 : 1;
+        const amount = Number(p.amount);
+        if (!Number.isFinite(cost) || !Number.isFinite(amount)) return;
+        const sign = amount < 0 ? -1 : 1;
         byCurrency.set(
           p.cost.currency,
           (byCurrency.get(p.cost.currency) ?? 0) + sign * cost

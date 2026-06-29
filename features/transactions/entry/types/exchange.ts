@@ -62,16 +62,16 @@ export const exchangeAdapter: TransactionTypeAdapter<ExchangeFields> = {
     if (draft.postings.some((p) => p.assertion)) return null;
     const got = draft.postings.find((p) => p.cost);
     const gave = draft.postings.find((p) => !p.cost);
-    if (!got || !gave || got === gave || !got.cost) return null;
+    if (!got?.cost || !gave || got === gave) return null;
+    const { cost } = got;
     if (got.amount === '' || gave.amount === '') return null;
     if (!(Number(got.amount) > 0) || !(Number(gave.amount) < 0)) return null;
-    if (gave.currency !== got.cost.currency) return null;
-    if (Math.abs(Number(gave.amount) + Number(got.cost.amount)) > 1e-9)
-      return null;
+    if (gave.currency !== cost.currency) return null;
+    if (Math.abs(Number(gave.amount) + Number(cost.amount)) > 1e-9) return null;
     return {
       ...headerOf(draft),
-      gaveAmount: got.cost.amount,
-      gaveCurrency: got.cost.currency,
+      gaveAmount: cost.amount,
+      gaveCurrency: cost.currency,
       gaveFrom: gave.account,
       gotAmount: absAmount(got.amount),
       gotCurrency: got.currency,

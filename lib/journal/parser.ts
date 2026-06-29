@@ -20,12 +20,15 @@ export const parseHeader = (line: string): ParsedHeader | null => {
   return { date: `${y}-${mo}-${d}`, status, payee };
 };
 
+/** A posting annotation: a total-cost (`@@`) or a balance assertion (`=`). */
+export type Annotation = { amount: string; currency: string };
+
 export type ParsedPosting = {
   account: string;
   amount: string;
   currency: string;
-  cost?: { amount: string; currency: string };
-  assertion?: { amount: string; currency: string };
+  cost?: Annotation;
+  assertion?: Annotation;
 };
 
 const POSTING_BARE_REGEX = /^\s+([^;\s][^\t]*?)\s*$/;

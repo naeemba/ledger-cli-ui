@@ -1,12 +1,11 @@
-export type DraftCost = { amount: string; currency: string };
-export type DraftAssertion = { amount: string; currency: string };
+import type { Annotation } from '@/lib/journal/parser';
 
 export type DraftPosting = {
   account: string;
   amount: string;
   currency: string;
-  cost?: DraftCost;
-  assertion?: DraftAssertion;
+  cost?: Annotation;
+  assertion?: Annotation;
 };
 
 export type DraftStatus = 'cleared' | 'pending' | 'none';

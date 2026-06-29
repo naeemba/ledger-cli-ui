@@ -19,8 +19,11 @@ export const computeBalance = (postings: DraftPosting[]): Balance => {
   for (const p of active) {
     if (p.cost) {
       const cost = Number(p.cost.amount);
-      if (!Number.isFinite(cost)) return { kind: 'invalid' };
-      const sign = Number(p.amount) < 0 ? -1 : 1;
+      const amount = Number(p.amount);
+      if (!Number.isFinite(cost) || !Number.isFinite(amount)) {
+        return { kind: 'invalid' };
+      }
+      const sign = amount < 0 ? -1 : 1;
       byCurrency.set(
         p.cost.currency,
         (byCurrency.get(p.cost.currency) ?? 0) + sign * cost
