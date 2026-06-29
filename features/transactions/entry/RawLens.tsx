@@ -1,20 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { LedgerEditor } from './LedgerEditor';
 import type { DraftState, DraftAction } from './draftReducer';
 import { applyRawText } from './rawLensLogic';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Textarea } from '@/components/ui/textarea';
 import { formatTransaction } from '@/lib/transactions/schema';
 
 export function RawLens({
   draft,
   dispatch,
   onError,
+  accounts = [],
+  payees = [],
+  commodities = [],
 }: {
   draft: DraftState;
   dispatch: (action: DraftAction) => void;
   onError?: (error: string | null) => void;
+  accounts?: string[];
+  payees?: string[];
+  commodities?: string[];
 }) {
   const [text, setText] = useState(() => formatTransaction(draft));
   const [error, setError] = useState<string | null>(null);
@@ -34,12 +40,12 @@ export function RawLens({
 
   return (
     <div className="flex flex-col gap-2">
-      <Textarea
+      <LedgerEditor
         value={text}
-        onChange={(e) => onChange(e.target.value)}
-        spellCheck={false}
-        rows={10}
-        className="resize-y font-mono leading-relaxed"
+        onChange={onChange}
+        accounts={accounts}
+        payees={payees}
+        commodities={commodities}
         aria-label="Transaction ledger text"
       />
       {error && (
