@@ -3,6 +3,10 @@ export {
   type SetSavedBaseCurrencyResult,
 } from './setSavedBaseCurrency';
 export {
+  setEntryTabOrderAction,
+  type SetEntryTabOrderResult,
+} from './setEntryTabOrder';
+export {
   setSessionBaseCurrencyAction,
   type SetSessionBaseCurrencyResult,
 } from './setSessionBaseCurrency';
