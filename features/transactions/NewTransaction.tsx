@@ -4,7 +4,7 @@ import { getAccountBalance } from './entry/actions/getAccountBalance';
 import Help from '@/components/Help';
 import TemplatePicker from '@/features/templates/TemplatePicker';
 import { requireUser } from '@/lib/auth/require-user';
-import { getBaseCurrency } from '@/lib/settings';
+import { getBaseCurrency, getEntryTabOrder } from '@/lib/settings';
 import { templateRepository } from '@/lib/templates';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 import {
@@ -21,7 +21,10 @@ const NewTransaction = async ({ templateId }: Props) => {
     getPayeeSuggestions(),
     templateRepository.list(user.id),
   ]);
-  const defaultCurrency = await getBaseCurrency();
+  const [defaultCurrency, tabOrder] = await Promise.all([
+    getBaseCurrency(),
+    getEntryTabOrder(),
+  ]);
 
   // Note: we intentionally do NOT seed `date` here. The client computes today's
   // date in the user's local timezone (`TransactionEntry` falls back to its own
@@ -74,6 +77,7 @@ const NewTransaction = async ({ templateId }: Props) => {
         accounts={accounts}
         payees={payees}
         defaultCurrency={defaultCurrency}
+        tabOrder={tabOrder}
         submitAction={createTransactionAction}
         getAccountBalance={getAccountBalance}
         initialDraft={initialDraft}
