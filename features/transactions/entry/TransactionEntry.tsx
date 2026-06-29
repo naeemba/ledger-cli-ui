@@ -28,7 +28,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import SaveAsTemplateButton from '@/features/templates/SaveAsTemplateButton';
 import type { TemplateDraft } from '@/lib/templates/schema';
-import { type TabId, normalizeTabOrder } from '@/lib/transactions/entryTabs';
+import {
+  type TabId,
+  TAB_LABELS,
+  normalizeTabOrder,
+} from '@/lib/transactions/entryTabs';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 import { useRouter } from 'next/navigation';
 
@@ -55,12 +59,6 @@ const todayISO = (): string => {
 };
 
 const initialState: TransactionActionState = { ok: false };
-
-const TAB_LABELS: Record<TabId, string> = {
-  types: 'Types',
-  form: 'Form',
-  raw: 'Raw',
-};
 
 const TransactionEntry = ({
   accounts,

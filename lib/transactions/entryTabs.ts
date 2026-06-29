@@ -5,6 +5,15 @@ export type TabId = (typeof TAB_IDS)[number];
 
 export const DEFAULT_TAB_ORDER: TabId[] = ['types', 'form', 'raw'];
 
+// Canonical human-readable label for each tab. Single source of truth shared by
+// the entry shell (TransactionEntry) and the Settings reorder UI so relabels
+// can never drift between the two call sites.
+export const TAB_LABELS: Record<TabId, string> = {
+  types: 'Types',
+  form: 'Form',
+  raw: 'Raw',
+};
+
 export const entryTabOrderSchema = z.array(z.enum(TAB_IDS));
 
 const isTabId = (value: string): value is TabId =>

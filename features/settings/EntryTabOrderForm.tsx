@@ -4,13 +4,7 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { setEntryTabOrderAction } from '@/features/settings/actions';
-import { type TabId } from '@/lib/transactions/entryTabs';
-
-const LABELS: Record<TabId, string> = {
-  types: 'Types',
-  form: 'Form',
-  raw: 'Raw',
-};
+import { type TabId, TAB_LABELS } from '@/lib/transactions/entryTabs';
 
 type Props = { initial: TabId[] };
 
@@ -44,7 +38,7 @@ const EntryTabOrderForm = ({ initial }: Props) => {
             className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
           >
             <span className="text-sm font-medium">
-              {LABELS[id]}
+              {TAB_LABELS[id]}
               {i === 0 && (
                 <span className="ml-2 text-xs text-muted-foreground">
                   Default
@@ -56,7 +50,7 @@ const EntryTabOrderForm = ({ initial }: Props) => {
                 type="button"
                 variant="outline"
                 size="sm"
-                aria-label={`Move ${LABELS[id]} up`}
+                aria-label={`Move ${TAB_LABELS[id]} up`}
                 disabled={i === 0}
                 onClick={() => setOrder((o) => move(o, i, i - 1))}
               >
@@ -66,7 +60,7 @@ const EntryTabOrderForm = ({ initial }: Props) => {
                 type="button"
                 variant="outline"
                 size="sm"
-                aria-label={`Move ${LABELS[id]} down`}
+                aria-label={`Move ${TAB_LABELS[id]} down`}
                 disabled={i === order.length - 1}
                 onClick={() => setOrder((o) => move(o, i, i + 1))}
               >
