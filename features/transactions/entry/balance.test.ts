@@ -69,3 +69,32 @@ describe('computeBalance', () => {
     expect(computeBalance(postings).kind).toBe('invalid');
   });
 });
+
+describe('computeBalance — cost and assertion', () => {
+  it('treats a cost posting as balancing on its cost currency', () => {
+    expect(
+      computeBalance([
+        {
+          account: 'Assets:EUR',
+          amount: '92',
+          currency: 'EUR',
+          cost: { amount: '100', currency: 'USD' },
+        },
+        { account: 'Assets:Checking', amount: '-100', currency: 'USD' },
+      ])
+    ).toEqual({ kind: 'balanced' });
+  });
+  it('excludes an assertion-only posting and auto-balances the lone blank', () => {
+    expect(
+      computeBalance([
+        {
+          account: 'Assets:Checking',
+          amount: '',
+          currency: '',
+          assertion: { amount: '1234.56', currency: 'USD' },
+        },
+        { account: 'Equity:Adjustments', amount: '', currency: '' },
+      ])
+    ).toEqual({ kind: 'auto-balance' });
+  });
+});
