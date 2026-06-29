@@ -1,5 +1,6 @@
 import { createTransactionAction } from './actions';
 import TransactionEntry from './entry/TransactionEntry';
+import { getAccountBalance } from './entry/actions/getAccountBalance';
 import Help from '@/components/Help';
 import TemplatePicker from '@/features/templates/TemplatePicker';
 import { requireUser } from '@/lib/auth/require-user';
@@ -74,6 +75,7 @@ const NewTransaction = async ({ templateId }: Props) => {
         payees={payees}
         defaultCurrency={defaultCurrency}
         submitAction={createTransactionAction}
+        getAccountBalance={getAccountBalance}
         initialDraft={initialDraft}
         templateMissing={templateMissing}
       />

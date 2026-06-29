@@ -22,4 +22,19 @@ describe('TabBar', () => {
     const out = html(<TabBar tabs={tabs} active="form" onSelect={() => {}} />);
     expect(out).toContain('disabled');
   });
+  it('marks inactive tabs aria-selected="false" and uses tablist/tab roles', () => {
+    const out = html(
+      <TabBar
+        tabs={[
+          { id: 'a', label: 'A' },
+          { id: 'b', label: 'B' },
+        ]}
+        active="a"
+        onSelect={() => {}}
+      />
+    );
+    expect(out).toContain('role="tablist"');
+    expect(out).toContain('role="tab"');
+    expect(out).toContain('aria-selected="false"');
+  });
 });

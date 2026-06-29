@@ -1,6 +1,7 @@
 import 'server-only';
 import { updateTransactionAction } from './actions';
 import TransactionEntry from './entry/TransactionEntry';
+import { getAccountBalance } from './entry/actions/getAccountBalance';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { fingerprintDraft } from '@/lib/journal/fingerprint';
@@ -47,6 +48,7 @@ const EditTransaction = async ({ uid }: { uid: string }) => {
         accounts={accounts}
         payees={payees}
         defaultCurrency={defaultCurrency}
+        getAccountBalance={getAccountBalance}
       />
     </div>
   );

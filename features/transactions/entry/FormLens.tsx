@@ -9,10 +9,10 @@ import type {
   DraftState,
   DraftStatus,
 } from './draftReducer';
+import { Field, SectionLabel } from './typeForms/fields';
 import Combobox from '@/components/Combobox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
@@ -163,30 +163,6 @@ export function FormLens({
 }
 
 // ─── Private sub-components ─────────────────────────────────────────────────
-
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:text-[0.7rem]">
-    {children}
-  </div>
-);
-
-const Field = ({
-  label,
-  htmlFor,
-  error,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  error?: string;
-  children: React.ReactNode;
-}) => (
-  <div className="flex flex-col gap-1.5">
-    <Label htmlFor={htmlFor}>{label}</Label>
-    {children}
-    {error && <span className="text-xs text-destructive">{error}</span>}
-  </div>
-);
 
 const PostingRow = ({
   posting,
