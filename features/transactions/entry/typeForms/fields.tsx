@@ -40,13 +40,34 @@ export const optionsForRoles = (
   return [...seen];
 };
 
+const ROLE_EXAMPLE: Record<AccountRole, string> = {
+  asset: 'Assets:Checking',
+  liability: 'Liabilities:CreditCard',
+  income: 'Income:Salary',
+  expense: 'Expenses:Food',
+  equity: 'Equity:Opening Balances',
+  unknown: 'Assets:Checking',
+};
+
+/**
+ * Builds a placeholder whose example matches the account role of the field, so
+ * an asset picker doesn't suggest "Expenses:Food". For multi-role fields the
+ * first role wins (it's the primary one — e.g. "asset" for "Paid from").
+ */
+export const placeholderForRole = (
+  role: AccountRole | AccountRole[]
+): string => {
+  const first = (Array.isArray(role) ? role[0] : role) ?? 'unknown';
+  return `Account, e.g. ${ROLE_EXAMPLE[first]}`;
+};
+
 export const AccountField = ({
   label,
   role,
   accounts,
   value,
   onChange,
-  placeholder = 'Account (full path, e.g. Expenses:Food)',
+  placeholder,
   error,
 }: {
   label: string;
@@ -64,8 +85,33 @@ export const AccountField = ({
         value={value}
         onChange={onChange}
         options={options}
-        placeholder={placeholder}
+        placeholder={placeholder ?? placeholderForRole(role)}
       />
     </Field>
   );
 };
+
+/**
+ * Inline currency picker used alongside an amount input. Autocompletes against
+ * the commodities already present in the journal while still accepting any
+ * free-typed ticker.
+ */
+export const CurrencyCombobox = ({
+  value,
+  onChange,
+  currencies,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  currencies: string[];
+  className?: string;
+}) => (
+  <Combobox
+    value={value}
+    onChange={onChange}
+    options={currencies}
+    placeholder="Currency"
+    triggerClassName={className}
+  />
+);

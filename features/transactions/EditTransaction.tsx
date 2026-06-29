@@ -5,7 +5,7 @@ import { getAccountBalance } from './entry/actions/getAccountBalance';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { fingerprintDraft } from '@/lib/journal/fingerprint';
-import { getBaseCurrency, getEntryTabOrder } from '@/lib/settings';
+import { getAvailableCurrencies, getEntryTabOrder } from '@/lib/settings';
 import {
   getAccountSuggestions,
   getPayeeSuggestions,
@@ -17,8 +17,8 @@ const EditTransaction = async ({ uid }: { uid: string }) => {
   const tx = await journalService.findTransaction(user.id, uid);
   if (!tx) notFound();
 
-  const [defaultCurrency, tabOrder] = await Promise.all([
-    getBaseCurrency(),
+  const [{ currencies, base: defaultCurrency }, tabOrder] = await Promise.all([
+    getAvailableCurrencies(),
     getEntryTabOrder(),
   ]);
   const initialDraft = {
@@ -51,6 +51,7 @@ const EditTransaction = async ({ uid }: { uid: string }) => {
         accounts={accounts}
         payees={payees}
         defaultCurrency={defaultCurrency}
+        currencies={currencies}
         tabOrder={tabOrder}
         getAccountBalance={getAccountBalance}
       />

@@ -6,9 +6,8 @@ import AmountInput from '../../AmountInput';
 import { headerOf } from '../types/adapter';
 import { fixBalanceAdapter, type FixBalanceFields } from '../types/fixBalance';
 import { HeaderFieldsEditor } from './HeaderFields';
-import { Field, SectionLabel, AccountField } from './fields';
+import { Field, SectionLabel, AccountField, CurrencyCombobox } from './fields';
 import type { TypeFormProps } from './props';
-import { Input } from '@/components/ui/input';
 
 export type FixBalanceFormProps = TypeFormProps & {
   getAccountBalance: (account: string, currency: string) => Promise<string>;
@@ -20,6 +19,7 @@ export function FixBalanceForm({
   accounts,
   payees,
   defaultCurrency,
+  currencies = [],
   getAccountBalance,
 }: FixBalanceFormProps): React.JSX.Element {
   const ctx = useMemo(() => ({ defaultCurrency }), [defaultCurrency]);
@@ -93,13 +93,12 @@ export function FixBalanceForm({
               placeholder="Target"
               className="flex-1 text-right tabular-nums"
             />
-            <Input
-              type="text"
+            <CurrencyCombobox
               value={fields.targetCurrency}
-              onChange={(e) =>
-                update({ ...fields, targetCurrency: e.target.value })
+              onChange={(targetCurrency) =>
+                update({ ...fields, targetCurrency })
               }
-              placeholder="Currency"
+              currencies={currencies}
               className="w-24"
             />
           </div>
