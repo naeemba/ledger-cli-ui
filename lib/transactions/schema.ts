@@ -158,7 +158,7 @@ export type PostingDraft = z.infer<typeof postingSchema>;
 
 const ACCOUNT_COLUMN = 48;
 
-const formatPosting = (p: PostingDraft): string => {
+export const formatPosting = (p: PostingDraft): string => {
   const indent = '    ';
   const pad = (account: string) =>
     ' '.repeat(Math.max(2, ACCOUNT_COLUMN - indent.length - account.length));

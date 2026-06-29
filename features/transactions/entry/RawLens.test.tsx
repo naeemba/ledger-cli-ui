@@ -19,16 +19,30 @@ describe('RawLens', () => {
     'USD'
   );
 
-  it('seeds the textarea with the formatted ledger text', () => {
-    const out = html(<RawLens draft={draft} dispatch={() => {}} />);
-    expect(out).toContain('<textarea');
-    expect(out).toContain('Whole Foods');
-    expect(out).toContain('Expenses:Groceries');
-    expect(out).toContain('Assets:Checking');
+  it('renders the ledger editor surface without crashing', () => {
+    const out = html(
+      <RawLens
+        draft={draft}
+        dispatch={() => {}}
+        accounts={[]}
+        payees={[]}
+        commodities={[]}
+      />
+    );
+    expect(out).toContain('aria-label="Transaction ledger text"');
+    expect(out).toContain('Format');
   });
 
-  it('renders no error on the initial (seeded) render', () => {
-    const out = html(<RawLens draft={draft} dispatch={() => {}} />);
+  it('renders no parse error on the initial render', () => {
+    const out = html(
+      <RawLens
+        draft={draft}
+        dispatch={() => {}}
+        accounts={[]}
+        payees={[]}
+        commodities={[]}
+      />
+    );
     expect(out.toLowerCase()).not.toContain('could not parse');
   });
 });

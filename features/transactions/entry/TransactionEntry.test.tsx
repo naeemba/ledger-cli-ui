@@ -154,8 +154,8 @@ describe('TransactionEntry', () => {
     expect(rawIdx).toBeGreaterThan(-1);
     expect(rawIdx).toBeLessThan(formIdx);
     expect(formIdx).toBeLessThan(typesIdx);
-    // Raw is the active tab → its RawLens textarea renders.
-    expect(out).toContain('<textarea');
+    // Raw is the active tab → its LedgerEditor surface renders.
+    expect(out).toContain('aria-label="Transaction ledger text"');
   });
 
   it('defaults to the first tab order entry when tabOrder is omitted', () => {

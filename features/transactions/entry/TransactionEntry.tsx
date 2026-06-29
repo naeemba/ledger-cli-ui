@@ -215,7 +215,14 @@ const TransactionEntry = ({
           )}
 
           {active === 'raw' && (
-            <RawLens draft={draft} dispatch={dispatch} onError={setRawError} />
+            <RawLens
+              draft={draft}
+              dispatch={dispatch}
+              onError={setRawError}
+              accounts={accounts}
+              payees={payees}
+              commodities={currencies}
+            />
           )}
 
           {state?.formError ===
