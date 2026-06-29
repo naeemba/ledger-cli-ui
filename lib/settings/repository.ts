@@ -24,4 +24,14 @@ export class UserSettingRepository {
         set: { baseCurrency: value, updatedAt: sql`now()` },
       });
   }
+
+  async upsertEntryTabOrder(userId: string, value: string): Promise<void> {
+    await this.db
+      .insert(userSetting)
+      .values({ userId, entryTabOrder: value })
+      .onConflictDoUpdate({
+        target: userSetting.userId,
+        set: { entryTabOrder: value, updatedAt: sql`now()` },
+      });
+  }
 }
