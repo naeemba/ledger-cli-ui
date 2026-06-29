@@ -13,3 +13,9 @@ export const extractAccountBalance = (
   const row = parseBalanceRows(stdout).find((r) => r.account === account);
   return row ? toNumber(row.amount) : '0';
 };
+
+/** Reject argv flag-smuggling: a non-empty value that does not begin with '-'. */
+export const isSafeLedgerArg = (value: string): boolean => {
+  const v = value.trim();
+  return v !== '' && !v.startsWith('-');
+};
