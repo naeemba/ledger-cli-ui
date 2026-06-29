@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
-import { Field, SectionLabel, AccountField } from './fields';
+import { Field, SectionLabel, AccountField, optionsForRoles } from './fields';
 
 const html = (node: React.ReactNode) => renderToStaticMarkup(node);
 
@@ -19,33 +19,31 @@ describe('fields primitives', () => {
     expect(html(<SectionLabel>Details</SectionLabel>)).toContain('Details');
   });
 
-  it('AccountField shows only accounts matching the role(s)', () => {
+  it('optionsForRoles filters accounts by a single role', () => {
+    expect(
+      optionsForRoles(['Expenses:Food', 'Assets:Checking'], 'expense')
+    ).toEqual(['Expenses:Food']);
+  });
+
+  it('optionsForRoles unions across an array of roles and dedupes', () => {
+    expect(
+      optionsForRoles(
+        ['Assets:Checking', 'Liabilities:Card', 'Expenses:Food'],
+        ['asset', 'liability']
+      )
+    ).toEqual(['Assets:Checking', 'Liabilities:Card']);
+  });
+
+  it('AccountField renders its label', () => {
     const out = html(
       <AccountField
         label="Spent on"
         role="expense"
-        accounts={['Expenses:Food', 'Assets:Checking']}
+        accounts={['Expenses:Food']}
         value=""
         onChange={() => {}}
       />
     );
-    // Combobox renders its options in the DOM; the asset account must be absent.
-    expect(out).toContain('Expenses:Food');
-    expect(out).not.toContain('Assets:Checking');
-  });
-
-  it('AccountField accepts an array of roles', () => {
-    const out = html(
-      <AccountField
-        label="From"
-        role={['asset', 'liability']}
-        accounts={['Assets:Checking', 'Liabilities:Card', 'Expenses:Food']}
-        value=""
-        onChange={() => {}}
-      />
-    );
-    expect(out).toContain('Assets:Checking');
-    expect(out).toContain('Liabilities:Card');
-    expect(out).not.toContain('Expenses:Food');
+    expect(out).toContain('Spent on');
   });
 });

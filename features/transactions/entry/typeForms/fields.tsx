@@ -29,7 +29,7 @@ export const Field = ({
   </div>
 );
 
-const optionsForRoles = (
+export const optionsForRoles = (
   accounts: string[],
   role: AccountRole | AccountRole[]
 ): string[] => {
@@ -46,7 +46,7 @@ export const AccountField = ({
   accounts,
   value,
   onChange,
-  placeholder = 'Search accounts…',
+  placeholder = 'Account (full path, e.g. Expenses:Food)',
   error,
 }: {
   label: string;
@@ -66,10 +66,6 @@ export const AccountField = ({
         options={options}
         placeholder={placeholder}
       />
-      {/* Hidden list keeps filtered options in the DOM for SSR assertions. */}
-      <span hidden aria-hidden="true">
-        {options.join(' ')}
-      </span>
     </Field>
   );
 };
