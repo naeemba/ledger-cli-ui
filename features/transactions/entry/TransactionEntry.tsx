@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import SaveAsTemplateButton from '@/features/templates/SaveAsTemplateButton';
 import type { TemplateDraft } from '@/lib/templates/schema';
+import { type TabId, normalizeTabOrder } from '@/lib/transactions/entryTabs';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 import { useRouter } from 'next/navigation';
 
@@ -44,6 +45,7 @@ export type TransactionEntryProps = {
   submitAction: SubmitAction;
   templateMissing?: boolean;
   getAccountBalance?: (account: string, currency: string) => Promise<string>;
+  tabOrder?: TabId[];
 };
 
 const todayISO = (): string => {
@@ -54,11 +56,11 @@ const todayISO = (): string => {
 
 const initialState: TransactionActionState = { ok: false };
 
-const TABS = [
-  { id: 'types', label: 'Types' },
-  { id: 'form', label: 'Form' },
-  { id: 'raw', label: 'Raw' },
-];
+const TAB_LABELS: Record<TabId, string> = {
+  types: 'Types',
+  form: 'Form',
+  raw: 'Raw',
+};
 
 const TransactionEntry = ({
   accounts,
@@ -71,6 +73,7 @@ const TransactionEntry = ({
   submitAction,
   templateMissing,
   getAccountBalance,
+  tabOrder,
 }: TransactionEntryProps) => {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
@@ -85,8 +88,11 @@ const TransactionEntry = ({
     )
   );
 
-  const [active, setActive] = useState(() =>
-    mode === 'edit' && !detectType(draft) ? 'form' : 'types'
+  const orderedTabs = normalizeTabOrder(tabOrder);
+  const tabs = orderedTabs.map((id) => ({ id, label: TAB_LABELS[id] }));
+
+  const [active, setActive] = useState<string>(() =>
+    mode === 'edit' && !detectType(draft) ? 'form' : orderedTabs[0]
   );
   const [rawError, setRawError] = useState<string | null>(null);
 
@@ -181,7 +187,7 @@ const TransactionEntry = ({
             />
           )}
 
-          <TabBar tabs={TABS} active={active} onSelect={setActive} />
+          <TabBar tabs={tabs} active={active} onSelect={setActive} />
 
           {active === 'types' && (
             <TypeLens
