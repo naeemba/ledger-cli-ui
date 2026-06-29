@@ -100,9 +100,58 @@ export function LedgerEditor({
         return false;
       },
     }),
+    // Drive the editor and its autocomplete dropdown off the app's CSS
+    // variables so it tracks the active light/dark theme (the built-in light
+    // theme is disabled via `theme="none"` on the CodeMirror element below).
     EditorView.theme({
-      '&': { fontSize: '0.875rem' },
-      '.cm-content': { fontFamily: 'var(--font-mono, monospace)' },
+      '&': {
+        fontSize: '0.875rem',
+        backgroundColor: 'transparent',
+        color: 'var(--foreground)',
+      },
+      '&.cm-focused': { outline: 'none' },
+      '.cm-content': {
+        fontFamily: 'var(--font-mono, monospace)',
+        caretColor: 'var(--foreground)',
+      },
+      '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--foreground)' },
+      '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, .cm-content ::selection':
+        {
+          backgroundColor:
+            'color-mix(in oklch, var(--foreground) 18%, transparent)',
+        },
+      '.cm-gutters': {
+        backgroundColor: 'transparent',
+        color: 'var(--muted-foreground)',
+        border: 'none',
+      },
+      '.cm-tooltip': {
+        backgroundColor: 'var(--popover)',
+        color: 'var(--popover-foreground)',
+        border: '1px solid var(--border)',
+        borderRadius: '0.5rem',
+        overflow: 'hidden',
+        boxShadow: '0 4px 12px rgb(0 0 0 / 0.15)',
+      },
+      '.cm-tooltip.cm-tooltip-autocomplete > ul': {
+        fontFamily: 'var(--font-mono, monospace)',
+        maxHeight: '12rem',
+      },
+      '.cm-tooltip.cm-tooltip-autocomplete > ul > li': {
+        color: 'var(--popover-foreground)',
+        padding: '3px 8px',
+      },
+      '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+        backgroundColor: 'var(--accent)',
+        color: 'var(--accent-foreground)',
+      },
+      '.cm-completionMatchedText': {
+        color: 'var(--primary)',
+        textDecoration: 'none',
+        fontWeight: '600',
+      },
+      '.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionMatchedText':
+        { color: 'inherit' },
     }),
     EditorView.contentAttributes.of({
       'aria-label': ariaLabel ?? 'Transaction ledger text',
@@ -131,6 +180,7 @@ export function LedgerEditor({
         <CodeMirror
           value={value}
           onChange={onChange}
+          theme="none"
           extensions={extensions}
           basicSetup={{
             lineNumbers: false,
