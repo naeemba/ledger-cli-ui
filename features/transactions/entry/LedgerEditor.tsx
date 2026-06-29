@@ -104,6 +104,9 @@ export function LedgerEditor({
       '&': { fontSize: '0.875rem' },
       '.cm-content': { fontFamily: 'var(--font-mono, monospace)' },
     }),
+    EditorView.contentAttributes.of({
+      'aria-label': ariaLabel ?? 'Transaction ledger text',
+    }),
   ];
 
   if (!mounted) {
@@ -124,10 +127,7 @@ export function LedgerEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <div
-        className="rounded-md border border-input overflow-hidden"
-        aria-label={ariaLabel}
-      >
+      <div className="rounded-md border border-input overflow-hidden">
         <CodeMirror
           value={value}
           onChange={onChange}
