@@ -43,4 +43,18 @@ describe('UserSettingRepository', () => {
     await ctx.client.query(`DELETE FROM "user" WHERE id = $1`, ['alice']);
     expect(await repo.get('alice')).toBeNull();
   });
+
+  it('upsertEntryTabOrder creates a row on first call', async () => {
+    await repo.upsertEntryTabOrder('alice', 'raw,types,form');
+    const row = await repo.get('alice');
+    expect(row?.entryTabOrder).toBe('raw,types,form');
+  });
+
+  it('upsertEntryTabOrder updates in place without clobbering baseCurrency', async () => {
+    await repo.upsertBaseCurrency('alice', 'EUR');
+    await repo.upsertEntryTabOrder('alice', 'form,raw,types');
+    const row = await repo.get('alice');
+    expect(row?.entryTabOrder).toBe('form,raw,types');
+    expect(row?.baseCurrency).toBe('EUR');
+  });
 });

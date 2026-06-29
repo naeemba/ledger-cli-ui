@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/auth/require-user';
 import { cryptoStatus } from '@/lib/crypto/gate';
 import { env } from '@/lib/env';
 import { getAvailableCurrencies, userSettingRepository } from '@/lib/settings';
+import { parseEntryTabOrder } from '@/lib/transactions/entryTabs';
 
 const SettingsPage = async () => {
   const user = await requireUser();
@@ -23,6 +24,7 @@ const SettingsPage = async () => {
       envFallback={env.DEFAULT_CURRENCY}
       encryptionEnabled={status !== 'unset'}
       recentActivity={recentActivity}
+      entryTabOrder={parseEntryTabOrder(row?.entryTabOrder ?? null)}
     />
   );
 };

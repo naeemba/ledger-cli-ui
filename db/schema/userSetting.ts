@@ -12,6 +12,10 @@ export const userSetting = pgTable('userSetting', {
   // Relative path (within the user's journal dir) of the main ledger file.
   // Folded in from the old user table, which the auth package now owns.
   journalMain: text('journalMain').notNull().default('main.ledger'),
+  // Comma-joined order of the transaction-entry tabs (e.g. "types,form,raw").
+  // Nullable: consumers fall back to DEFAULT_TAB_ORDER when null. The first id
+  // is the default tab the entry shell opens on.
+  entryTabOrder: text('entryTabOrder'),
   updatedAt: timestamp('updatedAt')
     .notNull()
     .default(sql`now()`),

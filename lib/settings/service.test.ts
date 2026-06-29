@@ -27,4 +27,10 @@ describe('UserSettingService', () => {
     const row = await service.get('alice');
     expect(row?.baseCurrency).toBe('EUR');
   });
+
+  it('saveEntryTabOrder serializes and round-trips through get', async () => {
+    await service.saveEntryTabOrder('alice', ['raw', 'types', 'form']);
+    const row = await service.get('alice');
+    expect(row?.entryTabOrder).toBe('raw,types,form');
+  });
 });

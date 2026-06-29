@@ -142,4 +142,28 @@ describe('TransactionEntry', () => {
     expect(out).not.toContain('Pick a type');
     expect(out).toContain('+ Add posting');
   });
+
+  it('renders tabs in a custom order with the first tab active', () => {
+    const out = html(
+      <TransactionEntry {...common} tabOrder={['raw', 'form', 'types']} />
+    );
+    // The first ordered tab (Raw) is the selected one.
+    const rawIdx = out.indexOf('Raw');
+    const formIdx = out.indexOf('Form');
+    const typesIdx = out.indexOf('Types');
+    expect(rawIdx).toBeGreaterThan(-1);
+    expect(rawIdx).toBeLessThan(formIdx);
+    expect(formIdx).toBeLessThan(typesIdx);
+    // Raw is the active tab → its RawLens textarea renders.
+    expect(out).toContain('<textarea');
+  });
+
+  it('defaults to the first tab order entry when tabOrder is omitted', () => {
+    const out = html(<TransactionEntry {...common} />);
+    const typesIdx = out.indexOf('Types');
+    const formIdx = out.indexOf('Form');
+    const rawIdx = out.indexOf('Raw');
+    expect(typesIdx).toBeLessThan(formIdx);
+    expect(formIdx).toBeLessThan(rawIdx);
+  });
 });

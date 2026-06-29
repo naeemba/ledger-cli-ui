@@ -78,6 +78,13 @@
       "when": 1782606834501,
       "tag": "0010_plain_ink",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1782745717694,
+      "tag": "0011_giant_firestar",
+      "breakpoints": true
     }
   ]
 }

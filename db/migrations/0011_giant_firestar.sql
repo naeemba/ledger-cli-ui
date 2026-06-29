@@ -1,0 +1,1 @@
+ALTER TABLE "userSetting" ADD COLUMN "entryTabOrder" text;

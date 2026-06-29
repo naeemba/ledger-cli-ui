@@ -1,5 +1,6 @@
 import BaseCurrencyForm from './BaseCurrencyForm';
 import DangerZone from './DangerZone';
+import EntryTabOrderForm from './EntryTabOrderForm';
 import SecuritySection from './SecuritySection';
 import { clearSessionBaseCurrencyAction } from './actions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { AuditLog } from '@/db/schema/auditLog';
 import { ActivityCard } from '@/features/activity';
+import { type TabId } from '@/lib/transactions/entryTabs';
 
 type Props = {
   base: string;
@@ -15,6 +17,7 @@ type Props = {
   envFallback: string;
   encryptionEnabled: boolean;
   recentActivity: AuditLog[];
+  entryTabOrder: TabId[];
 };
 
 const Settings = ({
@@ -24,6 +27,7 @@ const Settings = ({
   envFallback,
   encryptionEnabled,
   recentActivity,
+  entryTabOrder,
 }: Props) => {
   const overrideActive =
     (savedDefault !== null && base !== savedDefault) ||
@@ -57,6 +61,19 @@ const Settings = ({
               </AlertDescription>
             </Alert>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Transaction entry tabs</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Reorder the tabs on the add/edit transaction screen. The top tab is
+            the one that opens by default.
+          </p>
+          <EntryTabOrderForm initial={entryTabOrder} />
         </CardContent>
       </Card>
 
