@@ -22,5 +22,7 @@ export const parsedBlockToDraft = (
     account: p.account,
     amount: p.amount,
     currency: p.currency,
+    ...(p.cost ? { cost: p.cost } : {}),
+    ...(p.assertion ? { assertion: p.assertion } : {}),
   })),
 });

@@ -89,6 +89,54 @@ describe('draftReducer', () => {
   });
 });
 
+describe('serializeDraftJson — cost and assertion', () => {
+  it('serializes a cost-bearing posting', () => {
+    const json = JSON.parse(
+      serializeDraftJson(
+        {
+          ...base,
+          postings: [
+            {
+              account: 'Assets:EUR',
+              amount: '92',
+              currency: 'EUR',
+              cost: { amount: '100', currency: 'USD' },
+            },
+            { account: 'Assets:Checking', amount: '-100', currency: 'USD' },
+          ],
+        },
+        'create'
+      )
+    );
+    expect(json.postings[0].cost).toEqual({ amount: '100', currency: 'USD' });
+    expect(json.postings[1].cost).toBeUndefined();
+  });
+  it('serializes an assertion-bearing posting', () => {
+    const json = JSON.parse(
+      serializeDraftJson(
+        {
+          ...base,
+          postings: [
+            {
+              account: 'Assets:Checking',
+              amount: '',
+              currency: '',
+              assertion: { amount: '1234.56', currency: 'USD' },
+            },
+            { account: 'Equity:Adjustments', amount: '', currency: '' },
+          ],
+        },
+        'create'
+      )
+    );
+    expect(json.postings[0].assertion).toEqual({
+      amount: '1234.56',
+      currency: 'USD',
+    });
+    expect(json.postings[1].assertion).toBeUndefined();
+  });
+});
+
 describe('serializeDraftJson', () => {
   it('trims fields and omits empty note/uid in create mode', () => {
     const json = JSON.parse(

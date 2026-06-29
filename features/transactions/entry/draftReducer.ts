@@ -1,7 +1,12 @@
+export type DraftCost = { amount: string; currency: string };
+export type DraftAssertion = { amount: string; currency: string };
+
 export type DraftPosting = {
   account: string;
   amount: string;
   currency: string;
+  cost?: DraftCost;
+  assertion?: DraftAssertion;
 };
 
 export type DraftStatus = 'cleared' | 'pending' | 'none';
@@ -92,5 +97,21 @@ export const serializeDraftJson = (
       account: p.account.trim(),
       amount: p.amount.trim(),
       currency: p.currency.trim(),
+      ...(p.cost
+        ? {
+            cost: {
+              amount: p.cost.amount.trim(),
+              currency: p.cost.currency.trim(),
+            },
+          }
+        : {}),
+      ...(p.assertion
+        ? {
+            assertion: {
+              amount: p.assertion.amount.trim(),
+              currency: p.assertion.currency.trim(),
+            },
+          }
+        : {}),
     })),
   });
