@@ -119,4 +119,27 @@ describe('TransactionEntry', () => {
     // Types is default → its "Pick a type" prompt is present on first render.
     expect(out).toContain('Pick a type');
   });
+
+  it('defaults to the Form tab in edit mode when the draft matches no type', () => {
+    const out = html(
+      <TransactionEntry
+        {...common}
+        mode="edit"
+        uid="abc123"
+        initialDraft={{
+          payee: 'Split',
+          status: 'none',
+          note: '',
+          postings: [
+            { account: 'Expenses:Food', amount: '5', currency: 'USD' },
+            { account: 'Expenses:Fun', amount: '5', currency: 'USD' },
+            { account: 'Assets:Checking', amount: '-10', currency: 'USD' },
+          ],
+        }}
+      />
+    );
+    // Form tab is active → its Postings UI renders, NOT the Types "Pick a type" prompt.
+    expect(out).not.toContain('Pick a type');
+    expect(out).toContain('+ Add posting');
+  });
 });
