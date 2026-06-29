@@ -15,6 +15,7 @@ describe('TransactionEntry', () => {
     payees: ['Whole Foods'],
     defaultCurrency: 'USD',
     submitAction: noopAction,
+    getAccountBalance: async () => '0',
   };
 
   it('renders the Form tab', () => {
@@ -102,5 +103,20 @@ describe('TransactionEntry', () => {
       />
     );
     expect(out).toContain('Save changes');
+  });
+
+  it('shows Types as the first tab and defaults to it in create mode', () => {
+    const out = html(
+      <TransactionEntry
+        accounts={[]}
+        payees={[]}
+        defaultCurrency="USD"
+        submitAction={async () => ({ ok: false })}
+        getAccountBalance={async () => '0'}
+      />
+    );
+    expect(out).toContain('Types');
+    // Types is default → its "Pick a type" prompt is present on first render.
+    expect(out).toContain('Pick a type');
   });
 });

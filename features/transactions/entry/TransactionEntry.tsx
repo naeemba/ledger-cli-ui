@@ -13,6 +13,8 @@ import type { SubmitAction, TransactionActionState } from '../actions';
 import { FormLens } from './FormLens';
 import { RawLens } from './RawLens';
 import { TabBar } from './TabBar';
+import { TypeLens } from './TypeLens';
+import { getAccountBalance as defaultGetAccountBalance } from './actions/getAccountBalance';
 import { computeBalance } from './balance';
 import {
   draftReducer,
@@ -20,6 +22,7 @@ import {
   initDraft,
   serializeDraftJson,
 } from './draftReducer';
+import { detectType } from './types/registry';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -40,6 +43,7 @@ export type TransactionEntryProps = {
   expectedFingerprint?: string;
   submitAction: SubmitAction;
   templateMissing?: boolean;
+  getAccountBalance?: (account: string, currency: string) => Promise<string>;
 };
 
 const todayISO = (): string => {
@@ -51,6 +55,7 @@ const todayISO = (): string => {
 const initialState: TransactionActionState = { ok: false };
 
 const TABS = [
+  { id: 'types', label: 'Types' },
   { id: 'form', label: 'Form' },
   { id: 'raw', label: 'Raw' },
 ];
@@ -65,6 +70,7 @@ const TransactionEntry = ({
   expectedFingerprint,
   submitAction,
   templateMissing,
+  getAccountBalance,
 }: TransactionEntryProps) => {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
@@ -79,7 +85,9 @@ const TransactionEntry = ({
     )
   );
 
-  const [active, setActive] = useState('form');
+  const [active, setActive] = useState(() =>
+    mode === 'edit' && !detectType(draft) ? 'form' : 'types'
+  );
   const [rawError, setRawError] = useState<string | null>(null);
 
   const formRef = useRef<HTMLFormElement>(null);
@@ -174,6 +182,17 @@ const TransactionEntry = ({
           )}
 
           <TabBar tabs={TABS} active={active} onSelect={setActive} />
+
+          {active === 'types' && (
+            <TypeLens
+              draft={draft}
+              dispatch={dispatch}
+              accounts={accounts}
+              payees={payees}
+              defaultCurrency={defaultCurrency}
+              getAccountBalance={getAccountBalance ?? defaultGetAccountBalance}
+            />
+          )}
 
           {active === 'form' && (
             <FormLens
