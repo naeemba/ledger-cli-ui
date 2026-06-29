@@ -1,6 +1,81 @@
 import { describe, it, expect } from 'vitest';
 import { formatTransaction, transactionDraftSchema } from './schema';
 
+describe('transactionDraftSchema — cost and assertion', () => {
+  it('accepts an exchange transaction that balances on the cost currency', () => {
+    const result = transactionDraftSchema.safeParse({
+      date: '2026-06-29',
+      payee: 'Currency exchange',
+      status: 'none',
+      postings: [
+        {
+          account: 'Assets:EUR',
+          amount: '92',
+          currency: 'EUR',
+          cost: { amount: '100', currency: 'USD' },
+        },
+        { account: 'Assets:Checking', amount: '-100', currency: 'USD' },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+  it('accepts a fix-balance transaction (assertion + blank equity)', () => {
+    const result = transactionDraftSchema.safeParse({
+      date: '2026-06-29',
+      payee: 'Balance adjustment',
+      status: 'none',
+      postings: [
+        {
+          account: 'Assets:Checking',
+          amount: '',
+          currency: '',
+          assertion: { amount: '1234.56', currency: 'USD' },
+        },
+        { account: 'Equity:Adjustments', amount: '', currency: '' },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('formatTransaction — cost and assertion', () => {
+  it('emits @@ for a cost posting', () => {
+    const out = formatTransaction({
+      date: '2026-06-29',
+      payee: 'Currency exchange',
+      status: 'none',
+      postings: [
+        {
+          account: 'Assets:EUR',
+          amount: '92',
+          currency: 'EUR',
+          cost: { amount: '100', currency: 'USD' },
+        },
+        { account: 'Assets:Checking', amount: '-100', currency: 'USD' },
+      ],
+    } as never);
+    expect(out).toContain('EUR 92 @@ USD 100');
+  });
+  it('emits a bare = assertion line for a fix-balance posting', () => {
+    const out = formatTransaction({
+      date: '2026-06-29',
+      payee: 'Balance adjustment',
+      status: 'none',
+      postings: [
+        {
+          account: 'Assets:Checking',
+          amount: '',
+          currency: '',
+          assertion: { amount: '1234.56', currency: 'USD' },
+        },
+        { account: 'Equity:Adjustments', amount: '', currency: '' },
+      ],
+    } as never);
+    expect(out).toMatch(/Assets:Checking\s+= USD 1234\.56/);
+    expect(out).toMatch(/\n {4}Equity:Adjustments$/);
+  });
+});
+
 describe('transactionDraftSchema with uid', () => {
   it('accepts a valid ULID', () => {
     const result = transactionDraftSchema.safeParse({
