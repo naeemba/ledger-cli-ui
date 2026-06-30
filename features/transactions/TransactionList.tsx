@@ -3,6 +3,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import TransactionRowItem from './TransactionRowItem';
 import { loadTransactionPageAction } from './actions';
 import { type TransactionFilters } from './applyTransactionFilters';
@@ -29,7 +30,7 @@ const TransactionList = ({
     rows: TransactionRow[];
     nextOffset: number | null;
   }>({ rows: initialRows, nextOffset: initialNextOffset });
-  const [loading, setLoading] = useState(false);
+  const loadingRef = useRef(false);
 
   const virtualizer = useVirtualizer({
     count: page.rows.length,
@@ -39,8 +40,8 @@ const TransactionList = ({
   });
 
   const loadMore = useCallback(async () => {
-    if (loading || page.nextOffset === null) return;
-    setLoading(true);
+    if (loadingRef.current || page.nextOffset === null) return;
+    loadingRef.current = true;
     try {
       const next = await loadTransactionPageAction({
         filters,
@@ -48,10 +49,12 @@ const TransactionList = ({
         limit: PAGE_SIZE,
       });
       setPage((prev) => appendPage(prev, next));
+    } catch {
+      toast.error("Couldn't load more transactions.");
     } finally {
-      setLoading(false);
+      loadingRef.current = false;
     }
-  }, [loading, page.nextOffset, filters]);
+  }, [page.nextOffset, filters]);
 
   const items = virtualizer.getVirtualItems();
 
