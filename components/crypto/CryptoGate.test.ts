@@ -54,6 +54,14 @@ describe('CryptoGate', () => {
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
+  it('redirects an unset user to /crypto/setup on a real navigation', async () => {
+    setHeaders({ 'x-pathname': '/dashboard', 'RSC': '1' });
+    cryptoStatus.mockResolvedValue('unset');
+    const { CryptoGate } = await import('./CryptoGate');
+    await expect(CryptoGate()).rejects.toThrow('NEXT_REDIRECT');
+    expect(redirectMock).toHaveBeenCalledWith('/crypto/setup');
+  });
+
   it('does NOT redirect an unset user on a prefetch request', async () => {
     setHeaders({ 'x-pathname': '/dashboard', 'purpose': 'prefetch' });
     cryptoStatus.mockResolvedValue('unset');
