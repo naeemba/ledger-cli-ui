@@ -130,7 +130,7 @@ const Portfolio = async () => {
                 <tr key={row.account}>
                   <td>
                     <Link
-                      className="block text-fg hover:text-accent"
+                      className="block text-fg hover:text-accent-text"
                       href={`/accounts/${encodeURIComponent(row.account)}`}
                     >
                       {row.account}
