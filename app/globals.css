@@ -2,7 +2,11 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
-@custom-variant dark (&:is(.dark *));
+/* Dark mode is OS-driven (no `.dark` toggle exists), so the `dark:` utility
+   variant must follow the same media query the palette flips on — otherwise
+   every `dark:` utility is dead. If a manual theme toggle is ever added, this
+   and the dark palette block below both need a `.dark` selector path. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
 
 @theme inline {
   --color-bg: var(--bg);
@@ -14,6 +18,7 @@
   --color-subtle: var(--subtle);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
+  --color-accent-text: var(--accent-text);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --font-heading: var(--font-sans);
@@ -65,8 +70,13 @@
   --card-fg: oklch(22% 0.015 250);
   --border: oklch(0.922 0 0);
   --subtle: oklch(96% 0.006 250);
+  /* --accent is a subtle hover *surface* (near-bg neutral); --accent-fg is the
+     readable text that sits on it (NOT white — that was a 1.09:1 failure). */
   --accent: oklch(0.97 0 0);
-  --accent-fg: oklch(100% 0 0);
+  --accent-fg: oklch(0.205 0 0);
+  /* --accent-text is the vivid brand-accent *text* color (link hovers, etc.),
+     a separate role from the --accent surface; saturated enough to read on bg. */
+  --accent-text: oklch(48% 0.13 165);
   --positive: oklch(50% 0.13 165);
   --negative: oklch(54% 0.18 25);
 
@@ -117,6 +127,7 @@
     --subtle: oklch(25% 0.015 250);
     --accent: oklch(72% 0.14 165);
     --accent-fg: oklch(20% 0.05 165);
+    --accent-text: oklch(72% 0.14 165);
     --positive: oklch(74% 0.14 165);
     --negative: oklch(72% 0.16 25);
 

@@ -81,7 +81,7 @@ const Balance = async () => {
                     <tr key={index}>
                       <td>
                         <Link
-                          className="block text-fg hover:text-accent"
+                          className="block text-fg hover:text-accent-text"
                           href={`/accounts/${encodeURIComponent(columns[0])}`}
                         >
                           {columns[0]}

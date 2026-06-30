@@ -74,7 +74,7 @@ const Debts = async () => {
                     <tr key={idx}>
                       <td>
                         <Link
-                          className="block text-fg hover:text-accent"
+                          className="block text-fg hover:text-accent-text"
                           href={`/accounts/${encodeURIComponent(columns[0])}`}
                         >
                           {columns[0]}

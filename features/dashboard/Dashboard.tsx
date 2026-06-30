@@ -218,7 +218,7 @@ const Dashboard = async () => {
                       <td>{row.payee || '—'}</td>
                       <td>
                         <Link
-                          className="text-fg hover:text-accent"
+                          className="text-fg hover:text-accent-text"
                           href={`/accounts/${encodeURIComponent(row.account)}`}
                         >
                           {row.account}
