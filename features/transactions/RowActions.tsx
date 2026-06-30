@@ -4,6 +4,7 @@ import { MoreHorizontal, Pencil, Trash2, BookmarkPlus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { deleteTransactionAction } from './actions';
+import type { TransactionRow } from './transactionRow';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,13 +15,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SaveAsTemplateDialog } from '@/features/templates/SaveAsTemplateButton';
-import type { Transaction } from '@/lib/journal/parser';
 import type { TemplateDraft } from '@/lib/templates/schema';
 import { useRouter } from 'next/navigation';
 
-type Props = { transaction: Transaction };
+type Props = { transaction: TransactionRow };
 
-const toTemplateDraft = (t: Transaction): TemplateDraft => ({
+const toTemplateDraft = (t: TransactionRow): TemplateDraft => ({
   payee: t.payee,
   status: t.status,
   note: t.note ?? undefined,

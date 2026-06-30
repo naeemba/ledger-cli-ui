@@ -5,3 +5,4 @@ export {
   deleteTransactionAction,
   type DeleteTransactionResult,
 } from './deleteTransaction';
+export { loadTransactionPageAction } from './loadTransactionPage';
