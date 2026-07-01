@@ -1,16 +1,24 @@
 import AccountsView from './AccountsView';
+import { buildAccountTree, countLeaves } from './accountTree';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import { parseBalanceRows, type BalanceRow } from '@/lib/balance/parse';
+import { getBaseCurrency } from '@/lib/settings';
 import runLedger from '@/utils/runLedger';
 
 const Accounts = async () => {
-  let accounts: string[];
+  let rows: BalanceRow[];
   try {
-    const stdout = await runLedger(['accounts']);
-    accounts = stdout
-      .split('\n')
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
+    const base = await getBaseCurrency();
+    const stdout = await runLedger([
+      'balance',
+      '--no-total',
+      '-X',
+      base,
+      '--format',
+      '%A|%T\n',
+    ]);
+    rows = parseBalanceRows(stdout).filter((r) => r.account !== 'Total');
   } catch (e) {
     console.error(e);
     return (
@@ -19,24 +27,29 @@ const Accounts = async () => {
       </div>
     );
   }
+
+  const leafCount = countLeaves(buildAccountTree(rows));
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
           <Help label="About accounts">
-            Every account referenced in your journal, organised as a tree by the
-            colon-separated naming convention (e.g.{' '}
-            <code>Assets:Bank:Checking</code>). Use the buttons next to a name
-            to view its full transaction history or a monthly summary.
+            Your money is grouped into <strong>Accounts</strong> (what you have
+            and owe — bank, cash, cards) and <strong>Categories</strong> (where
+            money comes from and goes). An arrow shows whether a balance is in
+            your favour (↑) or against you (↓); a tag like <em>owed to you</em>{' '}
+            appears when a balance is the opposite of what is usual. Less-common
+            accounts live under <strong>Advanced</strong>.
           </Help>
           <ExportButton href="/api/accounts/export" />
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          {accounts.length} account{accounts.length === 1 ? '' : 's'}
+          {leafCount} account{leafCount === 1 ? '' : 's'}
         </p>
       </div>
-      <AccountsView accounts={accounts} />
+      <AccountsView rows={rows} />
     </div>
   );
 };
