@@ -6,7 +6,9 @@ type Props = { amount: string; role: AccountRole };
 
 const FriendlyBalance = ({ amount, role }: Props) => {
   const { unit, magnitude, signed } = parseAmountParts(amount);
-  if (!magnitude) return <span className="text-muted-foreground">—</span>;
+  const numeric =
+    magnitude !== '' && Number.isFinite(Number(magnitude.replaceAll(',', '')));
+  if (!numeric) return <span className="text-muted-foreground">—</span>;
 
   const { direction, chip } = balanceDisplay(role, signed);
   const favorable = direction === 'favor';

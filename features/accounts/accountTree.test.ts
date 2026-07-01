@@ -31,6 +31,7 @@ describe('buildAccountTree', () => {
     const expenses = roots.find((r) => r.path === 'Expenses')!;
     expect(expenses.amount).toBe('');
     expect(expenses.children[0].name).toBe('Food');
+    expect(expenses.children[0].amount).toBe('');
   });
 });
 
