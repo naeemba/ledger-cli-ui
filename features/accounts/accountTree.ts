@@ -81,7 +81,7 @@ export function bucketRoots(roots: AccountNode[]): Bucket[] {
   return order.map((key) => ({
     key,
     title: BUCKET_TITLES[key],
-    roots: groups[key].sort((a, b) => a.name.localeCompare(b.name)),
+    roots: groups[key],
   }));
 }
 
