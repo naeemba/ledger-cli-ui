@@ -1,4 +1,4 @@
-// features/accounts/AccountTree.tsx
+// features/accounts/AccountTreeView.tsx
 'use client';
 
 import { useState } from 'react';
@@ -52,7 +52,7 @@ const Node = ({
   );
 };
 
-const AccountTree = ({
+const AccountTreeView = ({
   nodes,
   forceOpen,
 }: {
@@ -73,4 +73,4 @@ const AccountTree = ({
   );
 };
 
-export default AccountTree;
+export default AccountTreeView;

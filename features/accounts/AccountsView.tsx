@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import type { BalanceRow } from '@/lib/balance/parse';
 import { bucketRoots, buildAccountTree, countLeaves } from './accountTree';
-import AccountTree from './AccountTree.tsx';
+import AccountTreeView from './AccountTreeView';
 import BucketSection from './BucketSection';
 
 type Props = {
@@ -40,7 +40,7 @@ const AccountsView = ({ rows }: Props) => {
           count={countLeaves(bucket.roots)}
           defaultOpen={bucket.key !== 'advanced'}
         >
-          <AccountTree nodes={bucket.roots} forceOpen={searching} />
+          <AccountTreeView nodes={bucket.roots} forceOpen={searching} />
         </BucketSection>
       ))}
     </div>
