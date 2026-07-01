@@ -1,20 +1,28 @@
+// features/accounts/AccountsView.tsx
 'use client';
 
 import { useMemo, useState } from 'react';
-import { buildTree } from './Accounts.utils';
-import Tree from './Tree';
+import type { BalanceRow } from '@/lib/balance/parse';
+import { bucketRoots, buildAccountTree, countLeaves } from './accountTree';
+import AccountTree from './AccountTree.tsx';
+import BucketSection from './BucketSection';
 
 type Props = {
-  accounts: string[];
+  rows: BalanceRow[];
 };
 
-const AccountsView = ({ accounts }: Props) => {
+const AccountsView = ({ rows }: Props) => {
   const [query, setQuery] = useState('');
-  const tree = useMemo(() => {
-    if (!query.trim()) return buildTree(accounts);
-    const needle = query.toLowerCase();
-    return buildTree(accounts.filter((a) => a.toLowerCase().includes(needle)));
-  }, [accounts, query]);
+  const trimmed = query.trim().toLowerCase();
+
+  const buckets = useMemo(() => {
+    const filtered = trimmed
+      ? rows.filter((r) => r.account.toLowerCase().includes(trimmed))
+      : rows;
+    return bucketRoots(buildAccountTree(filtered));
+  }, [rows, trimmed]);
+
+  const searching = trimmed.length > 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -25,9 +33,16 @@ const AccountsView = ({ accounts }: Props) => {
         onChange={(e) => setQuery(e.target.value)}
         className="block w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
       />
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <Tree tree={tree} />
-      </div>
+      {buckets.map((bucket) => (
+        <BucketSection
+          key={bucket.key}
+          title={bucket.title}
+          count={countLeaves(bucket.roots)}
+          defaultOpen={bucket.key !== 'advanced'}
+        >
+          <AccountTree nodes={bucket.roots} forceOpen={searching} />
+        </BucketSection>
+      ))}
     </div>
   );
 };
