@@ -2,10 +2,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { BalanceRow } from '@/lib/balance/parse';
-import { bucketRoots, buildAccountTree, countLeaves } from './accountTree';
 import AccountTreeView from './AccountTreeView';
 import BucketSection from './BucketSection';
+import { bucketRoots, buildAccountTree, countLeaves } from './accountTree';
+import type { BalanceRow } from '@/lib/balance/parse';
 
 type Props = {
   rows: BalanceRow[];
@@ -39,6 +39,7 @@ const AccountsView = ({ rows }: Props) => {
           title={bucket.title}
           count={countLeaves(bucket.roots)}
           defaultOpen={bucket.key !== 'advanced'}
+          forceOpen={searching}
         >
           <AccountTreeView nodes={bucket.roots} forceOpen={searching} />
         </BucketSection>
