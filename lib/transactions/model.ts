@@ -4,6 +4,7 @@ import type {
   Transaction,
 } from '@/lib/journal/parser';
 import type { TemplateDraft } from '@/lib/templates/schema';
+import type { TransactionDraft } from '@/lib/transactions/schema';
 
 export type Posting = {
   account: string;
@@ -14,6 +15,15 @@ export type Posting = {
 };
 
 export type TxnStatus = 'cleared' | 'pending' | 'none';
+
+export type TxnJSON = {
+  date: string;
+  payee: string;
+  status: TxnStatus;
+  note?: string;
+  uid?: string;
+  postings: Posting[];
+};
 
 const carry = (p: {
   cost?: Annotation;
@@ -154,5 +164,60 @@ export class Txn {
       postings,
       this.uid
     );
+  }
+
+  private trimmedPostings(): Posting[] {
+    return this.postings.map((p) => ({
+      account: p.account.trim(),
+      amount: p.amount.trim(),
+      currency: p.currency.trim(),
+      ...(p.cost
+        ? {
+            cost: {
+              amount: p.cost.amount.trim(),
+              currency: p.cost.currency.trim(),
+            },
+          }
+        : {}),
+      ...(p.assertion
+        ? {
+            assertion: {
+              amount: p.assertion.amount.trim(),
+              currency: p.assertion.currency.trim(),
+            },
+          }
+        : {}),
+    }));
+  }
+
+  toWire(mode: 'create' | 'edit'): TxnJSON {
+    return {
+      date: this.date,
+      payee: this.payee.trim(),
+      status: this.status,
+      note: this.note.trim() || undefined,
+      uid: mode === 'edit' ? this.uid : undefined,
+      postings: this.trimmedPostings(),
+    };
+  }
+
+  toSubmit(): TransactionDraft {
+    return {
+      date: this.date,
+      payee: this.payee.trim(),
+      status: this.status,
+      note: this.note.trim() || undefined,
+      uid: this.uid,
+      postings: this.trimmedPostings(),
+    } as TransactionDraft;
+  }
+
+  toTemplate(): TemplateDraft {
+    return {
+      payee: this.payee.trim() || '—',
+      status: this.status,
+      note: this.note.trim() || undefined,
+      postings: this.trimmedPostings(),
+    } as TemplateDraft;
   }
 }

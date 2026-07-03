@@ -211,3 +211,61 @@ describe('Txn immutable updates', () => {
     expect(a.removePosting(0)).toBe(a);
   });
 });
+
+describe('Txn outputs', () => {
+  const t = () =>
+    new Txn(
+      '2024-01-15',
+      '  Coffee  ',
+      'cleared',
+      '  hi  ',
+      [
+        {
+          account: '  Assets:USD  ',
+          amount: ' 100 ',
+          currency: ' USD ',
+          cost: { amount: ' 90 ', currency: ' EUR ' },
+        },
+        { account: 'Assets:EUR', amount: '-90', currency: 'EUR' },
+      ],
+      'u9'
+    );
+
+  it('toWire trims, drops blank note, and keeps uid only in edit mode', () => {
+    expect(t().toWire('edit').uid).toBe('u9');
+    expect(t().toWire('create').uid).toBeUndefined();
+    const w = t().toWire('edit');
+    expect(w.payee).toBe('Coffee');
+    expect(w.note).toBe('hi');
+    expect(w.postings[0]).toEqual({
+      account: 'Assets:USD',
+      amount: '100',
+      currency: 'USD',
+      cost: { amount: '90', currency: 'EUR' },
+    });
+    expect(
+      new Txn('2024-01-15', 'P', 'none', '   ', []).toWire('create').note
+    ).toBeUndefined();
+  });
+
+  it('toSubmit produces the trimmed submit DTO with date and uid', () => {
+    const s = t().toSubmit();
+    expect(s.date).toBe('2024-01-15');
+    expect(s.uid).toBe('u9');
+    expect(s.postings[0].cost).toEqual({ amount: '90', currency: 'EUR' });
+  });
+
+  it('toTemplate omits date/uid, trims, and defaults blank payee to dash', () => {
+    const tpl = t().toTemplate();
+    expect('date' in tpl).toBe(false);
+    expect('uid' in tpl).toBe(false);
+    expect(tpl.payee).toBe('Coffee');
+    expect(tpl.postings[0].cost).toEqual({ amount: '90', currency: 'EUR' });
+    expect(
+      new Txn('', '   ', 'none', '', [
+        { account: 'A', amount: '1', currency: 'USD' },
+        { account: 'B', amount: '-1', currency: 'USD' },
+      ]).toTemplate().payee
+    ).toBe('—');
+  });
+});
