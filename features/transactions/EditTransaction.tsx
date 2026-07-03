@@ -2,9 +2,9 @@ import 'server-only';
 import { updateTransactionAction } from './actions';
 import TransactionEntry from './entry/TransactionEntry';
 import { getAccountBalance } from './entry/actions/getAccountBalance';
+import { transactionToDraft } from './entry/transactionToDraft';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
-import { fingerprintDraft } from '@/lib/journal/fingerprint';
 import { getAvailableCurrencies, getEntryTabOrder } from '@/lib/settings';
 import {
   getAccountSuggestions,
@@ -21,19 +21,12 @@ const EditTransaction = async ({ uid }: { uid: string }) => {
     getAvailableCurrencies(),
     getEntryTabOrder(),
   ]);
-  const initialDraft = {
-    date: tx.date,
-    payee: tx.payee,
-    status: tx.status,
-    note: tx.note ?? undefined,
-    uid: tx.uid ?? undefined,
-    postings: tx.postings.map((p) => ({
-      account: p.account,
-      amount: p.amount,
-      currency: p.currency || defaultCurrency,
-    })),
-  };
-  const expectedFingerprint = fingerprintDraft(initialDraft);
+  const initialDraft = transactionToDraft(tx, defaultCurrency);
+  // Carry the parser's canonical fingerprint through unchanged — never re-hash
+  // a reconstruction of the transaction. The concurrency guard in performEdit
+  // compares against this exact value (recomputed from the parsed postings), so
+  // any lossy reconstruction here would make every such edit falsely "stale".
+  const expectedFingerprint = tx.fingerprint;
   const [accounts, payees] = await Promise.all([
     getAccountSuggestions(),
     getPayeeSuggestions(),

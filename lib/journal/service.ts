@@ -2,7 +2,6 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import 'server-only';
-import { fingerprintDraft } from './fingerprint';
 import {
   DEFAULT_MAIN,
   PRICE_DB_NAME,
@@ -417,15 +416,9 @@ export class JournalService {
       };
     }
 
-    const currentFingerprint = fingerprintDraft({
-      date: current.date,
-      payee: current.payee,
-      status: current.status,
-      note: current.note ?? undefined,
-      uid: current.uid ?? undefined,
-      postings: current.postings,
-    });
-    if (currentFingerprint !== input.expectedFingerprint) {
+    // parseJournalFile already stamped the canonical fingerprint on `current`;
+    // reuse it rather than recomputing the same hash from a rebuilt draft.
+    if (current.fingerprint !== input.expectedFingerprint) {
       return {
         ok: false,
         reason: 'stale',
@@ -494,15 +487,8 @@ export class JournalService {
       };
     }
 
-    const fp = fingerprintDraft({
-      date: current.date,
-      payee: current.payee,
-      status: current.status,
-      note: current.note ?? undefined,
-      uid: current.uid ?? undefined,
-      postings: current.postings,
-    });
-    if (fp !== input.expectedFingerprint) {
+    // Reuse the parser's stamped fingerprint rather than recomputing it.
+    if (current.fingerprint !== input.expectedFingerprint) {
       return {
         ok: false,
         reason: 'stale',

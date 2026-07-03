@@ -1,5 +1,36 @@
 # Full application review — 2026-07-03
 
+> ## ⚙️ Working protocol for agents — read this first
+>
+> This document is worked through incrementally by multiple agents. To avoid
+> collisions and keep progress visible, **follow this loop exactly**:
+>
+> 1. **Pick the next item.** Take the highest-priority item that is not marked
+>    `✅ DONE` or `🚧 IN PROGRESS`, following the *Suggested implementation
+>    order* below (A → B → … → I, in number order within each workstream).
+>    Respect the dependency notes — some items share one fix or must land in a
+>    specific order.
+> 2. **Claim it.** Set the item's status line to `🚧 IN PROGRESS` before you
+>    start, so a parallel agent doesn't take the same item.
+> 3. **Fix one item at a time.** Use TDD: write a failing test, make it pass,
+>    keep the whole suite green (`npx vitest run`), typecheck (`npx tsc
+>    --noEmit`), and lint (`npx eslint`).
+> 4. **Mark it done here.** Update the item's status line to
+>    `✅ DONE — PR #<n> (<branch>) — <date>` **in the same PR** as the fix, so
+>    the doc and the code move together.
+> 5. **One PR per item.** Commit, push, open a PR whose title references the
+>    item id (e.g. `fix(review): A1 …`). Keep the diff scoped to that item.
+> 6. **Log it** in the Progress log table directly below.
+>
+> Status legend: `⬜ TODO` (default, unmarked) · `🚧 IN PROGRESS` · `✅ DONE`.
+> An item with no status line is `⬜ TODO`.
+>
+> ### Progress log
+>
+> | Item | Status | PR | Branch | Date |
+> |---|---|---|---|---|
+> | A1 | ✅ DONE | [#62](https://github.com/naeemba/ledger-cli-ui/pull/62) | `fix/review-a1-edit-cost-assertion` | 2026-07-03 |
+
 A complete, implementation-ready review of ledger-cli-ui covering performance, correctness, error handling, architecture, UX consistency, and dead code. **Security was deliberately excluded** (covered by a separate review). Test files were not reviewed.
 
 ## How this review was produced
@@ -40,6 +71,8 @@ Dependency notes for implementers:
 These produce wrong or lost financial data and come first. The largest cluster is the silent stripping of `@@` cost and `=` balance-assertion annotations: the same converter defect exists independently on the edit page, both save-as-template paths, and template hydration — fix them together, ideally by introducing one shared posting↔draft converter that round-trips cost/assertion and is unit-tested (A1–A4 plus the two template UX items A5–A6). The parser items (A7–A8), the period/date items (A9–A10), and the amount-precision items (A11–A12) are independent of each other.
 
 ### A1. Edit page strips cost/assertion annotations, making such transactions permanently uneditable (false 'stale')
+
+**Status:** ✅ DONE — [PR #62](https://github.com/naeemba/ledger-cli-ui/pull/62) (`fix/review-a1-edit-cost-assertion`) — 2026-07-03. Fixed at the root: the fingerprint is now computed from a **single source** (the parser). `EditTransaction` passes `tx.fingerprint` straight through as `expectedFingerprint` instead of re-hashing a reconstructed draft, and both concurrency guards in `service.ts` (edit + delete) compare against the parser-stamped `current.fingerprint` instead of recomputing it — so `fingerprintDraft` now has exactly one production caller (`parser.ts`) and no lossy reconstruction can ever diverge from it. Also extracted a pure `transactionToDraft(tx, defaultCurrency)` helper (`features/transactions/entry/transactionToDraft.ts`) that carries `cost`/`assertion` into the edit-form seed so annotations display and round-trip through an unchanged save; `transactionToDraft.test.ts` pins that seed faithfulness (`fingerprintDraft(draft) === tx.fingerprint`). The helper is intended for reuse by A2–A4.
 
 **Severity:** HIGH · **Effort:** S (<1h) · **Location:** `features/transactions/EditTransaction.tsx:30`
 
