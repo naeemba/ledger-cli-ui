@@ -30,6 +30,7 @@
 > | Item | Status | PR | Branch | Date |
 > |---|---|---|---|---|
 > | A1 | ✅ DONE | [#62](https://github.com/naeemba/ledger-cli-ui/pull/62) | `fix/review-a1-edit-cost-assertion` | 2026-07-03 |
+> | A2 | ✅ DONE | [#63](https://github.com/naeemba/ledger-cli-ui/pull/63) | `fix/review-a2-template-cost-assertion` | 2026-07-03 |
 
 A complete, implementation-ready review of ledger-cli-ui covering performance, correctness, error handling, architecture, UX consistency, and dead code. **Security was deliberately excluded** (covered by a separate review). Test files were not reviewed.
 
@@ -91,6 +92,8 @@ postings: tx.postings.map((p) => ({
 > **Verifier notes** (independent adversarial check, confidence: high): Confirmed. EditTransaction.tsx:30-34 strips cost/assertion from initialDraft; parser's ParsedPosting carries them (parser.ts:30-31) and performEdit (service.ts:420-434) fingerprints current.postings with them. formatPosting (schema.ts:166-172) emits '@@' and '=' when present, so fingerprintDraft outputs differ whenever a cost or assertion exists, making the stale guard always fire. The app's own exchange type form creates cost annotations (entry/types/exchange.ts:51), so this breaks editing of app-created transactions, not just hand-written ones. parsedBlockToDraft.ts:25-26 already shows the correct mapping. Severity high and fix are accurate.
 
 ### A2. Save-as-template from a transaction row silently drops @@ cost and = assertion annotations
+
+**Status:** ✅ DONE — [PR #63](https://github.com/naeemba/ledger-cli-ui/pull/63) (`fix/review-a2-template-cost-assertion`) — 2026-07-03. `TransactionRow`'s posting shape now carries optional `cost`/`assertion` (`features/transactions/transactionRow.ts`), and both `toTransactionRow` and `toTemplateDraft` pass the annotations through, so a `@@`-balanced multi-currency transaction saved as a template hydrates back into a balanced, submittable draft. `toTemplateDraft` was moved out of the `RowActions` client component into the pure `transactionRow` module so it is unit-testable; `transactionRow.test.ts` pins cost and assertion round-tripping through both mappers. (A1's `transactionToDraft` covers the edit path; A3/A4 remain for the live-draft save and template-hydration hops.)
 
 **Severity:** HIGH · **Effort:** M (half day) · **Location:** `features/transactions/RowActions.tsx:27`
 

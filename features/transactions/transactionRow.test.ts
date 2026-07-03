@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toTransactionRow } from './transactionRow';
+import { toTransactionRow, toTemplateDraft } from './transactionRow';
 import type { Transaction } from '@/lib/journal/parser';
 
 const sample: Transaction = {
@@ -24,6 +24,20 @@ const sample: Transaction = {
   fingerprint: 'abc',
 };
 
+const withAssertion: Transaction = {
+  ...sample,
+  postings: [
+    { account: 'Assets:Cash', amount: '-5.00', currency: '$' },
+    { account: 'Expenses:Food', amount: '5.00', currency: '$' },
+    {
+      account: 'Assets:Cash',
+      amount: '',
+      currency: '',
+      assertion: { amount: '95.00', currency: '$' },
+    },
+  ],
+};
+
 describe('toTransactionRow', () => {
   it('drops rawBlock and endLine', () => {
     const row = toTransactionRow(sample);
@@ -31,14 +45,30 @@ describe('toTransactionRow', () => {
     expect('endLine' in row).toBe(false);
   });
 
-  it('slims postings to account/amount/currency only', () => {
+  it('carries cost annotations through so they can round-trip', () => {
     const row = toTransactionRow(sample);
     expect(row.postings[0]).toEqual({
       account: 'Expenses:Food',
       amount: '5.00',
       currency: '$',
+      cost: { amount: '1', currency: '€' },
     });
-    expect('cost' in row.postings[0]).toBe(false);
+  });
+
+  it('carries balance-assertion annotations through', () => {
+    const row = toTransactionRow(withAssertion);
+    expect(row.postings[2]).toEqual({
+      account: 'Assets:Cash',
+      amount: '',
+      currency: '',
+      assertion: { amount: '95.00', currency: '$' },
+    });
+  });
+
+  it('omits cost/assertion keys for plain postings', () => {
+    const row = toTransactionRow(sample);
+    expect('cost' in row.postings[1]).toBe(false);
+    expect('assertion' in row.postings[1]).toBe(false);
   });
 
   it('preserves fields the table and row actions consume', () => {
@@ -53,5 +83,43 @@ describe('toTransactionRow', () => {
       note: null,
       fingerprint: 'abc',
     });
+  });
+});
+
+describe('toTemplateDraft', () => {
+  it('carries @@ cost annotations into the template draft', () => {
+    const draft = toTemplateDraft(toTransactionRow(sample));
+    expect(draft.postings[0]).toEqual({
+      account: 'Expenses:Food',
+      amount: '5.00',
+      currency: '$',
+      cost: { amount: '1', currency: '€' },
+    });
+  });
+
+  it('carries = balance assertions into the template draft', () => {
+    const draft = toTemplateDraft(toTransactionRow(withAssertion));
+    expect(draft.postings[2]).toEqual({
+      account: 'Assets:Cash',
+      amount: '',
+      currency: '',
+      assertion: { amount: '95.00', currency: '$' },
+    });
+  });
+
+  it('maps payee, status and note', () => {
+    const draft = toTemplateDraft(
+      toTransactionRow({ ...sample, note: 'morning' })
+    );
+    expect(draft).toMatchObject({
+      payee: 'Coffee',
+      status: 'cleared',
+      note: 'morning',
+    });
+  });
+
+  it('coerces a null note to undefined', () => {
+    const draft = toTemplateDraft(toTransactionRow(sample));
+    expect(draft.note).toBeUndefined();
   });
 });

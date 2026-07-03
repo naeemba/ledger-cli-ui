@@ -1,3 +1,4 @@
+import { carryAnnotations } from '../carryAnnotations.util';
 import type { Transaction } from '@/lib/journal/parser';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 
@@ -24,7 +25,6 @@ export const transactionToDraft = (
     account: p.account,
     amount: p.amount,
     currency: p.currency || defaultCurrency,
-    ...(p.cost ? { cost: p.cost } : {}),
-    ...(p.assertion ? { assertion: p.assertion } : {}),
+    ...carryAnnotations(p),
   })),
 });
