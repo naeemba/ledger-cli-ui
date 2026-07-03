@@ -1,5 +1,5 @@
-import { carryAnnotations } from '../carryAnnotations.util';
 import type { Transaction } from '@/lib/journal/parser';
+import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 
 /**

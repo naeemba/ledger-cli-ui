@@ -1,6 +1,6 @@
-import { carryAnnotations } from './carryAnnotations.util';
 import type { Annotation, Transaction } from '@/lib/journal/parser';
 import type { TemplateDraft } from '@/lib/templates/schema';
+import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
 
 export type TransactionRow = Omit<
   Transaction,

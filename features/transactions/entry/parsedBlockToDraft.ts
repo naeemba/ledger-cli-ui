@@ -1,6 +1,6 @@
-import { carryAnnotations } from '../carryAnnotations.util';
 import type { DraftState } from './draftReducer';
 import type { ParsedBlock } from '@/lib/journal/parser';
+import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
 
 /**
  * Map a parsed ledger block onto the canonical entry draft.

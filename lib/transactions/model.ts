@@ -4,6 +4,7 @@ import type {
   Transaction,
 } from '@/lib/journal/parser';
 import type { TemplateDraft } from '@/lib/templates/schema';
+import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 
 export type Posting = {
@@ -24,14 +25,6 @@ export type TxnJSON = {
   uid?: string;
   postings: Posting[];
 };
-
-const carry = (p: {
-  cost?: Annotation;
-  assertion?: Annotation;
-}): Pick<Posting, 'cost' | 'assertion'> => ({
-  ...(p.cost ? { cost: p.cost } : {}),
-  ...(p.assertion ? { assertion: p.assertion } : {}),
-});
 
 const blankPostings = (currency: string): Posting[] => [
   { account: '', amount: '', currency },
@@ -62,7 +55,7 @@ export class Txn {
         account: p.account,
         amount: p.amount,
         currency: p.currency || defaultCurrency,
-        ...carry(p),
+        ...carryAnnotations(p),
       })),
       tx.uid ?? undefined
     );
@@ -81,7 +74,7 @@ export class Txn {
         account: p.account,
         amount: p.amount,
         currency: p.currency,
-        ...carry(p),
+        ...carryAnnotations(p),
       })),
       block.uid ?? prev?.uid
     );
@@ -97,7 +90,7 @@ export class Txn {
         account: p.account,
         amount: p.amount,
         currency: p.currency || defaultCurrency,
-        ...carry(p),
+        ...carryAnnotations(p),
       }))
     );
   }
@@ -120,7 +113,7 @@ export class Txn {
         account: p.account,
         amount: p.amount,
         currency: p.currency,
-        ...carry(p),
+        ...carryAnnotations(p),
       })),
       o.uid
     );
