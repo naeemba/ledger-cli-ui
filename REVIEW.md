@@ -92,6 +92,8 @@ postings: tx.postings.map((p) => ({
 
 ### A2. Save-as-template from a transaction row silently drops @@ cost and = assertion annotations
 
+**Status:** 🚧 IN PROGRESS — `fix/review-a2-template-cost-assertion`
+
 **Severity:** HIGH · **Effort:** M (half day) · **Location:** `features/transactions/RowActions.tsx:27`
 
 postingSchema (lib/transactions/schema.ts:91-92) declares optional `cost` and `assertion` fields and templateDraftSchema reuses postingSchema, so templates can legally carry these annotations. But toTemplateDraft maps postings to only {account, amount, currency}, so saving a transaction containing `@@` cost or `=` assertion postings as a template silently loses them. For a multi-currency transaction balanced via `@@` cost, the resulting template hydrates into a draft that fails computeBalance (postings no longer sum to zero per currency), leaving the Save buttons disabled — the template is unusable for its primary purpose without manual repair in the raw tab. Root cause is upstream: TransactionRow itself strips the fields (features/transactions/transactionRow.ts:7 `postings: Array<{ account: string; amount: string; currency: string }>`), so the row type must be widened too.
