@@ -171,6 +171,44 @@ describe('Txn.fromJSON', () => {
     expect(t.note).toBe('');
     expect(t.uid).toBeUndefined();
   });
+
+  it('round-trips a Txn with cost and assertion through JSON serialization', () => {
+    const original = new Txn(
+      '2024-03-03',
+      '  Wire  ',
+      'cleared',
+      '',
+      [
+        {
+          account: 'Assets:USD',
+          amount: ' 100 ',
+          currency: ' USD ',
+          cost: { amount: ' 90 ', currency: ' EUR ' },
+        },
+        {
+          account: 'Assets:EUR',
+          amount: ' -90 ',
+          currency: ' EUR ',
+          assertion: { amount: ' 500 ', currency: ' EUR ' },
+        },
+      ],
+      'rt1'
+    );
+    const reconstructed = Txn.fromJSON(
+      JSON.parse(JSON.stringify(original.toWire('edit')))
+    );
+    expect(reconstructed.date).toBe('2024-03-03');
+    expect(reconstructed.payee).toBe('Wire');
+    expect(reconstructed.uid).toBe('rt1');
+    expect(reconstructed.postings[0].cost).toEqual({
+      amount: '90',
+      currency: 'EUR',
+    });
+    expect(reconstructed.postings[1].assertion).toEqual({
+      amount: '500',
+      currency: 'EUR',
+    });
+  });
 });
 
 describe('Txn immutable updates', () => {
@@ -226,7 +264,12 @@ describe('Txn outputs', () => {
           currency: ' USD ',
           cost: { amount: ' 90 ', currency: ' EUR ' },
         },
-        { account: 'Assets:EUR', amount: '-90', currency: 'EUR' },
+        {
+          account: 'Assets:EUR',
+          amount: '-90',
+          currency: 'EUR',
+          assertion: { amount: ' 500 ', currency: ' EUR ' },
+        },
       ],
       'u9'
     );
@@ -243,6 +286,7 @@ describe('Txn outputs', () => {
       currency: 'USD',
       cost: { amount: '90', currency: 'EUR' },
     });
+    expect(w.postings[1].assertion).toEqual({ amount: '500', currency: 'EUR' });
     expect(
       new Txn('2024-01-15', 'P', 'none', '   ', []).toWire('create').note
     ).toBeUndefined();
@@ -253,6 +297,7 @@ describe('Txn outputs', () => {
     expect(s.date).toBe('2024-01-15');
     expect(s.uid).toBe('u9');
     expect(s.postings[0].cost).toEqual({ amount: '90', currency: 'EUR' });
+    expect(s.postings[1].assertion).toEqual({ amount: '500', currency: 'EUR' });
   });
 
   it('toTemplate omits date/uid, trims, and defaults blank payee to dash', () => {

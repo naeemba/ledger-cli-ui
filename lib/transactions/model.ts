@@ -209,7 +209,7 @@ export class Txn {
       note: this.note.trim() || undefined,
       uid: this.uid,
       postings: this.trimmedPostings(),
-    } as TransactionDraft;
+    };
   }
 
   toTemplate(): TemplateDraft {
@@ -218,6 +218,6 @@ export class Txn {
       status: this.status,
       note: this.note.trim() || undefined,
       postings: this.trimmedPostings(),
-    } as TemplateDraft;
+    };
   }
 }
