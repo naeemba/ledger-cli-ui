@@ -1,3 +1,4 @@
+import { carryAnnotations } from './carryAnnotations.util';
 import type { Annotation, Transaction } from '@/lib/journal/parser';
 import type { TemplateDraft } from '@/lib/templates/schema';
 
@@ -27,8 +28,7 @@ export const toTransactionRow = (t: Transaction): TransactionRow => ({
     account: p.account,
     amount: p.amount,
     currency: p.currency,
-    ...(p.cost ? { cost: p.cost } : {}),
-    ...(p.assertion ? { assertion: p.assertion } : {}),
+    ...carryAnnotations(p),
   })),
 });
 
@@ -49,7 +49,6 @@ export const toTemplateDraft = (t: TransactionRow): TemplateDraft => ({
     account: p.account,
     amount: p.amount,
     currency: p.currency,
-    ...(p.cost ? { cost: p.cost } : {}),
-    ...(p.assertion ? { assertion: p.assertion } : {}),
+    ...carryAnnotations(p),
   })),
 });
