@@ -14,7 +14,7 @@ export type Posting = {
   assertion?: Annotation;
 };
 
-export type TxnStatus = 'cleared' | 'pending' | 'none';
+export type TxnStatus = TransactionDraft['status'];
 
 export type TxnJSON = {
   date: string;
