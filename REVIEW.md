@@ -29,7 +29,7 @@
 >
 > | Item | Status | PR | Branch | Date |
 > |---|---|---|---|---|
-> | A1 | ✅ DONE | #<pending> | `fix/review-a1-edit-cost-assertion` | 2026-07-03 |
+> | A1 | ✅ DONE | [#62](https://github.com/naeemba/ledger-cli-ui/pull/62) | `fix/review-a1-edit-cost-assertion` | 2026-07-03 |
 
 A complete, implementation-ready review of ledger-cli-ui covering performance, correctness, error handling, architecture, UX consistency, and dead code. **Security was deliberately excluded** (covered by a separate review). Test files were not reviewed.
 
@@ -72,7 +72,7 @@ These produce wrong or lost financial data and come first. The largest cluster i
 
 ### A1. Edit page strips cost/assertion annotations, making such transactions permanently uneditable (false 'stale')
 
-**Status:** ✅ DONE — PR #<pending> (`fix/review-a1-edit-cost-assertion`) — 2026-07-03. Extracted a pure `transactionToDraft(tx, defaultCurrency)` helper (`features/transactions/entry/transactionToDraft.ts`) that carries `cost`/`assertion` through, replacing the inline mapping in `EditTransaction.tsx`; added `transactionToDraft.test.ts` asserting `fingerprintDraft(draft) === tx.fingerprint` for a transaction with `@@` cost and `=` assertion. The helper is intended for reuse by A2–A4.
+**Status:** ✅ DONE — [PR #62](https://github.com/naeemba/ledger-cli-ui/pull/62) (`fix/review-a1-edit-cost-assertion`) — 2026-07-03. Extracted a pure `transactionToDraft(tx, defaultCurrency)` helper (`features/transactions/entry/transactionToDraft.ts`) that carries `cost`/`assertion` through, replacing the inline mapping in `EditTransaction.tsx`; added `transactionToDraft.test.ts` asserting `fingerprintDraft(draft) === tx.fingerprint` for a transaction with `@@` cost and `=` assertion. The helper is intended for reuse by A2–A4.
 
 **Severity:** HIGH · **Effort:** S (<1h) · **Location:** `features/transactions/EditTransaction.tsx:30`
 
