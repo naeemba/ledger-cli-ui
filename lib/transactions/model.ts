@@ -115,4 +115,44 @@ export class Txn {
       o.uid
     );
   }
+
+  withField(field: 'date' | 'payee' | 'status' | 'note', value: string): Txn {
+    return new Txn(
+      field === 'date' ? value : this.date,
+      field === 'payee' ? value : this.payee,
+      field === 'status' ? (value as TxnStatus) : this.status,
+      field === 'note' ? value : this.note,
+      this.postings,
+      this.uid
+    );
+  }
+
+  withPosting(index: number, patch: Partial<Posting>): Txn {
+    return this.replacePostings(
+      this.postings.map((p, i) => (i === index ? { ...p, ...patch } : p))
+    );
+  }
+
+  addPosting(currency: string): Txn {
+    return this.replacePostings([
+      ...this.postings,
+      { account: '', amount: '', currency },
+    ]);
+  }
+
+  removePosting(index: number): Txn {
+    if (this.postings.length <= 2) return this;
+    return this.replacePostings(this.postings.filter((_, i) => i !== index));
+  }
+
+  private replacePostings(postings: readonly Posting[]): Txn {
+    return new Txn(
+      this.date,
+      this.payee,
+      this.status,
+      this.note,
+      postings,
+      this.uid
+    );
+  }
 }

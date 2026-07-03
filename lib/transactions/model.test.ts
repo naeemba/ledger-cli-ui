@@ -172,3 +172,42 @@ describe('Txn.fromJSON', () => {
     expect(t.uid).toBeUndefined();
   });
 });
+
+describe('Txn immutable updates', () => {
+  const base = () =>
+    new Txn('2024-01-01', 'P', 'none', '', [
+      { account: 'A', amount: '1', currency: 'USD' },
+      { account: 'B', amount: '-1', currency: 'USD' },
+    ]);
+
+  it('withField returns a new instance and does not mutate', () => {
+    const a = base();
+    const b = a.withField('payee', 'Changed');
+    expect(b.payee).toBe('Changed');
+    expect(a.payee).toBe('P');
+    expect(b).not.toBe(a);
+  });
+
+  it('withPosting patches one posting only', () => {
+    const b = base().withPosting(1, { amount: '-2' });
+    expect(b.postings[1].amount).toBe('-2');
+    expect(b.postings[0].amount).toBe('1');
+  });
+
+  it('addPosting appends a blank posting in the given currency', () => {
+    const b = base().addPosting('EUR');
+    expect(b.postings).toHaveLength(3);
+    expect(b.postings[2]).toEqual({ account: '', amount: '', currency: 'EUR' });
+  });
+
+  it('removePosting deletes by index above the two-row floor', () => {
+    const b = base().addPosting('USD').removePosting(0);
+    expect(b.postings).toHaveLength(2);
+    expect(b.postings[0].account).toBe('B');
+  });
+
+  it('removePosting is a no-op at two postings', () => {
+    const a = base();
+    expect(a.removePosting(0)).toBe(a);
+  });
+});
