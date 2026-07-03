@@ -31,6 +31,7 @@
 > |---|---|---|---|---|
 > | A1 | ✅ DONE | [#62](https://github.com/naeemba/ledger-cli-ui/pull/62) | `fix/review-a1-edit-cost-assertion` | 2026-07-03 |
 > | A2 | ✅ DONE | [#63](https://github.com/naeemba/ledger-cli-ui/pull/63) | `fix/review-a2-template-cost-assertion` | 2026-07-03 |
+| A3 | 🚧 IN PROGRESS | — | `fix/review-a3-entry-template-cost-assertion` | 2026-07-03 |
 
 A complete, implementation-ready review of ledger-cli-ui covering performance, correctness, error handling, architecture, UX consistency, and dead code. **Security was deliberately excluded** (covered by a separate review). Test files were not reviewed.
 
@@ -112,6 +113,8 @@ postings: t.postings.map((p) => ({
 > **Verifier notes** (independent adversarial check, confidence: high): Confirmed. Parser postings carry optional cost/assertion (lib/journal/parser.ts:30-31), but TransactionRow (features/transactions/transactionRow.ts:7) and toTemplateDraft (features/transactions/RowActions.tsx:27-31) both strip them, while templateDraftSchema (lib/templates/schema.ts, reuses postingSchema) legally stores them. Downstream impact verified: computeBalance/canSubmit (TransactionEntry.tsx:144-150, entry/balance.ts:20-29) rely on p.cost for @@-balanced multi-currency transactions, so the hydrated template is unbalanced and the Save buttons stay disabled. Additionally, assertion-only postings degrade into blank-amount auto-balance postings, silently changing semantics. Suggested fix (widen TransactionRow posting shape and pass fields through both mappers) is correct.
 
 ### A3. Save-as-template from the entry form also strips cost/assertion from the live draft
+
+**Status:** 🚧 IN PROGRESS — `fix/review-a3-entry-template-cost-assertion`. Extracted the inline `templateDraft` construction into a pure, unit-tested `draftToTemplateDraft(draft)` helper (`features/transactions/entry/draftToTemplateDraft.ts`) that carries each posting's `@@` cost and `=` assertion through the shared `carryAnnotations` idiom (the same helper A1/A2 use), so a cost-balanced multi-currency draft now saves as a balanced, submittable template. `draftToTemplateDraft.test.ts` pins cost/assertion round-tripping plus field trimming. (A4 — template hydration in NewTransaction — remains the last stripping hop.)
 
 **Severity:** HIGH · **Effort:** S (<1h) · **Location:** `features/transactions/entry/TransactionEntry.tsx:156`
 
