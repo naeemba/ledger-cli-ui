@@ -18,10 +18,12 @@ describe('transactionToDraft', () => {
     expect(fingerprintDraft(draft)).toBe(tx.fingerprint);
   });
 
-  it('carries @@ cost and = assertion so the fingerprint still matches (regression: A1)', () => {
+  it('carries @@ cost and = assertion, so the seed faithfully reconstructs the transaction (A1)', () => {
     // A transaction the app itself can create (exchange type form emits @@ cost).
-    // Before the fix, initialDraft dropped cost/assertion, so its fingerprint
-    // never matched tx.fingerprint and every edit failed as falsely "stale".
+    // The edit form is seeded with this draft; if it drops cost/assertion, an
+    // unchanged save rewrites the block without them. fingerprintDraft(draft) ===
+    // tx.fingerprint means formatTransaction(draft) reproduces the original block
+    // byte-for-byte, i.e. the annotations round-trip through an unchanged save.
     const text = [
       '2026-06-29 Currency exchange',
       '    ; :uid: 01J0000000000000000000000B',
