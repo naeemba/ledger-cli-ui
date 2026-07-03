@@ -30,6 +30,7 @@
 > | Item | Status | PR | Branch | Date |
 > |---|---|---|---|---|
 > | A1 | ✅ DONE | [#62](https://github.com/naeemba/ledger-cli-ui/pull/62) | `fix/review-a1-edit-cost-assertion` | 2026-07-03 |
+> | A2 | ✅ DONE | [#63](https://github.com/naeemba/ledger-cli-ui/pull/63) | `fix/review-a2-template-cost-assertion` | 2026-07-03 |
 
 A complete, implementation-ready review of ledger-cli-ui covering performance, correctness, error handling, architecture, UX consistency, and dead code. **Security was deliberately excluded** (covered by a separate review). Test files were not reviewed.
 
@@ -92,7 +93,7 @@ postings: tx.postings.map((p) => ({
 
 ### A2. Save-as-template from a transaction row silently drops @@ cost and = assertion annotations
 
-**Status:** 🚧 IN PROGRESS — `fix/review-a2-template-cost-assertion`
+**Status:** ✅ DONE — [PR #63](https://github.com/naeemba/ledger-cli-ui/pull/63) (`fix/review-a2-template-cost-assertion`) — 2026-07-03. `TransactionRow`'s posting shape now carries optional `cost`/`assertion` (`features/transactions/transactionRow.ts`), and both `toTransactionRow` and `toTemplateDraft` pass the annotations through, so a `@@`-balanced multi-currency transaction saved as a template hydrates back into a balanced, submittable draft. `toTemplateDraft` was moved out of the `RowActions` client component into the pure `transactionRow` module so it is unit-testable; `transactionRow.test.ts` pins cost and assertion round-tripping through both mappers. (A1's `transactionToDraft` covers the edit path; A3/A4 remain for the live-draft save and template-hydration hops.)
 
 **Severity:** HIGH · **Effort:** M (half day) · **Location:** `features/transactions/RowActions.tsx:27`
 
