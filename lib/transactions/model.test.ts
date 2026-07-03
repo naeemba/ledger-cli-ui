@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Txn } from './model';
-import type { Transaction } from '@/lib/journal/parser';
+import type { ParsedBlock, Transaction } from '@/lib/journal/parser';
+import type { TemplateDraft } from '@/lib/templates/schema';
 
 const txnFixture = (over: Partial<Transaction> = {}): Transaction => ({
   uid: 'u1',
@@ -82,5 +83,92 @@ describe('Txn.fromTransaction', () => {
       'GBP'
     );
     expect(t.postings[0].currency).toBe('GBP');
+  });
+});
+
+describe('Txn.fromParsedBlock', () => {
+  const block: Omit<ParsedBlock, 'unparsedLines'> = {
+    uid: null,
+    date: '2024-02-01',
+    status: 'pending',
+    payee: 'Rent',
+    note: 'monthly',
+    postings: [
+      { account: 'Expenses:Rent', amount: '1200', currency: 'USD' },
+      { account: 'Assets:Bank', amount: '-1200', currency: 'USD' },
+    ],
+  };
+
+  it('maps the block and keeps note as a string', () => {
+    const t = Txn.fromParsedBlock(block);
+    expect(t.date).toBe('2024-02-01');
+    expect(t.status).toBe('pending');
+    expect(t.note).toBe('monthly');
+    expect(t.postings).toHaveLength(2);
+  });
+
+  it('falls back to prev uid when the block omits it', () => {
+    const prev = new Txn('2024-02-01', 'Rent', 'pending', '', [], 'keep-me');
+    expect(Txn.fromParsedBlock(block, prev).uid).toBe('keep-me');
+    expect(Txn.fromParsedBlock({ ...block, uid: 'own' }, prev).uid).toBe('own');
+  });
+});
+
+describe('Txn.fromTemplate', () => {
+  const tmpl: TemplateDraft = {
+    payee: 'Groceries',
+    status: 'none',
+    postings: [
+      {
+        account: 'Assets:USD',
+        amount: '100',
+        currency: 'USD',
+        cost: { amount: '90', currency: 'EUR' },
+      },
+      { account: 'Assets:EUR', amount: '-90', currency: 'EUR' },
+    ],
+  };
+
+  it('hydrates a date-less template and carries cost', () => {
+    const t = Txn.fromTemplate(tmpl, 'USD');
+    expect(t.date).toBe('');
+    expect(t.payee).toBe('Groceries');
+    expect(t.postings[0].cost).toEqual({ amount: '90', currency: 'EUR' });
+  });
+
+  it('defaults a blank template posting currency', () => {
+    const t = Txn.fromTemplate(
+      { ...tmpl, postings: [{ account: 'A', amount: '1', currency: '' }] },
+      'JPY'
+    );
+    expect(t.postings[0].currency).toBe('JPY');
+  });
+});
+
+describe('Txn.fromJSON', () => {
+  it('rebuilds a Txn from a parsed wire object', () => {
+    const t = Txn.fromJSON({
+      date: '2024-03-03',
+      payee: 'Wire',
+      status: 'cleared',
+      note: 'n',
+      uid: 'w1',
+      postings: [{ account: 'A', amount: '1', currency: 'USD' }],
+    });
+    expect(t).toBeInstanceOf(Txn);
+    expect(t.uid).toBe('w1');
+    expect(t.note).toBe('n');
+    expect(t.postings[0].currency).toBe('USD');
+  });
+
+  it('treats a missing note/uid as empty/undefined', () => {
+    const t = Txn.fromJSON({
+      date: '2024-03-03',
+      payee: 'Wire',
+      status: 'none',
+      postings: [],
+    });
+    expect(t.note).toBe('');
+    expect(t.uid).toBeUndefined();
   });
 });

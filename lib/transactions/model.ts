@@ -1,4 +1,9 @@
-import type { Annotation, Transaction } from '@/lib/journal/parser';
+import type {
+  Annotation,
+  ParsedBlock,
+  Transaction,
+} from '@/lib/journal/parser';
+import type { TemplateDraft } from '@/lib/templates/schema';
 
 export type Posting = {
   account: string;
@@ -50,6 +55,64 @@ export class Txn {
         ...carry(p),
       })),
       tx.uid ?? undefined
+    );
+  }
+
+  static fromParsedBlock(
+    block: Omit<ParsedBlock, 'unparsedLines'>,
+    prev?: Txn
+  ): Txn {
+    return new Txn(
+      block.date,
+      block.payee,
+      block.status,
+      block.note ?? '',
+      block.postings.map((p) => ({
+        account: p.account,
+        amount: p.amount,
+        currency: p.currency,
+        ...carry(p),
+      })),
+      block.uid ?? prev?.uid
+    );
+  }
+
+  static fromTemplate(t: TemplateDraft, defaultCurrency: string): Txn {
+    return new Txn(
+      '',
+      t.payee,
+      t.status,
+      t.note ?? '',
+      t.postings.map((p) => ({
+        account: p.account,
+        amount: p.amount,
+        currency: p.currency || defaultCurrency,
+        ...carry(p),
+      }))
+    );
+  }
+
+  static fromJSON(j: unknown): Txn {
+    const o = j as {
+      date?: string;
+      payee?: string;
+      status?: TxnStatus;
+      note?: string;
+      uid?: string;
+      postings?: Posting[];
+    };
+    return new Txn(
+      o.date ?? '',
+      o.payee ?? '',
+      o.status ?? 'none',
+      o.note ?? '',
+      (o.postings ?? []).map((p) => ({
+        account: p.account,
+        amount: p.amount,
+        currency: p.currency,
+        ...carry(p),
+      })),
+      o.uid
     );
   }
 }
