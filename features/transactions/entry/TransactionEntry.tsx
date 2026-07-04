@@ -22,6 +22,7 @@ import {
   initDraft,
   serializeDraftJson,
 } from './draftReducer';
+import { draftToTemplateDraft } from './draftToTemplateDraft';
 import { detectType } from './types/registry';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -149,16 +150,7 @@ const TransactionEntry = ({
     (balanceKind === 'balanced' || balanceKind === 'auto-balance') &&
     !(active === 'raw' && rawError !== null);
 
-  const templateDraft: TemplateDraft = {
-    payee: draft.payee.trim() || '—',
-    status: draft.status,
-    note: draft.note.trim() || undefined,
-    postings: draft.postings.map((p) => ({
-      account: p.account.trim(),
-      amount: p.amount.trim(),
-      currency: p.currency.trim(),
-    })),
-  };
+  const templateDraft: TemplateDraft = draftToTemplateDraft(draft);
   const canSaveTemplate =
     draft.payee.trim() !== '' &&
     draft.postings.filter((p) => p.account.trim() !== '').length >= 2;
