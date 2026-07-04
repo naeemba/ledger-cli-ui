@@ -1,5 +1,5 @@
 import type { DraftState, DraftStatus, DraftPosting } from '../draftReducer';
-import { Txn } from '@/lib/transactions/model';
+import { Transaction } from '@/lib/transactions/model';
 
 export type TypeContext = { defaultCurrency: string };
 
@@ -32,7 +32,7 @@ export const draftFromHeader = (
   header: HeaderFields,
   postings: DraftPosting[]
 ): DraftState =>
-  new Txn(
+  new Transaction(
     header.date,
     header.payee,
     header.status,

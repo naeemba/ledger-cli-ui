@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SaveAsTemplateDialog } from '@/features/templates/SaveAsTemplateButton';
-import { Txn } from '@/lib/transactions/model';
+import { Transaction } from '@/lib/transactions/model';
 import { useRouter } from 'next/navigation';
 
 type Props = { transaction: TransactionRow };
@@ -31,7 +31,7 @@ const RowActions = ({ transaction: t }: Props) => {
     router.refresh();
   };
 
-  const templateDraft = new Txn(
+  const templateDraft = new Transaction(
     t.date,
     t.payee,
     t.status,

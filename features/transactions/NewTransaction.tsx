@@ -6,7 +6,7 @@ import TemplatePicker from '@/features/templates/TemplatePicker';
 import { requireUser } from '@/lib/auth/require-user';
 import { getAvailableCurrencies, getEntryTabOrder } from '@/lib/settings';
 import { templateRepository } from '@/lib/templates';
-import { Txn } from '@/lib/transactions/model';
+import { Transaction } from '@/lib/transactions/model';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 import {
   getAccountSuggestions,
@@ -35,7 +35,7 @@ const NewTransaction = async ({ templateId }: Props) => {
   if (templateId) {
     const t = await templateRepository.find(user.id, templateId);
     if (t) {
-      initialDraft = Txn.fromTemplate(t.draft, defaultCurrency).toWire(
+      initialDraft = Transaction.fromTemplate(t.draft, defaultCurrency).toWire(
         'create'
       );
     } else {

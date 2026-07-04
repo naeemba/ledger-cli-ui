@@ -6,7 +6,7 @@ import {
   serializeDraftJson,
   type DraftState,
 } from './draftReducer';
-import { Txn } from '@/lib/transactions/model';
+import { Transaction } from '@/lib/transactions/model';
 
 const base: DraftState = initDraft({ date: '2026-06-29' }, 'USD');
 
@@ -85,7 +85,7 @@ describe('serializeDraftJson — cost and assertion', () => {
   it('serializes a cost-bearing posting', () => {
     const json = JSON.parse(
       serializeDraftJson(
-        new Txn('2026-06-29', '', 'none', '', [
+        new Transaction('2026-06-29', '', 'none', '', [
           {
             account: 'Assets:EUR',
             amount: '92',
@@ -103,7 +103,7 @@ describe('serializeDraftJson — cost and assertion', () => {
   it('serializes an assertion-bearing posting', () => {
     const json = JSON.parse(
       serializeDraftJson(
-        new Txn('2026-06-29', '', 'none', '', [
+        new Transaction('2026-06-29', '', 'none', '', [
           {
             account: 'Assets:Checking',
             amount: '',
@@ -127,7 +127,7 @@ describe('serializeDraftJson', () => {
   it('trims fields and omits empty note/uid in create mode', () => {
     const json = JSON.parse(
       serializeDraftJson(
-        new Txn('2026-06-29', '  Acme  ', 'none', '   ', [
+        new Transaction('2026-06-29', '  Acme  ', 'none', '   ', [
           { account: ' Assets:Cash ', amount: ' 5 ', currency: ' USD ' },
         ]),
         'create'
@@ -145,7 +145,7 @@ describe('serializeDraftJson', () => {
   it('includes uid in edit mode', () => {
     const json = JSON.parse(
       serializeDraftJson(
-        new Txn('2026-06-29', '', 'none', '', base.postings, 'ULID123'),
+        new Transaction('2026-06-29', '', 'none', '', base.postings, 'ULID123'),
         'edit'
       )
     );
@@ -154,7 +154,7 @@ describe('serializeDraftJson', () => {
   it('omits uid in create mode even when present on state', () => {
     const json = JSON.parse(
       serializeDraftJson(
-        new Txn('2026-06-29', '', 'none', '', base.postings, 'ULID123'),
+        new Transaction('2026-06-29', '', 'none', '', base.postings, 'ULID123'),
         'create'
       )
     );

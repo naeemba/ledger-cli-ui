@@ -1,9 +1,9 @@
-import { Txn, type Posting } from '@/lib/transactions/model';
+import { Transaction, type Posting } from '@/lib/transactions/model';
 
 export type { Posting as DraftPosting } from '@/lib/transactions/model';
-export type { TxnStatus as DraftStatus } from '@/lib/transactions/model';
+export type { TransactionStatus as DraftStatus } from '@/lib/transactions/model';
 
-export type DraftState = Txn;
+export type DraftState = Transaction;
 
 export type DraftAction =
   | {
@@ -24,14 +24,14 @@ export const emptyPostings = (currency: string): Posting[] => [
 export const initDraft = (
   input: { date: string } & {
     payee?: string;
-    status?: Txn['status'];
+    status?: Transaction['status'];
     note?: string;
     uid?: string;
     postings?: Posting[];
   },
   defaultCurrency: string
-): Txn =>
-  new Txn(
+): Transaction =>
+  new Transaction(
     input.date,
     input.payee ?? '',
     input.status ?? 'none',
@@ -40,7 +40,10 @@ export const initDraft = (
     input.uid
   );
 
-export const draftReducer = (state: Txn, action: DraftAction): Txn => {
+export const draftReducer = (
+  state: Transaction,
+  action: DraftAction
+): Transaction => {
   switch (action.type) {
     case 'setField':
       return state.withField(action.field, action.value);

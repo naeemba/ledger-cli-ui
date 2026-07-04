@@ -4,7 +4,7 @@ import path from 'path';
 import { eq, sql } from 'drizzle-orm';
 import { DEFAULT_MAIN, PRICE_DB_NAME, getJournalDir } from './layout';
 import { parseJournal } from './loader';
-import { type ParsedJournal, type Transaction } from './parser';
+import { type ParsedJournal, type ParsedTransaction } from './parser';
 import { userSetting } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 import { pullLocked, manifestRelName } from '@/lib/storage';
@@ -120,7 +120,7 @@ export class JournalRepository {
   }
 
   /** Finds a single transaction by UID across the user's journal. */
-  async find(userId: string, uid: string): Promise<Transaction | null> {
+  async find(userId: string, uid: string): Promise<ParsedTransaction | null> {
     const { transactions } = await this.list(userId);
     return transactions.find((t) => t.uid === uid) ?? null;
   }

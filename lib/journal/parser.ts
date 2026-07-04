@@ -149,7 +149,7 @@ export const parseBlock = (block: string): ParsedBlock | null => {
   };
 };
 
-export type Transaction = {
+export type ParsedTransaction = {
   uid: string | null;
   file: string;
   startLine: number;
@@ -165,7 +165,7 @@ export type Transaction = {
 
 export type ParsedJournal = {
   files: Array<{ path: string; mtimeMs: number }>;
-  transactions: Transaction[];
+  transactions: ParsedTransaction[];
 };
 
 const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
@@ -173,9 +173,9 @@ const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
 export const parseJournalFile = (
   filePath: string,
   text: string
-): Transaction[] => {
+): ParsedTransaction[] => {
   const lines = text.split('\n');
-  const transactions: Transaction[] = [];
+  const transactions: ParsedTransaction[] = [];
   let blockStart: number | null = null;
   let blockLines: string[] = [];
 

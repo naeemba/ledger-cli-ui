@@ -13,7 +13,7 @@ import { withUserLock } from './mutex';
 import {
   parseJournalFile,
   type ParsedJournal,
-  type Transaction,
+  type ParsedTransaction,
 } from './parser';
 import { getJournalDirSize, journalQuotaBytes, journalQuotaMb } from './quota';
 import { JournalRepository } from './repository';
@@ -131,7 +131,7 @@ export class JournalService {
   async findTransaction(
     userId: string,
     uid: string
-  ): Promise<Transaction | null> {
+  ): Promise<ParsedTransaction | null> {
     await pullLocked(userId);
     return this.repo.find(userId, uid);
   }

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { transactionsToCsv } from './csv';
-import type { Transaction } from '@/lib/journal/parser';
+import type { ParsedTransaction } from '@/lib/journal/parser';
 
-const tx = (overrides: Partial<Transaction> = {}): Transaction => ({
+const tx = (overrides: Partial<ParsedTransaction> = {}): ParsedTransaction => ({
   uid: '01HZX5G5KJDS9HQRYK8E5T0DJC',
   file: '/tmp/main.ledger',
   startLine: 1,

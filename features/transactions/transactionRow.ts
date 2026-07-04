@@ -1,15 +1,15 @@
-import type { Transaction } from '@/lib/journal/parser';
+import type { ParsedTransaction } from '@/lib/journal/parser';
 import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
 import type { Posting } from '@/lib/transactions/posting';
 
 export type TransactionRow = Omit<
-  Transaction,
+  ParsedTransaction,
   'rawBlock' | 'endLine' | 'postings'
 > & {
   postings: Posting[];
 };
 
-export const toTransactionRow = (t: Transaction): TransactionRow => ({
+export const toTransactionRow = (t: ParsedTransaction): TransactionRow => ({
   uid: t.uid,
   file: t.file,
   startLine: t.startLine,

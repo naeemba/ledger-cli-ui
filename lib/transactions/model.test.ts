@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { Txn } from './model';
-import type { ParsedBlock, Transaction } from '@/lib/journal/parser';
+import { Transaction } from './model';
+import type { ParsedBlock, ParsedTransaction } from '@/lib/journal/parser';
 import type { TemplateDraft } from '@/lib/templates/schema';
 
-const txnFixture = (over: Partial<Transaction> = {}): Transaction => ({
+const transactionFixture = (
+  over: Partial<ParsedTransaction> = {}
+): ParsedTransaction => ({
   uid: 'u1',
   file: 'main.ledger',
   startLine: 1,
@@ -21,9 +23,9 @@ const txnFixture = (over: Partial<Transaction> = {}): Transaction => ({
   ...over,
 });
 
-describe('Txn.fromTransaction', () => {
+describe('Transaction.fromTransaction', () => {
   it('projects the editable core and defaults blank currency', () => {
-    const t = Txn.fromTransaction(txnFixture(), 'USD');
+    const t = Transaction.fromTransaction(transactionFixture(), 'USD');
     expect(t.date).toBe('2024-01-15');
     expect(t.payee).toBe('Coffee Shop');
     expect(t.status).toBe('cleared');
@@ -37,8 +39,8 @@ describe('Txn.fromTransaction', () => {
   });
 
   it('carries cost and assertion annotations', () => {
-    const t = Txn.fromTransaction(
-      txnFixture({
+    const t = Transaction.fromTransaction(
+      transactionFixture({
         postings: [
           {
             account: 'Assets:USD',
@@ -61,8 +63,8 @@ describe('Txn.fromTransaction', () => {
   });
 
   it('maps a missing posting currency to the default', () => {
-    const t = Txn.fromTransaction(
-      txnFixture({
+    const t = Transaction.fromTransaction(
+      transactionFixture({
         postings: [{ account: 'A', amount: '1', currency: '' }],
       }),
       'GBP'
@@ -71,7 +73,7 @@ describe('Txn.fromTransaction', () => {
   });
 });
 
-describe('Txn.fromParsedBlock', () => {
+describe('Transaction.fromParsedBlock', () => {
   const block: Omit<ParsedBlock, 'unparsedLines'> = {
     uid: null,
     date: '2024-02-01',
@@ -85,7 +87,7 @@ describe('Txn.fromParsedBlock', () => {
   };
 
   it('maps the block and keeps note as a string', () => {
-    const t = Txn.fromParsedBlock(block);
+    const t = Transaction.fromParsedBlock(block);
     expect(t.date).toBe('2024-02-01');
     expect(t.status).toBe('pending');
     expect(t.note).toBe('monthly');
@@ -93,13 +95,22 @@ describe('Txn.fromParsedBlock', () => {
   });
 
   it('falls back to prev uid when the block omits it', () => {
-    const prev = new Txn('2024-02-01', 'Rent', 'pending', '', [], 'keep-me');
-    expect(Txn.fromParsedBlock(block, prev).uid).toBe('keep-me');
-    expect(Txn.fromParsedBlock({ ...block, uid: 'own' }, prev).uid).toBe('own');
+    const prev = new Transaction(
+      '2024-02-01',
+      'Rent',
+      'pending',
+      '',
+      [],
+      'keep-me'
+    );
+    expect(Transaction.fromParsedBlock(block, prev).uid).toBe('keep-me');
+    expect(
+      Transaction.fromParsedBlock({ ...block, uid: 'own' }, prev).uid
+    ).toBe('own');
   });
 });
 
-describe('Txn.fromTemplate', () => {
+describe('Transaction.fromTemplate', () => {
   const tmpl: TemplateDraft = {
     payee: 'Groceries',
     status: 'none',
@@ -115,14 +126,14 @@ describe('Txn.fromTemplate', () => {
   };
 
   it('hydrates a date-less template and carries cost', () => {
-    const t = Txn.fromTemplate(tmpl, 'USD');
+    const t = Transaction.fromTemplate(tmpl, 'USD');
     expect(t.date).toBe('');
     expect(t.payee).toBe('Groceries');
     expect(t.postings[0].cost).toEqual({ amount: '90', currency: 'EUR' });
   });
 
   it('defaults a blank template posting currency', () => {
-    const t = Txn.fromTemplate(
+    const t = Transaction.fromTemplate(
       { ...tmpl, postings: [{ account: 'A', amount: '1', currency: '' }] },
       'JPY'
     );
@@ -130,9 +141,9 @@ describe('Txn.fromTemplate', () => {
   });
 });
 
-describe('Txn immutable updates', () => {
+describe('Transaction immutable updates', () => {
   const base = () =>
-    new Txn('2024-01-01', 'P', 'none', '', [
+    new Transaction('2024-01-01', 'P', 'none', '', [
       { account: 'A', amount: '1', currency: 'USD' },
       { account: 'B', amount: '-1', currency: 'USD' },
     ]);
@@ -169,9 +180,9 @@ describe('Txn immutable updates', () => {
   });
 });
 
-describe('Txn outputs', () => {
+describe('Transaction outputs', () => {
   const t = () =>
-    new Txn(
+    new Transaction(
       '2024-01-15',
       '  Coffee  ',
       'cleared',
@@ -207,7 +218,8 @@ describe('Txn outputs', () => {
     });
     expect(w.postings[1].assertion).toEqual({ amount: '500', currency: 'EUR' });
     expect(
-      new Txn('2024-01-15', 'P', 'none', '   ', []).toWire('create').note
+      new Transaction('2024-01-15', 'P', 'none', '   ', []).toWire('create')
+        .note
     ).toBeUndefined();
   });
 
@@ -218,7 +230,7 @@ describe('Txn outputs', () => {
     expect(tpl.payee).toBe('Coffee');
     expect(tpl.postings[0].cost).toEqual({ amount: '90', currency: 'EUR' });
     expect(
-      new Txn('', '   ', 'none', '', [
+      new Transaction('', '   ', 'none', '', [
         { account: 'A', amount: '1', currency: 'USD' },
         { account: 'B', amount: '-1', currency: 'USD' },
       ]).toTemplate().payee

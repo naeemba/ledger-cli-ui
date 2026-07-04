@@ -1,4 +1,4 @@
-import type { Transaction } from '@/lib/journal/parser';
+import type { ParsedTransaction } from '@/lib/journal/parser';
 
 export type TransactionFilters = {
   start?: string;
@@ -14,9 +14,9 @@ export type TransactionFilters = {
  * so both apply identical semantics to the same query string.
  */
 export const applyTransactionFilters = (
-  txs: Transaction[],
+  txs: ParsedTransaction[],
   params: TransactionFilters
-): Transaction[] => {
+): ParsedTransaction[] => {
   const start = params.start ? Date.parse(params.start) : null;
   const end = params.end ? Date.parse(params.end) : null;
   const account = params.account?.toLowerCase().trim();

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { toTransactionRow } from './transactionRow';
-import type { Transaction } from '@/lib/journal/parser';
+import type { ParsedTransaction } from '@/lib/journal/parser';
 
-const sample: Transaction = {
+const sample: ParsedTransaction = {
   uid: 'U1',
   file: 'main.ledger',
   startLine: 1,
@@ -24,7 +24,7 @@ const sample: Transaction = {
   fingerprint: 'abc',
 };
 
-const withAssertion: Transaction = {
+const withAssertion: ParsedTransaction = {
   ...sample,
   postings: [
     { account: 'Assets:Cash', amount: '-5.00', currency: '$' },
