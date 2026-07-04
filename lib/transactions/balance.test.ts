@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeBalance } from './balance';
+import { computeBalance } from '@/lib/transactions/balance';
 
 describe('computeBalance', () => {
   it('returns balanced for a two-posting set that nets to zero', () => {

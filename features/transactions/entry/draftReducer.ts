@@ -16,11 +16,6 @@ export type DraftAction =
   | { type: 'removePosting'; index: number }
   | { type: 'replaceAll'; state: DraftState };
 
-export const emptyPostings = (currency: string): Posting[] => [
-  { account: '', amount: '', currency },
-  { account: '', amount: '', currency },
-];
-
 export const initDraft = (
   input: { date: string } & {
     payee?: string;
@@ -36,7 +31,7 @@ export const initDraft = (
     payee: input.payee ?? '',
     status: input.status ?? 'none',
     note: input.note ?? '',
-    postings: input.postings ?? emptyPostings(defaultCurrency),
+    postings: input.postings ?? Transaction.empty(defaultCurrency).postings,
     uid: input.uid,
   });
 

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   draftReducer,
-  emptyPostings,
   initDraft,
   serializeDraftJson,
   type DraftState,
@@ -9,15 +8,6 @@ import {
 import { Transaction } from '@/lib/transactions/model';
 
 const base: DraftState = initDraft({ date: '2026-06-29' }, 'USD');
-
-describe('emptyPostings', () => {
-  it('returns two blank postings in the given currency', () => {
-    expect(emptyPostings('EUR')).toEqual([
-      { account: '', amount: '', currency: 'EUR' },
-      { account: '', amount: '', currency: 'EUR' },
-    ]);
-  });
-});
 
 describe('initDraft', () => {
   it('fills two blank postings when none provided', () => {

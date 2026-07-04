@@ -1,10 +1,12 @@
 import type { ParsedBlock } from '@/lib/journal/parser';
 import type { TemplateDraft } from '@/lib/templates/schema';
+import { type Balance, computeBalance } from '@/lib/transactions/balance';
 import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
 import type { Posting } from '@/lib/transactions/posting';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 
 export type { Posting } from '@/lib/transactions/posting';
+export type { Balance } from '@/lib/transactions/balance';
 
 export type TransactionStatus = TransactionDraft['status'];
 
@@ -156,6 +158,20 @@ export class Transaction {
     });
   }
 
+  /** Assemble a draft from its header fields and an explicit posting list. */
+  static fromHeader(
+    header: {
+      date: string;
+      payee: string;
+      status: TransactionStatus;
+      note: string;
+      uid?: string;
+    },
+    postings: readonly Posting[]
+  ): Transaction {
+    return new Transaction({ ...header, postings });
+  }
+
   static fromTemplate(t: TemplateDraft, defaultCurrency: string): Transaction {
     return new Transaction({
       date: '',
@@ -261,6 +277,28 @@ export class Transaction {
       uid: mode === 'edit' ? this.uid : undefined,
       postings: this.postings.map(trimPosting),
     };
+  }
+
+  /** Classify whether the postings balance to zero per currency. */
+  balance(): Balance {
+    return computeBalance(this.postings);
+  }
+
+  /** First two posting accounts joined for a compact list summary. */
+  accountsSummary(): string {
+    const accounts = this.postings.slice(0, 2).map((p) => p.account);
+    return `${accounts.join(' → ')}${this.postings.length > 2 ? ' …' : ''}`;
+  }
+
+  /** Sum of positive posting amounts per currency — the transaction magnitude. */
+  magnitudesByCurrency(): Array<[string, number]> {
+    const sums = new Map<string, number>();
+    for (const p of this.postings) {
+      const value = Number(p.amount);
+      if (!Number.isFinite(value) || value <= 0) continue;
+      sums.set(p.currency || '', (sums.get(p.currency || '') ?? 0) + value);
+    }
+    return [...sums.entries()];
   }
 
   toTemplate(): TemplateDraft {

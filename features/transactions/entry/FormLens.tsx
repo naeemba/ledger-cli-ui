@@ -2,7 +2,6 @@
 
 import React from 'react';
 import AmountInput from '../AmountInput';
-import { computeBalance, type Balance } from './balance';
 import type {
   DraftAction,
   DraftPosting,
@@ -15,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import type { Balance } from '@/lib/transactions/model';
 
 type Props = {
   draft: DraftState;
@@ -35,7 +35,7 @@ export function FormLens({
   currencies = [],
   fieldErrors,
 }: Props): React.JSX.Element {
-  const balance = computeBalance(draft.postings);
+  const balance = draft.balance();
 
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(240px,1fr)_1.6fr] md:gap-8 lg:grid-cols-[minmax(280px,360px)_1fr]">

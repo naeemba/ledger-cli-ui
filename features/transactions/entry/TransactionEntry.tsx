@@ -15,13 +15,7 @@ import { RawLens } from './RawLens';
 import { TabBar } from './TabBar';
 import { TypeLens } from './TypeLens';
 import { getAccountBalance as defaultGetAccountBalance } from './actions/getAccountBalance';
-import { computeBalance } from './balance';
-import {
-  draftReducer,
-  emptyPostings,
-  initDraft,
-  serializeDraftJson,
-} from './draftReducer';
+import { draftReducer, initDraft, serializeDraftJson } from './draftReducer';
 import { detectType } from './types/registry';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -140,7 +134,7 @@ const TransactionEntry = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const balanceKind = computeBalance(draft.postings).kind;
+  const balanceKind = draft.balance().kind;
   const canSubmit =
     !isPending &&
     draft.date !== '' &&
