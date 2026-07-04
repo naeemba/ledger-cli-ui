@@ -31,7 +31,7 @@ export const initDraft = (
     payee: input.payee ?? '',
     status: input.status ?? 'none',
     note: input.note ?? '',
-    postings: input.postings ?? Transaction.empty(defaultCurrency).postings,
+    postings: input.postings ?? Transaction.blankPostings(defaultCurrency),
     uid: input.uid,
   });
 
