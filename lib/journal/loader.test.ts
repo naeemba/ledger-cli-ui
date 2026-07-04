@@ -63,8 +63,8 @@ describe('parseJournal', () => {
     const { transactions } = await parseJournal(main);
     for (const tx of transactions) {
       expect(tx.startLine).toBeGreaterThan(0);
-      expect(tx.endLine).toBeGreaterThanOrEqual(tx.startLine);
-      expect(tx.rawBlock.length).toBeGreaterThan(0);
+      expect(tx.endLine).toBeGreaterThanOrEqual(tx.startLine!);
+      expect(tx.rawBlock!.length).toBeGreaterThan(0);
     }
   });
 });

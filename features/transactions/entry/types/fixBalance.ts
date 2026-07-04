@@ -5,8 +5,8 @@ import {
   type TransactionTypeAdapter,
   type TypeContext,
   headerOf,
-  draftFromHeader,
 } from './adapter';
+import { Transaction } from '@/lib/transactions/model';
 
 export const ADJUSTMENTS_ACCOUNT = 'Equity:Adjustments';
 
@@ -30,7 +30,7 @@ export const fixBalanceAdapter: TransactionTypeAdapter<FixBalanceFields> = {
     targetCurrency: ctx.defaultCurrency,
   }),
   compile: (f, _ctx): DraftState =>
-    draftFromHeader(
+    Transaction.fromHeader(
       {
         date: f.date,
         payee: f.payee,

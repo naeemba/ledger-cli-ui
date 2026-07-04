@@ -5,9 +5,9 @@ import {
   type TransactionTypeAdapter,
   type TypeContext,
   headerOf,
-  draftFromHeader,
 } from './adapter';
 import { absAmount, negateAmount } from './amount';
+import { Transaction } from '@/lib/transactions/model';
 
 export type ExpenseFields = HeaderFields & {
   amount: string;
@@ -31,7 +31,7 @@ export const expenseAdapter: TransactionTypeAdapter<ExpenseFields> = {
     spentOn: '',
   }),
   compile: (f, _ctx): DraftState =>
-    draftFromHeader(
+    Transaction.fromHeader(
       {
         date: f.date,
         payee: f.payee,

@@ -1,10 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import {
-  parseJournalFile,
-  type ParsedJournal,
-  type Transaction,
-} from './parser';
+import { parseJournalFile, type ParsedJournal } from './parser';
+import type { ParsedTransaction } from '@/lib/transactions/model';
 
 const INCLUDE_LINE_REGEX = /^\s*include\s+(\S.*?)\s*$/;
 
@@ -41,7 +38,7 @@ export const parseJournal = async (
 ): Promise<ParsedJournal> => {
   const filePaths = await resolveIncludes(mainPath);
   const files: Array<{ path: string; mtimeMs: number }> = [];
-  const transactions: Transaction[] = [];
+  const transactions: ParsedTransaction[] = [];
   for (const filePath of filePaths) {
     const [stat, text] = await Promise.all([
       fs.stat(filePath),

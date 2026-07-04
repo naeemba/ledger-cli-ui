@@ -1,6 +1,7 @@
 // features/transactions/entry/types/exchange.test.ts
 import { describe, it, expect } from 'vitest';
 import { exchangeAdapter, type ExchangeFields } from './exchange';
+import { Transaction } from '@/lib/transactions/model';
 
 const ctx = { defaultCurrency: 'USD' };
 const header = {
@@ -37,21 +38,15 @@ describe('exchangeAdapter.compile', () => {
 });
 
 describe('exchangeAdapter.detect', () => {
-  const draft = {
-    date: '2026-06-29',
-    payee: 'Currency exchange',
-    status: 'none' as const,
-    note: '',
-    postings: [
-      {
-        account: 'Assets:EUR-Wallet',
-        amount: '92',
-        currency: 'EUR',
-        cost: { amount: '100', currency: 'USD' },
-      },
-      { account: 'Assets:Checking', amount: '-100', currency: 'USD' },
-    ],
-  };
+  const draft = Transaction.of('2026-06-29', 'Currency exchange', 'none', '', [
+    {
+      account: 'Assets:EUR-Wallet',
+      amount: '92',
+      currency: 'EUR',
+      cost: { amount: '100', currency: 'USD' },
+    },
+    { account: 'Assets:Checking', amount: '-100', currency: 'USD' },
+  ]);
   it('recognizes a cost-annotated exchange', () => {
     expect(exchangeAdapter.detect(draft)).toEqual({
       date: '2026-06-29',
@@ -84,13 +79,12 @@ describe('exchangeAdapter.detect', () => {
   });
   it('rejects a plain expense pair (no cost)', () => {
     expect(
-      exchangeAdapter.detect({
-        ...draft,
-        postings: [
+      exchangeAdapter.detect(
+        Transaction.of(draft.date, draft.payee, draft.status, draft.note, [
           { account: 'Expenses:Groceries', amount: '42.50', currency: 'USD' },
           { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
-        ],
-      })
+        ])
+      )
     ).toBeNull();
   });
 });

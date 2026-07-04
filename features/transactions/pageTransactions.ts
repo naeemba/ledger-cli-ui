@@ -3,7 +3,7 @@ import {
   type TransactionFilters,
 } from './applyTransactionFilters';
 import { toTransactionRow, type TransactionRow } from './transactionRow';
-import type { Transaction } from '@/lib/journal/parser';
+import type { TransactionData } from '@/lib/transactions/model';
 
 export const PAGE_SIZE = 50;
 
@@ -14,7 +14,7 @@ export type TransactionPage = {
 };
 
 export const pageTransactions = (
-  all: Transaction[],
+  all: readonly TransactionData[],
   filters: TransactionFilters,
   offset: number,
   limit: number

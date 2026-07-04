@@ -10,11 +10,7 @@ import {
 } from './layout';
 import { resolveIncludes } from './loader';
 import { withUserLock } from './mutex';
-import {
-  parseJournalFile,
-  type ParsedJournal,
-  type Transaction,
-} from './parser';
+import { parseJournalFile, type ParsedJournal } from './parser';
 import { getJournalDirSize, journalQuotaBytes, journalQuotaMb } from './quota';
 import { JournalRepository } from './repository';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
@@ -23,6 +19,7 @@ import { encryptFile, isCiphertext } from '@/lib/crypto/fileCrypto';
 import { getSessionDek, LockedError } from '@/lib/crypto/sessionKeys';
 import { pull, pullLocked, push, StorageConflictError } from '@/lib/storage';
 import { listLocalRelPaths } from '@/lib/storage/manifest';
+import type { ParsedTransaction } from '@/lib/transactions/model';
 import {
   formatTransaction,
   transactionDraftSchema,
@@ -131,7 +128,7 @@ export class JournalService {
   async findTransaction(
     userId: string,
     uid: string
-  ): Promise<Transaction | null> {
+  ): Promise<ParsedTransaction | null> {
     await pullLocked(userId);
     return this.repo.find(userId, uid);
   }

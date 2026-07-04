@@ -1,4 +1,4 @@
-import type { Annotation } from '@/lib/journal/parser';
+import type { Annotation } from '@/lib/transactions/posting';
 
 /**
  * Carry a posting's cost (`@@`) and balance-assertion (`=`) annotations onto a

@@ -1,4 +1,4 @@
-import type { DraftState, DraftStatus, DraftPosting } from '../draftReducer';
+import type { DraftState, DraftStatus } from '../draftReducer';
 
 export type TypeContext = { defaultCurrency: string };
 
@@ -25,16 +25,4 @@ export const headerOf = (draft: DraftState): HeaderFields => ({
   status: draft.status,
   note: draft.note,
   uid: draft.uid,
-});
-
-export const draftFromHeader = (
-  header: HeaderFields,
-  postings: DraftPosting[]
-): DraftState => ({
-  date: header.date,
-  payee: header.payee,
-  status: header.status,
-  note: header.note,
-  uid: header.uid,
-  postings,
 });

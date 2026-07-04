@@ -1,4 +1,4 @@
-import type { DraftPosting } from './draftReducer';
+import type { Posting } from '@/lib/transactions/posting';
 
 export type Balance =
   | { kind: 'balanced' }
@@ -7,7 +7,12 @@ export type Balance =
   | { kind: 'too-many-blanks' }
   | { kind: 'unbalanced'; issues: [string, number][] };
 
-export const computeBalance = (postings: DraftPosting[]): Balance => {
+/**
+ * Classify whether a set of postings balances to zero per currency. Shared by
+ * {@link Transaction.balance}; kept as a standalone function so the algorithm
+ * can be unit-tested directly against posting fixtures.
+ */
+export const computeBalance = (postings: readonly Posting[]): Balance => {
   // Assertion-only postings check a balance; they don't participate in balancing.
   const active = postings.filter(
     (p) => !(p.assertion && p.amount.trim() === '')

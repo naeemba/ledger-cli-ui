@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { PAGE_SIZE, pageTransactions, appendPage } from './pageTransactions';
-import type { Transaction } from '@/lib/journal/parser';
+import type { TransactionData } from '@/lib/transactions/model';
 
-const tx = (date: string, payee: string): Transaction => ({
+const tx = (date: string, payee: string): TransactionData => ({
   uid: `${date}-${payee}`,
   file: 'main.ledger',
   startLine: 1,
@@ -10,14 +10,14 @@ const tx = (date: string, payee: string): Transaction => ({
   date,
   payee,
   status: 'none',
-  note: null,
+  note: '',
   postings: [{ account: 'Assets:Cash', amount: '1.00', currency: '$' }],
   rawBlock: `${date} ${payee}`,
   fingerprint: `${date}-${payee}`,
 });
 
 // 5 transactions across 5 days, deliberately out of order.
-const all: Transaction[] = [
+const all: TransactionData[] = [
   tx('2026-01-01', 'A'),
   tx('2026-01-05', 'B'),
   tx('2026-01-03', 'C'),

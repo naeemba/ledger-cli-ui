@@ -6,6 +6,7 @@ import TemplatePicker from '@/features/templates/TemplatePicker';
 import { requireUser } from '@/lib/auth/require-user';
 import { getAvailableCurrencies, getEntryTabOrder } from '@/lib/settings';
 import { templateRepository } from '@/lib/templates';
+import { Transaction } from '@/lib/transactions/model';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 import {
   getAccountSuggestions,
@@ -26,27 +27,17 @@ const NewTransaction = async ({ templateId }: Props) => {
     getEntryTabOrder(),
   ]);
 
-  // Note: we intentionally do NOT seed `date` here. The client computes today's
-  // date in the user's local timezone (`TransactionEntry` falls back to its own
-  // `todayISO`), avoiding a server/client tz skew at midnight boundaries.
-  let initialDraft:
-    | (Omit<TransactionDraft, 'date'> & { date?: string })
-    | undefined;
+  // `date` is deliberately set to '' in the template seed so TransactionEntry's
+  // `||` fallback to `todayISO()` resolves today in the client's local timezone,
+  // avoiding a server/client tz skew at midnight boundaries.
+  let initialDraft: TransactionDraft | undefined;
   let templateMissing = false;
   if (templateId) {
     const t = await templateRepository.find(user.id, templateId);
     if (t) {
-      initialDraft = {
-        payee: t.draft.payee,
-        status: t.draft.status,
-        note: t.draft.note,
-        uid: undefined,
-        postings: t.draft.postings.map((p) => ({
-          account: p.account,
-          amount: p.amount,
-          currency: p.currency || defaultCurrency,
-        })),
-      };
+      initialDraft = Transaction.fromTemplate(t.draft, defaultCurrency).toWire(
+        'create'
+      );
     } else {
       templateMissing = true;
     }

@@ -15,14 +15,7 @@ import { RawLens } from './RawLens';
 import { TabBar } from './TabBar';
 import { TypeLens } from './TypeLens';
 import { getAccountBalance as defaultGetAccountBalance } from './actions/getAccountBalance';
-import { computeBalance } from './balance';
-import {
-  draftReducer,
-  emptyPostings,
-  initDraft,
-  serializeDraftJson,
-} from './draftReducer';
-import { draftToTemplateDraft } from './draftToTemplateDraft';
+import { draftReducer, initDraft, serializeDraftJson } from './draftReducer';
 import { detectType } from './types/registry';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -85,7 +78,7 @@ const TransactionEntry = ({
 
   const [draft, dispatch] = useReducer(draftReducer, undefined, () =>
     initDraft(
-      { ...initialDraft, date: initialDraft?.date ?? todayISO() },
+      { ...initialDraft, date: initialDraft?.date || todayISO() },
       defaultCurrency
     )
   );
@@ -141,7 +134,7 @@ const TransactionEntry = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const balanceKind = computeBalance(draft.postings).kind;
+  const balanceKind = draft.balance().kind;
   const canSubmit =
     !isPending &&
     draft.date !== '' &&
@@ -150,7 +143,7 @@ const TransactionEntry = ({
     (balanceKind === 'balanced' || balanceKind === 'auto-balance') &&
     !(active === 'raw' && rawError !== null);
 
-  const templateDraft: TemplateDraft = draftToTemplateDraft(draft);
+  const templateDraft: TemplateDraft = draft.toTemplate();
   const canSaveTemplate =
     draft.payee.trim() !== '' &&
     draft.postings.filter((p) => p.account.trim() !== '').length >= 2;

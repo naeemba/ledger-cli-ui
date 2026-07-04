@@ -4,7 +4,7 @@ import { MoreHorizontal, Pencil, Trash2, BookmarkPlus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { deleteTransactionAction } from './actions';
-import { toTemplateDraft, type TransactionRow } from './transactionRow';
+import { type TransactionRow } from './transactionRow';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SaveAsTemplateDialog } from '@/features/templates/SaveAsTemplateButton';
+import { Transaction } from '@/lib/transactions/model';
 import { useRouter } from 'next/navigation';
 
 type Props = { transaction: TransactionRow };
@@ -24,11 +25,13 @@ const RowActions = ({ transaction: t }: Props) => {
   const [saveOpen, setSaveOpen] = useState(false);
 
   const onDelete = async () => {
-    const res = await deleteTransactionAction(t.uid!, t.fingerprint);
+    const res = await deleteTransactionAction(t.uid!, t.fingerprint!);
     if (res.ok) toast.success('Transaction deleted');
     else toast.error(res.message);
     router.refresh();
   };
+
+  const templateDraft = Transaction.from(t).toTemplate();
 
   return (
     <>
@@ -69,7 +72,7 @@ const RowActions = ({ transaction: t }: Props) => {
       <SaveAsTemplateDialog
         open={saveOpen}
         onOpenChange={setSaveOpen}
-        draft={toTemplateDraft(t)}
+        draft={templateDraft}
       />
     </>
   );

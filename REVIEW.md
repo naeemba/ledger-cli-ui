@@ -31,7 +31,9 @@
 > |---|---|---|---|---|
 > | A1 | ✅ DONE | [#62](https://github.com/naeemba/ledger-cli-ui/pull/62) | `fix/review-a1-edit-cost-assertion` | 2026-07-03 |
 > | A2 | ✅ DONE | [#63](https://github.com/naeemba/ledger-cli-ui/pull/63) | `fix/review-a2-template-cost-assertion` | 2026-07-03 |
-| A3 | ✅ DONE | [#64](https://github.com/naeemba/ledger-cli-ui/pull/64) | `fix/review-a3-entry-template-cost-assertion` | 2026-07-03 |
+> | A3 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
+> | A4 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
+> | G3 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
 
 A complete, implementation-ready review of ledger-cli-ui covering performance, correctness, error handling, architecture, UX consistency, and dead code. **Security was deliberately excluded** (covered by a separate review). Test files were not reviewed.
 
@@ -114,7 +116,7 @@ postings: t.postings.map((p) => ({
 
 ### A3. Save-as-template from the entry form also strips cost/assertion from the live draft
 
-**Status:** ✅ DONE — [PR #64](https://github.com/naeemba/ledger-cli-ui/pull/64) (`fix/review-a3-entry-template-cost-assertion`) — 2026-07-03. Extracted the inline `templateDraft` construction into a pure, unit-tested `draftToTemplateDraft(draft)` helper (`features/transactions/entry/draftToTemplateDraft.ts`) that carries each posting's `@@` cost and `=` assertion through the shared `carryAnnotations` idiom (the same helper A1/A2 use), so a cost-balanced multi-currency draft now saves as a balanced, submittable template. `draftToTemplateDraft.test.ts` pins cost/assertion round-tripping plus field trimming. (A4 — template hydration in NewTransaction — remains the last stripping hop.)
+**Status:** ✅ DONE — PR #65 (`refactor/txn-model-consolidation`) — 2026-07-04. Closed as part of the Txn model consolidation (P2): the entry-form "save as template" now routes through `draft.toTemplate()` (`lib/transactions/model.ts`), which carries `@@` cost / `=` assertion annotations, so a cost-balanced multi-currency draft saves as a balanced, submittable template. Supersedes the standalone fix in PR #64 (`draftToTemplateDraft`), which can be closed.
 
 **Severity:** HIGH · **Effort:** S (<1h) · **Location:** `features/transactions/entry/TransactionEntry.tsx:156`
 
@@ -133,6 +135,8 @@ postings: draft.postings.map((p) => ({
 > **Verifier notes** (independent adversarial check, confidence: high): Confirmed. features/transactions/entry/TransactionEntry.tsx:156-160 maps draft postings to only account/amount/currency when building templateDraft, while DraftPosting (entry/draftReducer.ts:3-9) carries cost/assertion and the RawLens populates them via the journal parser. templateDraftSchema already accepts the fields, so the suggested one-line fix (include cost/assertion in the mapping) is correct and independent of the RowActions fix.
 
 ### A4. Template hydration in NewTransaction re-strips cost/assertion from stored drafts
+
+**Status:** ✅ DONE — PR #65 (`refactor/txn-model-consolidation`) — 2026-07-04. `NewTransaction` template hydration now uses `Txn.fromTemplate(t.draft, cur).toWire('create')` instead of an inline posting map, so stored `cost`/`assertion` annotations survive the hydration hop.
 
 **Severity:** LOW · **Effort:** S (<1h) · **Location:** `features/transactions/NewTransaction.tsx:44`
 
@@ -944,6 +948,8 @@ return Number(numericPart.replaceAll(',', '')) || 0;
 **Fix:** Replace the private parseAmount copies in lib/payees/parse.ts, lib/netWorth/parse.ts, features/monthlyComparison/MonthlyComparison.utils.ts and features/dashboard/Dashboard.utils.ts with utils/parseAmountColumn (it already returns 0 on garbage). For features/accounts/amountParts.ts, keep the unit/magnitude splitting but delegate the numeric extraction to parseAmountColumn.
 
 > **Verifier notes** (independent adversarial check, confidence: high): Confirmed. utils/parseAmountColumn.ts is the documented tolerant parser and is consumed by only one page (app/registers/monthly/[account]/page.tsx). Duplicate hand-rolled parsers verified at lib/payees/parse.ts:3-8 (evidence quote matches line 7), lib/netWorth/parse.ts:3-7 (no || 0, yields NaN on garbage), features/monthlyComparison/MonthlyComparison.utils.ts:5-10, features/dashboard/Dashboard.utils.ts:8-10 (inline split(' ')[1]), features/accounts/amountParts.ts:26. Divergence claim checks out: the parts[1]/parts[0] variants return 0 or NaN for symbol-attached '$100' and assume unit-first ordering, both of which parseAmountColumn handles. Minor quibbles: 'six parsers' counts five copies plus the shared one, and Dashboard's is inline logic rather than a parseAmount function — neither affects the substance. Suggested fix is sound; amountParts caveat (keep unit/magnitude split) is correctly noted.
+
+**Status:** ✅ DONE — PR #65 (`refactor/txn-model-consolidation`) — 2026-07-04. Superseded by the Txn model consolidation: one canonical `Posting` type (`lib/transactions/posting.ts`) now backs `ParsedPosting`, `DraftPosting`, the `TransactionRow` posting, and (structurally) the zod `postingSchema`; the six scattered posting converters were replaced by the `Txn` class's named constructors/outputs across P1–P4.
 
 ### G4. lib/ modules import types from features/ (layering inversion)
 

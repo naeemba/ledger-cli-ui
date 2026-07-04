@@ -1,5 +1,7 @@
 import { fingerprintDraft } from './fingerprint';
 import { UID_LINE_REGEX } from './uid';
+import { type ParsedTransaction, Transaction } from '@/lib/transactions/model';
+import type { Posting } from '@/lib/transactions/posting';
 
 export type ParsedHeader = {
   date: string;
@@ -20,16 +22,10 @@ export const parseHeader = (line: string): ParsedHeader | null => {
   return { date: `${y}-${mo}-${d}`, status, payee };
 };
 
-/** A posting annotation: a total-cost (`@@`) or a balance assertion (`=`). */
-export type Annotation = { amount: string; currency: string };
+export type { Annotation } from '@/lib/transactions/posting';
 
-export type ParsedPosting = {
-  account: string;
-  amount: string;
-  currency: string;
-  cost?: Annotation;
-  assertion?: Annotation;
-};
+/** Alias for the canonical `Posting` type; kept for backward compatibility. */
+export type ParsedPosting = Posting;
 
 const POSTING_BARE_REGEX = /^\s+([^;\s][^\t]*?)\s*$/;
 
@@ -154,23 +150,9 @@ export const parseBlock = (block: string): ParsedBlock | null => {
   };
 };
 
-export type Transaction = {
-  uid: string | null;
-  file: string;
-  startLine: number;
-  endLine: number;
-  date: string;
-  payee: string;
-  status: 'cleared' | 'pending' | 'none';
-  note: string | null;
-  postings: ParsedPosting[];
-  rawBlock: string;
-  fingerprint: string;
-};
-
 export type ParsedJournal = {
   files: Array<{ path: string; mtimeMs: number }>;
-  transactions: Transaction[];
+  transactions: ParsedTransaction[];
 };
 
 const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
@@ -178,9 +160,9 @@ const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
 export const parseJournalFile = (
   filePath: string,
   text: string
-): Transaction[] => {
+): ParsedTransaction[] => {
   const lines = text.split('\n');
-  const transactions: Transaction[] = [];
+  const transactions: ParsedTransaction[] = [];
   let blockStart: number | null = null;
   let blockLines: string[] = [];
 
@@ -196,19 +178,23 @@ export const parseJournalFile = (
         uid: block.uid ?? undefined,
         postings: block.postings,
       });
-      transactions.push({
-        uid: block.uid,
-        file: filePath,
-        startLine: blockStart + 1,
-        endLine: endLine + 1,
-        date: block.date,
-        payee: block.payee,
-        status: block.status,
-        note: block.note,
-        postings: block.postings,
-        rawBlock: blockLines.join('\n'),
-        fingerprint,
-      });
+      // The one place that vouches for the identity fields being present, so
+      // ParsedTransaction consumers downstream never need `!`.
+      transactions.push(
+        new Transaction({
+          uid: block.uid ?? undefined,
+          file: filePath,
+          startLine: blockStart + 1,
+          endLine: endLine + 1,
+          date: block.date,
+          payee: block.payee,
+          status: block.status,
+          note: block.note ?? '',
+          postings: block.postings,
+          rawBlock: blockLines.join('\n'),
+          fingerprint,
+        }) as ParsedTransaction
+      );
     }
     blockStart = null;
     blockLines = [];
