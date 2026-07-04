@@ -31,6 +31,15 @@ const RowActions = ({ transaction: t }: Props) => {
     router.refresh();
   };
 
+  const templateDraft = new Txn(
+    t.date,
+    t.payee,
+    t.status,
+    t.note ?? '',
+    t.postings,
+    t.uid ?? undefined
+  ).toTemplate();
+
   return (
     <>
       <DropdownMenu>
@@ -70,14 +79,7 @@ const RowActions = ({ transaction: t }: Props) => {
       <SaveAsTemplateDialog
         open={saveOpen}
         onOpenChange={setSaveOpen}
-        draft={new Txn(
-          t.date,
-          t.payee,
-          t.status,
-          t.note ?? '',
-          t.postings,
-          t.uid ?? undefined
-        ).toTemplate()}
+        draft={templateDraft}
       />
     </>
   );
