@@ -31,8 +31,8 @@
 > |---|---|---|---|---|
 > | A1 | ✅ DONE | [#62](https://github.com/naeemba/ledger-cli-ui/pull/62) | `fix/review-a1-edit-cost-assertion` | 2026-07-03 |
 > | A2 | ✅ DONE | [#63](https://github.com/naeemba/ledger-cli-ui/pull/63) | `fix/review-a2-template-cost-assertion` | 2026-07-03 |
-| A3 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
-| A4 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
+> | A3 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
+> | A4 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
 
 A complete, implementation-ready review of ledger-cli-ui covering performance, correctness, error handling, architecture, UX consistency, and dead code. **Security was deliberately excluded** (covered by a separate review). Test files were not reviewed.
 
