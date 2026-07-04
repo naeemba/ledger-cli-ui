@@ -8,7 +8,7 @@ import { type ParsedJournal } from './parser';
 import { userSetting } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 import { pullLocked, manifestRelName } from '@/lib/storage';
-import type { Transaction } from '@/lib/transactions/model';
+import type { ParsedTransaction } from '@/lib/transactions/model';
 
 /**
  * Request-scoped dedup of the read-path pull. A single render fires ~8
@@ -121,7 +121,7 @@ export class JournalRepository {
   }
 
   /** Finds a single transaction by UID across the user's journal. */
-  async find(userId: string, uid: string): Promise<Transaction | null> {
+  async find(userId: string, uid: string): Promise<ParsedTransaction | null> {
     const { transactions } = await this.list(userId);
     return transactions.find((t) => t.uid === uid) ?? null;
   }

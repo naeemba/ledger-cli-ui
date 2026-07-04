@@ -125,6 +125,14 @@ export class Transaction {
     return new Transaction({ date, payee, status, note, postings, uid });
   }
 
+  /** The two blank postings a fresh entry seeds with. */
+  static blankPostings(defaultCurrency: string): Posting[] {
+    return [
+      { account: '', amount: '', currency: defaultCurrency },
+      { account: '', amount: '', currency: defaultCurrency },
+    ];
+  }
+
   /** A blank two-posting draft for a fresh entry. */
   static empty(defaultCurrency: string): Transaction {
     return new Transaction({
@@ -132,10 +140,7 @@ export class Transaction {
       payee: '',
       status: 'none',
       note: '',
-      postings: [
-        { account: '', amount: '', currency: defaultCurrency },
-        { account: '', amount: '', currency: defaultCurrency },
-      ],
+      postings: Transaction.blankPostings(defaultCurrency),
     });
   }
 
@@ -310,3 +315,19 @@ export class Transaction {
     };
   }
 }
+
+/**
+ * A {@link Transaction} that came from a parsed journal file, where the
+ * identity/location fields are guaranteed present. The base model widens these
+ * to optional so scratch drafts can share the class; this alias restores the
+ * compile-time guarantee for the read/write paths that require a real file,
+ * line span, and fingerprint. `parseJournalFile` is the sole producer — the one
+ * place that vouches for these fields, so consumers never need `!`.
+ */
+export type ParsedTransaction = Transaction &
+  Required<
+    Pick<
+      Transaction,
+      'file' | 'startLine' | 'endLine' | 'rawBlock' | 'fingerprint'
+    >
+  >;

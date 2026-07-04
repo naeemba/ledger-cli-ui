@@ -1,6 +1,6 @@
 import { fingerprintDraft } from './fingerprint';
 import { UID_LINE_REGEX } from './uid';
-import { Transaction } from '@/lib/transactions/model';
+import { type ParsedTransaction, Transaction } from '@/lib/transactions/model';
 import type { Posting } from '@/lib/transactions/posting';
 
 export type ParsedHeader = {
@@ -152,7 +152,7 @@ export const parseBlock = (block: string): ParsedBlock | null => {
 
 export type ParsedJournal = {
   files: Array<{ path: string; mtimeMs: number }>;
-  transactions: Transaction[];
+  transactions: ParsedTransaction[];
 };
 
 const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
@@ -160,9 +160,9 @@ const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
 export const parseJournalFile = (
   filePath: string,
   text: string
-): Transaction[] => {
+): ParsedTransaction[] => {
   const lines = text.split('\n');
-  const transactions: Transaction[] = [];
+  const transactions: ParsedTransaction[] = [];
   let blockStart: number | null = null;
   let blockLines: string[] = [];
 
@@ -178,6 +178,8 @@ export const parseJournalFile = (
         uid: block.uid ?? undefined,
         postings: block.postings,
       });
+      // The one place that vouches for the identity fields being present, so
+      // ParsedTransaction consumers downstream never need `!`.
       transactions.push(
         new Transaction({
           uid: block.uid ?? undefined,
@@ -191,7 +193,7 @@ export const parseJournalFile = (
           postings: block.postings,
           rawBlock: blockLines.join('\n'),
           fingerprint,
-        })
+        }) as ParsedTransaction
       );
     }
     blockStart = null;
