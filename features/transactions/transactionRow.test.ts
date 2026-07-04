@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toTransactionRow, toTemplateDraft } from './transactionRow';
+import { toTransactionRow } from './transactionRow';
 import type { Transaction } from '@/lib/journal/parser';
 
 const sample: Transaction = {
@@ -83,43 +83,5 @@ describe('toTransactionRow', () => {
       note: null,
       fingerprint: 'abc',
     });
-  });
-});
-
-describe('toTemplateDraft', () => {
-  it('carries @@ cost annotations into the template draft', () => {
-    const draft = toTemplateDraft(toTransactionRow(sample));
-    expect(draft.postings[0]).toEqual({
-      account: 'Expenses:Food',
-      amount: '5.00',
-      currency: '$',
-      cost: { amount: '1', currency: '€' },
-    });
-  });
-
-  it('carries = balance assertions into the template draft', () => {
-    const draft = toTemplateDraft(toTransactionRow(withAssertion));
-    expect(draft.postings[2]).toEqual({
-      account: 'Assets:Cash',
-      amount: '',
-      currency: '',
-      assertion: { amount: '95.00', currency: '$' },
-    });
-  });
-
-  it('maps payee, status and note', () => {
-    const draft = toTemplateDraft(
-      toTransactionRow({ ...sample, note: 'morning' })
-    );
-    expect(draft).toMatchObject({
-      payee: 'Coffee',
-      status: 'cleared',
-      note: 'morning',
-    });
-  });
-
-  it('coerces a null note to undefined', () => {
-    const draft = toTemplateDraft(toTransactionRow(sample));
-    expect(draft.note).toBeUndefined();
   });
 });

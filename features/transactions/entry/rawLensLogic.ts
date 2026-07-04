@@ -1,6 +1,6 @@
 import type { DraftState, DraftAction } from './draftReducer';
-import { parsedBlockToDraft } from './parsedBlockToDraft';
 import { parseBlock } from '@/lib/journal/parser';
+import { Txn } from '@/lib/transactions/model';
 
 export const PARSE_ERROR =
   'Could not parse this as a transaction. Check the date/payee header and that each posting has an account.';
@@ -29,6 +29,6 @@ export const applyRawText = (
   }
   return {
     error: null,
-    action: { type: 'replaceAll', state: parsedBlockToDraft(block, draft) },
+    action: { type: 'replaceAll', state: Txn.fromParsedBlock(block, draft) },
   };
 };
