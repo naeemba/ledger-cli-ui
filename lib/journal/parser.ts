@@ -1,5 +1,6 @@
 import { fingerprintDraft } from './fingerprint';
 import { UID_LINE_REGEX } from './uid';
+import type { Posting } from '@/lib/transactions/posting';
 
 export type ParsedHeader = {
   date: string;
@@ -20,16 +21,10 @@ export const parseHeader = (line: string): ParsedHeader | null => {
   return { date: `${y}-${mo}-${d}`, status, payee };
 };
 
-/** A posting annotation: a total-cost (`@@`) or a balance assertion (`=`). */
-export type Annotation = { amount: string; currency: string };
+export type { Annotation } from '@/lib/transactions/posting';
 
-export type ParsedPosting = {
-  account: string;
-  amount: string;
-  currency: string;
-  cost?: Annotation;
-  assertion?: Annotation;
-};
+/** Alias for the canonical `Posting` type; kept for backward compatibility. */
+export type ParsedPosting = Posting;
 
 const POSTING_BARE_REGEX = /^\s+([^;\s][^\t]*?)\s*$/;
 

@@ -33,6 +33,7 @@
 > | A2 | ✅ DONE | [#63](https://github.com/naeemba/ledger-cli-ui/pull/63) | `fix/review-a2-template-cost-assertion` | 2026-07-03 |
 > | A3 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
 > | A4 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
+> | G3 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
 
 A complete, implementation-ready review of ledger-cli-ui covering performance, correctness, error handling, architecture, UX consistency, and dead code. **Security was deliberately excluded** (covered by a separate review). Test files were not reviewed.
 
@@ -947,6 +948,8 @@ return Number(numericPart.replaceAll(',', '')) || 0;
 **Fix:** Replace the private parseAmount copies in lib/payees/parse.ts, lib/netWorth/parse.ts, features/monthlyComparison/MonthlyComparison.utils.ts and features/dashboard/Dashboard.utils.ts with utils/parseAmountColumn (it already returns 0 on garbage). For features/accounts/amountParts.ts, keep the unit/magnitude splitting but delegate the numeric extraction to parseAmountColumn.
 
 > **Verifier notes** (independent adversarial check, confidence: high): Confirmed. utils/parseAmountColumn.ts is the documented tolerant parser and is consumed by only one page (app/registers/monthly/[account]/page.tsx). Duplicate hand-rolled parsers verified at lib/payees/parse.ts:3-8 (evidence quote matches line 7), lib/netWorth/parse.ts:3-7 (no || 0, yields NaN on garbage), features/monthlyComparison/MonthlyComparison.utils.ts:5-10, features/dashboard/Dashboard.utils.ts:8-10 (inline split(' ')[1]), features/accounts/amountParts.ts:26. Divergence claim checks out: the parts[1]/parts[0] variants return 0 or NaN for symbol-attached '$100' and assume unit-first ordering, both of which parseAmountColumn handles. Minor quibbles: 'six parsers' counts five copies plus the shared one, and Dashboard's is inline logic rather than a parseAmount function — neither affects the substance. Suggested fix is sound; amountParts caveat (keep unit/magnitude split) is correctly noted.
+
+**Status:** ✅ DONE — PR #65 (`refactor/txn-model-consolidation`) — 2026-07-04. Superseded by the Txn model consolidation: one canonical `Posting` type (`lib/transactions/posting.ts`) now backs `ParsedPosting`, `DraftPosting`, the `TransactionRow` posting, and (structurally) the zod `postingSchema`; the six scattered posting converters were replaced by the `Txn` class's named constructors/outputs across P1–P4.
 
 ### G4. lib/ modules import types from features/ (layering inversion)
 

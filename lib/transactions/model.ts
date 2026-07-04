@@ -1,19 +1,10 @@
-import type {
-  Annotation,
-  ParsedBlock,
-  Transaction,
-} from '@/lib/journal/parser';
+import type { ParsedBlock, Transaction } from '@/lib/journal/parser';
 import type { TemplateDraft } from '@/lib/templates/schema';
 import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
+import type { Posting } from '@/lib/transactions/posting';
 import type { TransactionDraft } from '@/lib/transactions/schema';
 
-export type Posting = {
-  account: string;
-  amount: string;
-  currency: string;
-  cost?: Annotation;
-  assertion?: Annotation;
-};
+export type { Posting } from '@/lib/transactions/posting';
 
 export type TxnStatus = TransactionDraft['status'];
 

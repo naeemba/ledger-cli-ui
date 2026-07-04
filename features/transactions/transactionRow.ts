@@ -1,17 +1,12 @@
-import type { Annotation, Transaction } from '@/lib/journal/parser';
+import type { Transaction } from '@/lib/journal/parser';
 import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
+import type { Posting } from '@/lib/transactions/posting';
 
 export type TransactionRow = Omit<
   Transaction,
   'rawBlock' | 'endLine' | 'postings'
 > & {
-  postings: Array<{
-    account: string;
-    amount: string;
-    currency: string;
-    cost?: Annotation;
-    assertion?: Annotation;
-  }>;
+  postings: Posting[];
 };
 
 export const toTransactionRow = (t: Transaction): TransactionRow => ({
