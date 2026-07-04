@@ -17,11 +17,6 @@ export type TxnJSON = {
   postings: Posting[];
 };
 
-const blankPostings = (currency: string): Posting[] => [
-  { account: '', amount: '', currency },
-  { account: '', amount: '', currency },
-];
-
 export class Txn {
   constructor(
     readonly date: string,
@@ -31,10 +26,6 @@ export class Txn {
     readonly postings: readonly Posting[],
     readonly uid?: string
   ) {}
-
-  static empty(defaultCurrency: string): Txn {
-    return new Txn('', '', 'none', '', blankPostings(defaultCurrency));
-  }
 
   static fromTransaction(tx: Transaction, defaultCurrency: string): Txn {
     return new Txn(
@@ -83,30 +74,6 @@ export class Txn {
         currency: p.currency || defaultCurrency,
         ...carryAnnotations(p),
       }))
-    );
-  }
-
-  static fromJSON(j: unknown): Txn {
-    const o = j as {
-      date?: string;
-      payee?: string;
-      status?: TxnStatus;
-      note?: string;
-      uid?: string;
-      postings?: Posting[];
-    };
-    return new Txn(
-      o.date ?? '',
-      o.payee ?? '',
-      o.status ?? 'none',
-      o.note ?? '',
-      (o.postings ?? []).map((p) => ({
-        account: p.account,
-        amount: p.amount,
-        currency: p.currency,
-        ...carryAnnotations(p),
-      })),
-      o.uid
     );
   }
 
@@ -181,17 +148,6 @@ export class Txn {
       status: this.status,
       note: this.note.trim() || undefined,
       uid: mode === 'edit' ? this.uid : undefined,
-      postings: this.trimmedPostings(),
-    };
-  }
-
-  toSubmit(): TransactionDraft {
-    return {
-      date: this.date,
-      payee: this.payee.trim(),
-      status: this.status,
-      note: this.note.trim() || undefined,
-      uid: this.uid,
       postings: this.trimmedPostings(),
     };
   }

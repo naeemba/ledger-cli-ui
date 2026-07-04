@@ -21,21 +21,6 @@ const txnFixture = (over: Partial<Transaction> = {}): Transaction => ({
   ...over,
 });
 
-describe('Txn.empty', () => {
-  it('seeds two blank postings in the default currency', () => {
-    const t = Txn.empty('EUR');
-    expect(t.date).toBe('');
-    expect(t.payee).toBe('');
-    expect(t.status).toBe('none');
-    expect(t.note).toBe('');
-    expect(t.uid).toBeUndefined();
-    expect(t.postings).toEqual([
-      { account: '', amount: '', currency: 'EUR' },
-      { account: '', amount: '', currency: 'EUR' },
-    ]);
-  });
-});
-
 describe('Txn.fromTransaction', () => {
   it('projects the editable core and defaults blank currency', () => {
     const t = Txn.fromTransaction(txnFixture(), 'USD');
@@ -145,72 +130,6 @@ describe('Txn.fromTemplate', () => {
   });
 });
 
-describe('Txn.fromJSON', () => {
-  it('rebuilds a Txn from a parsed wire object', () => {
-    const t = Txn.fromJSON({
-      date: '2024-03-03',
-      payee: 'Wire',
-      status: 'cleared',
-      note: 'n',
-      uid: 'w1',
-      postings: [{ account: 'A', amount: '1', currency: 'USD' }],
-    });
-    expect(t).toBeInstanceOf(Txn);
-    expect(t.uid).toBe('w1');
-    expect(t.note).toBe('n');
-    expect(t.postings[0].currency).toBe('USD');
-  });
-
-  it('treats a missing note/uid as empty/undefined', () => {
-    const t = Txn.fromJSON({
-      date: '2024-03-03',
-      payee: 'Wire',
-      status: 'none',
-      postings: [],
-    });
-    expect(t.note).toBe('');
-    expect(t.uid).toBeUndefined();
-  });
-
-  it('round-trips a Txn with cost and assertion through JSON serialization', () => {
-    const original = new Txn(
-      '2024-03-03',
-      '  Wire  ',
-      'cleared',
-      '',
-      [
-        {
-          account: 'Assets:USD',
-          amount: ' 100 ',
-          currency: ' USD ',
-          cost: { amount: ' 90 ', currency: ' EUR ' },
-        },
-        {
-          account: 'Assets:EUR',
-          amount: ' -90 ',
-          currency: ' EUR ',
-          assertion: { amount: ' 500 ', currency: ' EUR ' },
-        },
-      ],
-      'rt1'
-    );
-    const reconstructed = Txn.fromJSON(
-      JSON.parse(JSON.stringify(original.toWire('edit')))
-    );
-    expect(reconstructed.date).toBe('2024-03-03');
-    expect(reconstructed.payee).toBe('Wire');
-    expect(reconstructed.uid).toBe('rt1');
-    expect(reconstructed.postings[0].cost).toEqual({
-      amount: '90',
-      currency: 'EUR',
-    });
-    expect(reconstructed.postings[1].assertion).toEqual({
-      amount: '500',
-      currency: 'EUR',
-    });
-  });
-});
-
 describe('Txn immutable updates', () => {
   const base = () =>
     new Txn('2024-01-01', 'P', 'none', '', [
@@ -290,14 +209,6 @@ describe('Txn outputs', () => {
     expect(
       new Txn('2024-01-15', 'P', 'none', '   ', []).toWire('create').note
     ).toBeUndefined();
-  });
-
-  it('toSubmit produces the trimmed submit DTO with date and uid', () => {
-    const s = t().toSubmit();
-    expect(s.date).toBe('2024-01-15');
-    expect(s.uid).toBe('u9');
-    expect(s.postings[0].cost).toEqual({ amount: '90', currency: 'EUR' });
-    expect(s.postings[1].assertion).toEqual({ amount: '500', currency: 'EUR' });
   });
 
   it('toTemplate omits date/uid, trims, and defaults blank payee to dash', () => {
