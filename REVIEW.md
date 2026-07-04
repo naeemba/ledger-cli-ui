@@ -31,6 +31,8 @@
 > |---|---|---|---|---|
 > | A1 | ✅ DONE | [#62](https://github.com/naeemba/ledger-cli-ui/pull/62) | `fix/review-a1-edit-cost-assertion` | 2026-07-03 |
 > | A2 | ✅ DONE | [#63](https://github.com/naeemba/ledger-cli-ui/pull/63) | `fix/review-a2-template-cost-assertion` | 2026-07-03 |
+| A3 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
+| A4 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
 
 A complete, implementation-ready review of ledger-cli-ui covering performance, correctness, error handling, architecture, UX consistency, and dead code. **Security was deliberately excluded** (covered by a separate review). Test files were not reviewed.
 
@@ -113,6 +115,8 @@ postings: t.postings.map((p) => ({
 
 ### A3. Save-as-template from the entry form also strips cost/assertion from the live draft
 
+**Status:** ✅ DONE — PR #65 (`refactor/txn-model-consolidation`) — 2026-07-04. Closed as part of the Txn model consolidation (P2): the entry-form "save as template" now routes through `draft.toTemplate()` (`lib/transactions/model.ts`), which carries `@@` cost / `=` assertion annotations, so a cost-balanced multi-currency draft saves as a balanced, submittable template. Supersedes the standalone fix in PR #64 (`draftToTemplateDraft`), which can be closed.
+
 **Severity:** HIGH · **Effort:** S (<1h) · **Location:** `features/transactions/entry/TransactionEntry.tsx:156`
 
 DraftPosting (features/transactions/entry/draftReducer.ts:3-9) carries optional `cost` and `assertion`, and the raw/form lenses can populate them. When building the TemplateDraft passed to SaveAsTemplateButton, TransactionEntry maps each posting to only account/amount/currency, so a draft entered with `@@` cost or `=` assertion annotations is saved as a template without them — a second independent stripping site beyond RowActions. Same downstream effect: a cost-balanced multi-currency template rehydrates into an unbalanced, unsubmittable draft.
@@ -130,6 +134,8 @@ postings: draft.postings.map((p) => ({
 > **Verifier notes** (independent adversarial check, confidence: high): Confirmed. features/transactions/entry/TransactionEntry.tsx:156-160 maps draft postings to only account/amount/currency when building templateDraft, while DraftPosting (entry/draftReducer.ts:3-9) carries cost/assertion and the RawLens populates them via the journal parser. templateDraftSchema already accepts the fields, so the suggested one-line fix (include cost/assertion in the mapping) is correct and independent of the RowActions fix.
 
 ### A4. Template hydration in NewTransaction re-strips cost/assertion from stored drafts
+
+**Status:** ✅ DONE — PR #65 (`refactor/txn-model-consolidation`) — 2026-07-04. `NewTransaction` template hydration now uses `Txn.fromTemplate(t.draft, cur).toWire('create')` instead of an inline posting map, so stored `cost`/`assertion` annotations survive the hydration hop.
 
 **Severity:** LOW · **Effort:** S (<1h) · **Location:** `features/transactions/NewTransaction.tsx:44`
 

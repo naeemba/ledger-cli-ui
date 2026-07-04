@@ -84,7 +84,7 @@ const TransactionEntry = ({
 
   const [draft, dispatch] = useReducer(draftReducer, undefined, () =>
     initDraft(
-      { ...initialDraft, date: initialDraft?.date ?? todayISO() },
+      { ...initialDraft, date: initialDraft?.date || todayISO() },
       defaultCurrency
     )
   );
