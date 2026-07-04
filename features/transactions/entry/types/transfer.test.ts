@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { transferAdapter, type TransferFields } from './transfer';
+import { Txn } from '@/lib/transactions/model';
 
 const ctx = { defaultCurrency: 'USD' };
 const header = {
@@ -32,16 +33,10 @@ describe('transferAdapter.compile', () => {
 });
 
 describe('transferAdapter.detect', () => {
-  const draft = {
-    date: '2026-06-29',
-    payee: 'Transfer',
-    status: 'none' as const,
-    note: '',
-    postings: [
-      { account: 'Assets:Savings', amount: '500', currency: 'USD' },
-      { account: 'Assets:Checking', amount: '-500', currency: 'USD' },
-    ],
-  };
+  const draft = new Txn('2026-06-29', 'Transfer', 'none', '', [
+    { account: 'Assets:Savings', amount: '500', currency: 'USD' },
+    { account: 'Assets:Checking', amount: '-500', currency: 'USD' },
+  ]);
   it('recognizes a clean asset->asset move', () => {
     expect(transferAdapter.detect(draft)).toEqual({
       date: '2026-06-29',
@@ -70,13 +65,12 @@ describe('transferAdapter.detect', () => {
   });
   it('rejects an expense pair (one side is an expense)', () => {
     expect(
-      transferAdapter.detect({
-        ...draft,
-        postings: [
+      transferAdapter.detect(
+        new Txn(draft.date, draft.payee, draft.status, draft.note, [
           { account: 'Expenses:Groceries', amount: '42.50', currency: 'USD' },
           { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
-        ],
-      })
+        ])
+      )
     ).toBeNull();
   });
 });

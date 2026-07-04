@@ -1,6 +1,7 @@
 // features/transactions/entry/types/fixBalance.test.ts
 import { describe, it, expect } from 'vitest';
 import { fixBalanceAdapter, type FixBalanceFields } from './fixBalance';
+import { Txn } from '@/lib/transactions/model';
 
 const ctx = { defaultCurrency: 'USD' };
 const header = {
@@ -34,21 +35,15 @@ describe('fixBalanceAdapter.compile', () => {
 });
 
 describe('fixBalanceAdapter.detect', () => {
-  const draft = {
-    date: '2026-06-29',
-    payee: 'Balance adjustment',
-    status: 'none' as const,
-    note: '',
-    postings: [
-      {
-        account: 'Assets:Checking',
-        amount: '',
-        currency: '',
-        assertion: { amount: '1234.56', currency: 'USD' },
-      },
-      { account: 'Equity:Adjustments', amount: '', currency: '' },
-    ],
-  };
+  const draft = new Txn('2026-06-29', 'Balance adjustment', 'none', '', [
+    {
+      account: 'Assets:Checking',
+      amount: '',
+      currency: '',
+      assertion: { amount: '1234.56', currency: 'USD' },
+    },
+    { account: 'Equity:Adjustments', amount: '', currency: '' },
+  ]);
   it('recognizes an assertion + adjustments pair', () => {
     expect(fixBalanceAdapter.detect(draft)).toEqual({
       date: '2026-06-29',
@@ -75,13 +70,12 @@ describe('fixBalanceAdapter.detect', () => {
   });
   it('rejects a plain expense pair', () => {
     expect(
-      fixBalanceAdapter.detect({
-        ...draft,
-        postings: [
+      fixBalanceAdapter.detect(
+        new Txn(draft.date, draft.payee, draft.status, draft.note, [
           { account: 'Expenses:Groceries', amount: '42.50', currency: 'USD' },
           { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
-        ],
-      })
+        ])
+      )
     ).toBeNull();
   });
 });

@@ -43,14 +43,17 @@ describe('parsedBlockToDraft', () => {
   });
 
   it('keeps the prior uid when the raw text omits the uid line', () => {
-    const prev: DraftState = {
-      date: '2026-06-29',
-      payee: 'Acme',
-      status: 'none',
-      note: '',
-      uid: '01HZX9K3QF8V5C7R2D4M6N8P0T',
-      postings: [{ account: 'Assets:Cash', amount: '5', currency: 'USD' }],
-    };
+    const prev: DraftState = initDraft(
+      {
+        date: '2026-06-29',
+        payee: 'Acme',
+        status: 'none',
+        note: '',
+        uid: '01HZX9K3QF8V5C7R2D4M6N8P0T',
+        postings: [{ account: 'Assets:Cash', amount: '5', currency: 'USD' }],
+      },
+      'USD'
+    );
     const block = {
       uid: null,
       date: '2026-06-29',
@@ -65,14 +68,17 @@ describe('parsedBlockToDraft', () => {
   });
 
   it('prefers the uid present in the raw text over the prior uid', () => {
-    const prev: DraftState = {
-      date: '2026-06-29',
-      payee: 'Acme',
-      status: 'none',
-      note: '',
-      uid: '01HZX9K3QF8V5C7R2D4M6N8P0T',
-      postings: [],
-    };
+    const prev: DraftState = initDraft(
+      {
+        date: '2026-06-29',
+        payee: 'Acme',
+        status: 'none',
+        note: '',
+        uid: '01HZX9K3QF8V5C7R2D4M6N8P0T',
+        postings: [],
+      },
+      'USD'
+    );
     const block = {
       uid: '01J0000000000000000000000A',
       date: '2026-06-29',
@@ -100,7 +106,9 @@ describe('parsedBlockToDraft', () => {
       },
       'USD'
     );
-    const block = parseBlock(formatTransaction(draft));
+    const block = parseBlock(
+      formatTransaction({ ...draft, postings: [...draft.postings] })
+    );
     expect(block).not.toBeNull();
     expect(parsedBlockToDraft(block!)).toEqual(draft);
   });
@@ -148,7 +156,9 @@ describe('parsedBlockToDraft', () => {
       },
       'USD'
     );
-    const block = parseBlock(formatTransaction(draft));
+    const block = parseBlock(
+      formatTransaction({ ...draft, postings: [...draft.postings] })
+    );
     expect(parsedBlockToDraft(block!).uid).toBe('01HZX9K3QF8V5C7R2D4M6N8P0T');
   });
 });

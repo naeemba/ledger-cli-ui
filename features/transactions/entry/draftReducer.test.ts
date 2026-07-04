@@ -6,17 +6,9 @@ import {
   serializeDraftJson,
   type DraftState,
 } from './draftReducer';
+import { Txn } from '@/lib/transactions/model';
 
-const base: DraftState = {
-  date: '2026-06-29',
-  payee: '',
-  status: 'none',
-  note: '',
-  postings: [
-    { account: '', amount: '', currency: 'USD' },
-    { account: '', amount: '', currency: 'USD' },
-  ],
-};
+const base: DraftState = initDraft({ date: '2026-06-29' }, 'USD');
 
 describe('emptyPostings', () => {
   it('returns two blank postings in the given currency', () => {
@@ -84,7 +76,7 @@ describe('draftReducer', () => {
     expect(stillTwo.postings).toHaveLength(2);
   });
   it('replaceAll swaps the entire draft', () => {
-    const next: DraftState = { ...base, payee: 'X' };
+    const next: DraftState = base.withField('payee', 'X');
     expect(draftReducer(base, { type: 'replaceAll', state: next })).toBe(next);
   });
 });
@@ -93,18 +85,15 @@ describe('serializeDraftJson — cost and assertion', () => {
   it('serializes a cost-bearing posting', () => {
     const json = JSON.parse(
       serializeDraftJson(
-        {
-          ...base,
-          postings: [
-            {
-              account: 'Assets:EUR',
-              amount: '92',
-              currency: 'EUR',
-              cost: { amount: '100', currency: 'USD' },
-            },
-            { account: 'Assets:Checking', amount: '-100', currency: 'USD' },
-          ],
-        },
+        new Txn('2026-06-29', '', 'none', '', [
+          {
+            account: 'Assets:EUR',
+            amount: '92',
+            currency: 'EUR',
+            cost: { amount: '100', currency: 'USD' },
+          },
+          { account: 'Assets:Checking', amount: '-100', currency: 'USD' },
+        ]),
         'create'
       )
     );
@@ -114,18 +103,15 @@ describe('serializeDraftJson — cost and assertion', () => {
   it('serializes an assertion-bearing posting', () => {
     const json = JSON.parse(
       serializeDraftJson(
-        {
-          ...base,
-          postings: [
-            {
-              account: 'Assets:Checking',
-              amount: '',
-              currency: '',
-              assertion: { amount: '1234.56', currency: 'USD' },
-            },
-            { account: 'Equity:Adjustments', amount: '', currency: '' },
-          ],
-        },
+        new Txn('2026-06-29', '', 'none', '', [
+          {
+            account: 'Assets:Checking',
+            amount: '',
+            currency: '',
+            assertion: { amount: '1234.56', currency: 'USD' },
+          },
+          { account: 'Equity:Adjustments', amount: '', currency: '' },
+        ]),
         'create'
       )
     );
@@ -141,14 +127,9 @@ describe('serializeDraftJson', () => {
   it('trims fields and omits empty note/uid in create mode', () => {
     const json = JSON.parse(
       serializeDraftJson(
-        {
-          ...base,
-          payee: '  Acme  ',
-          note: '   ',
-          postings: [
-            { account: ' Assets:Cash ', amount: ' 5 ', currency: ' USD ' },
-          ],
-        },
+        new Txn('2026-06-29', '  Acme  ', 'none', '   ', [
+          { account: ' Assets:Cash ', amount: ' 5 ', currency: ' USD ' },
+        ]),
         'create'
       )
     );
@@ -163,13 +144,19 @@ describe('serializeDraftJson', () => {
   });
   it('includes uid in edit mode', () => {
     const json = JSON.parse(
-      serializeDraftJson({ ...base, uid: 'ULID123' }, 'edit')
+      serializeDraftJson(
+        new Txn('2026-06-29', '', 'none', '', base.postings, 'ULID123'),
+        'edit'
+      )
     );
     expect(json.uid).toBe('ULID123');
   });
   it('omits uid in create mode even when present on state', () => {
     const json = JSON.parse(
-      serializeDraftJson({ ...base, uid: 'ULID123' }, 'create')
+      serializeDraftJson(
+        new Txn('2026-06-29', '', 'none', '', base.postings, 'ULID123'),
+        'create'
+      )
     );
     expect(json.uid).toBeUndefined();
   });

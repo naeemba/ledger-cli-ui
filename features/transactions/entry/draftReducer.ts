@@ -1,23 +1,9 @@
-import type { Annotation } from '@/lib/journal/parser';
+import { Txn, type Posting } from '@/lib/transactions/model';
 
-export type DraftPosting = {
-  account: string;
-  amount: string;
-  currency: string;
-  cost?: Annotation;
-  assertion?: Annotation;
-};
+export type { Posting as DraftPosting } from '@/lib/transactions/model';
+export type { TxnStatus as DraftStatus } from '@/lib/transactions/model';
 
-export type DraftStatus = 'cleared' | 'pending' | 'none';
-
-export type DraftState = {
-  date: string;
-  payee: string;
-  status: DraftStatus;
-  note: string;
-  uid?: string;
-  postings: DraftPosting[];
-};
+export type DraftState = Txn;
 
 export type DraftAction =
   | {
@@ -25,56 +11,45 @@ export type DraftAction =
       field: 'date' | 'payee' | 'status' | 'note';
       value: string;
     }
-  | { type: 'setPosting'; index: number; patch: Partial<DraftPosting> }
+  | { type: 'setPosting'; index: number; patch: Partial<Posting> }
   | { type: 'addPosting'; currency: string }
   | { type: 'removePosting'; index: number }
   | { type: 'replaceAll'; state: DraftState };
 
-export const emptyPostings = (currency: string): DraftPosting[] => [
+export const emptyPostings = (currency: string): Posting[] => [
   { account: '', amount: '', currency },
   { account: '', amount: '', currency },
 ];
 
 export const initDraft = (
-  input: { date: string } & Partial<DraftState>,
+  input: { date: string } & {
+    payee?: string;
+    status?: Txn['status'];
+    note?: string;
+    uid?: string;
+    postings?: Posting[];
+  },
   defaultCurrency: string
-): DraftState => ({
-  date: input.date,
-  payee: input.payee ?? '',
-  status: input.status ?? 'none',
-  note: input.note ?? '',
-  uid: input.uid,
-  postings: input.postings ?? emptyPostings(defaultCurrency),
-});
+): Txn =>
+  new Txn(
+    input.date,
+    input.payee ?? '',
+    input.status ?? 'none',
+    input.note ?? '',
+    input.postings ?? emptyPostings(defaultCurrency),
+    input.uid
+  );
 
-export const draftReducer = (
-  state: DraftState,
-  action: DraftAction
-): DraftState => {
+export const draftReducer = (state: Txn, action: DraftAction): Txn => {
   switch (action.type) {
     case 'setField':
-      return { ...state, [action.field]: action.value };
+      return state.withField(action.field, action.value);
     case 'setPosting':
-      return {
-        ...state,
-        postings: state.postings.map((p, i) =>
-          i === action.index ? { ...p, ...action.patch } : p
-        ),
-      };
+      return state.withPosting(action.index, action.patch);
     case 'addPosting':
-      return {
-        ...state,
-        postings: [
-          ...state.postings,
-          { account: '', amount: '', currency: action.currency },
-        ],
-      };
+      return state.addPosting(action.currency);
     case 'removePosting':
-      if (state.postings.length <= 2) return state;
-      return {
-        ...state,
-        postings: state.postings.filter((_, i) => i !== action.index),
-      };
+      return state.removePosting(action.index);
     case 'replaceAll':
       return action.state;
     default:
@@ -85,32 +60,4 @@ export const draftReducer = (
 export const serializeDraftJson = (
   state: DraftState,
   mode: 'create' | 'edit'
-): string =>
-  JSON.stringify({
-    date: state.date,
-    payee: state.payee.trim(),
-    status: state.status,
-    note: state.note.trim() || undefined,
-    uid: mode === 'edit' ? state.uid : undefined,
-    postings: state.postings.map((p) => ({
-      account: p.account.trim(),
-      amount: p.amount.trim(),
-      currency: p.currency.trim(),
-      ...(p.cost
-        ? {
-            cost: {
-              amount: p.cost.amount.trim(),
-              currency: p.cost.currency.trim(),
-            },
-          }
-        : {}),
-      ...(p.assertion
-        ? {
-            assertion: {
-              amount: p.assertion.amount.trim(),
-              currency: p.assertion.currency.trim(),
-            },
-          }
-        : {}),
-    })),
-  });
+): string => JSON.stringify(state.toWire(mode));

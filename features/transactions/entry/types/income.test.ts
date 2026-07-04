@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { incomeAdapter, type IncomeFields } from './income';
+import { Txn } from '@/lib/transactions/model';
 
 const ctx = { defaultCurrency: 'USD' };
 const header = {
@@ -29,16 +30,10 @@ describe('incomeAdapter.compile', () => {
 });
 
 describe('incomeAdapter.detect', () => {
-  const draft = {
-    date: '2026-06-29',
-    payee: 'Acme Corp',
-    status: 'none' as const,
-    note: '',
-    postings: [
-      { account: 'Assets:Checking', amount: '3000', currency: 'USD' },
-      { account: 'Income:Salary', amount: '-3000', currency: 'USD' },
-    ],
-  };
+  const draft = new Txn('2026-06-29', 'Acme Corp', 'none', '', [
+    { account: 'Assets:Checking', amount: '3000', currency: 'USD' },
+    { account: 'Income:Salary', amount: '-3000', currency: 'USD' },
+  ]);
   it('recognizes a clean income->asset pair', () => {
     expect(incomeAdapter.detect(draft)).toEqual({
       date: '2026-06-29',
@@ -67,13 +62,12 @@ describe('incomeAdapter.detect', () => {
   });
   it('rejects an expense pair', () => {
     expect(
-      incomeAdapter.detect({
-        ...draft,
-        postings: [
+      incomeAdapter.detect(
+        new Txn(draft.date, draft.payee, draft.status, draft.note, [
           { account: 'Expenses:Groceries', amount: '42.50', currency: 'USD' },
           { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
-        ],
-      })
+        ])
+      )
     ).toBeNull();
   });
 });

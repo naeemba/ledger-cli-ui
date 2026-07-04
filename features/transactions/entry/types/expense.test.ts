@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { expenseAdapter, type ExpenseFields } from './expense';
+import { Txn } from '@/lib/transactions/model';
 
 const ctx = { defaultCurrency: 'USD' };
 const header = {
@@ -30,16 +31,10 @@ describe('expenseAdapter.compile', () => {
 });
 
 describe('expenseAdapter.detect', () => {
-  const draft = {
-    date: '2026-06-29',
-    payee: 'Whole Foods',
-    status: 'none' as const,
-    note: '',
-    postings: [
-      { account: 'Expenses:Groceries', amount: '42.50', currency: 'USD' },
-      { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
-    ],
-  };
+  const draft = new Txn('2026-06-29', 'Whole Foods', 'none', '', [
+    { account: 'Expenses:Groceries', amount: '42.50', currency: 'USD' },
+    { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
+  ]);
   it('recognizes a clean asset->expense pair', () => {
     expect(expenseAdapter.detect(draft)).toEqual({
       date: '2026-06-29',
@@ -68,31 +63,28 @@ describe('expenseAdapter.detect', () => {
   });
   it('rejects a 3-posting split', () => {
     expect(
-      expenseAdapter.detect({
-        ...draft,
-        postings: [
+      expenseAdapter.detect(
+        new Txn(draft.date, draft.payee, draft.status, draft.note, [
           ...draft.postings,
           { account: 'Expenses:Tax', amount: '0', currency: 'USD' },
-        ],
-      })
+        ])
+      )
     ).toBeNull();
   });
   it('rejects an asset->asset transfer', () => {
     expect(
-      expenseAdapter.detect({
-        ...draft,
-        postings: [
+      expenseAdapter.detect(
+        new Txn(draft.date, draft.payee, draft.status, draft.note, [
           { account: 'Assets:Savings', amount: '500', currency: 'USD' },
           { account: 'Assets:Checking', amount: '-500', currency: 'USD' },
-        ],
-      })
+        ])
+      )
     ).toBeNull();
   });
   it('rejects a cost-bearing posting', () => {
     expect(
-      expenseAdapter.detect({
-        ...draft,
-        postings: [
+      expenseAdapter.detect(
+        new Txn(draft.date, draft.payee, draft.status, draft.note, [
           {
             account: 'Expenses:Groceries',
             amount: '42.50',
@@ -100,8 +92,8 @@ describe('expenseAdapter.detect', () => {
             cost: { amount: '1', currency: 'EUR' },
           },
           { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
-        ],
-      })
+        ])
+      )
     ).toBeNull();
   });
 });

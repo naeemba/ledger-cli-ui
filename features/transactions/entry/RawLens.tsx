@@ -22,7 +22,9 @@ export function RawLens({
   payees?: string[];
   commodities?: string[];
 }) {
-  const [text, setText] = useState(() => formatTransaction(draft));
+  const [text, setText] = useState(() =>
+    formatTransaction({ ...draft, postings: [...draft.postings] })
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import type { DraftState } from './draftReducer';
 import type { ParsedBlock } from '@/lib/journal/parser';
-import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
+import { Txn } from '@/lib/transactions/model';
 
 /**
  * Map a parsed ledger block onto the canonical entry draft.
@@ -13,16 +13,4 @@ import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
 export const parsedBlockToDraft = (
   block: Omit<ParsedBlock, 'unparsedLines'>,
   prev?: DraftState
-): DraftState => ({
-  date: block.date,
-  payee: block.payee,
-  status: block.status,
-  note: block.note ?? '',
-  uid: block.uid ?? prev?.uid,
-  postings: block.postings.map((p) => ({
-    account: p.account,
-    amount: p.amount,
-    currency: p.currency,
-    ...carryAnnotations(p),
-  })),
-});
+): DraftState => Txn.fromParsedBlock(block, prev);

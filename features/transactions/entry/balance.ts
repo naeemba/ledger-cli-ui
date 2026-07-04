@@ -7,7 +7,7 @@ export type Balance =
   | { kind: 'too-many-blanks' }
   | { kind: 'unbalanced'; issues: [string, number][] };
 
-export const computeBalance = (postings: DraftPosting[]): Balance => {
+export const computeBalance = (postings: readonly DraftPosting[]): Balance => {
   // Assertion-only postings check a balance; they don't participate in balancing.
   const active = postings.filter(
     (p) => !(p.assertion && p.amount.trim() === '')
