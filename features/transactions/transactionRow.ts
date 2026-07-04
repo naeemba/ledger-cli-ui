@@ -1,27 +1,11 @@
-import type { ParsedTransaction } from '@/lib/journal/parser';
-import { carryAnnotations } from '@/lib/transactions/carryAnnotations.util';
-import type { Posting } from '@/lib/transactions/posting';
+import { Transaction, type TransactionData } from '@/lib/transactions/model';
 
-export type TransactionRow = Omit<
-  ParsedTransaction,
-  'rawBlock' | 'endLine' | 'postings'
-> & {
-  postings: Posting[];
-};
+export type { TransactionRow } from '@/lib/transactions/model';
 
-export const toTransactionRow = (t: ParsedTransaction): TransactionRow => ({
-  uid: t.uid,
-  file: t.file,
-  startLine: t.startLine,
-  date: t.date,
-  payee: t.payee,
-  status: t.status,
-  note: t.note,
-  fingerprint: t.fingerprint,
-  postings: t.postings.map((p) => ({
-    account: p.account,
-    amount: p.amount,
-    currency: p.currency,
-    ...carryAnnotations(p),
-  })),
-});
+/**
+ * Project a transaction (as its plain, cache-safe data) into the read-only row
+ * the list renders. Rehydrating through {@link Transaction} keeps row shaping in
+ * one place — the model — rather than duplicating the field/annotation mapping.
+ */
+export const toTransactionRow = (data: TransactionData) =>
+  Transaction.from(data).toRow();

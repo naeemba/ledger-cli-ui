@@ -10,11 +10,7 @@ import {
 } from './layout';
 import { resolveIncludes } from './loader';
 import { withUserLock } from './mutex';
-import {
-  parseJournalFile,
-  type ParsedJournal,
-  type ParsedTransaction,
-} from './parser';
+import { parseJournalFile, type ParsedJournal } from './parser';
 import { getJournalDirSize, journalQuotaBytes, journalQuotaMb } from './quota';
 import { JournalRepository } from './repository';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
@@ -23,6 +19,7 @@ import { encryptFile, isCiphertext } from '@/lib/crypto/fileCrypto';
 import { getSessionDek, LockedError } from '@/lib/crypto/sessionKeys';
 import { pull, pullLocked, push, StorageConflictError } from '@/lib/storage';
 import { listLocalRelPaths } from '@/lib/storage/manifest';
+import { Transaction } from '@/lib/transactions/model';
 import {
   formatTransaction,
   transactionDraftSchema,
@@ -131,7 +128,7 @@ export class JournalService {
   async findTransaction(
     userId: string,
     uid: string
-  ): Promise<ParsedTransaction | null> {
+  ): Promise<Transaction | null> {
     await pullLocked(userId);
     return this.repo.find(userId, uid);
   }
@@ -405,8 +402,8 @@ export class JournalService {
       };
     }
 
-    const text = await this.repo.readFile(tx.file);
-    const fileTxs = parseJournalFile(tx.file, text);
+    const text = await this.repo.readFile(tx.file!);
+    const fileTxs = parseJournalFile(tx.file!, text);
     const current = fileTxs.find((t) => t.uid === input.uid);
     if (!current) {
       return {
@@ -428,17 +425,17 @@ export class JournalService {
 
     const newBlock = formatTransaction(parsedDraft.data);
     const lines = text.split('\n');
-    const before = lines.slice(0, current.startLine - 1).join('\n');
-    const after = lines.slice(current.endLine).join('\n');
+    const before = lines.slice(0, current.startLine! - 1).join('\n');
+    const after = lines.slice(current.endLine!).join('\n');
     const next =
       (before ? before + '\n' : '') + newBlock + (after ? '\n' + after : '');
-    await this.repo.writeFileAtomic(tx.file, next);
+    await this.repo.writeFileAtomic(tx.file!, next);
 
     const { mainPath } = await this.repo.getLayout(userId);
     const verify = await verifyJournalParseable(mainPath);
     if (!verify.ok) {
       // Roll the file back to its pre-edit content so the journal stays parseable.
-      await this.repo.writeFileAtomic(tx.file, text);
+      await this.repo.writeFileAtomic(tx.file!, text);
       return {
         ok: false,
         reason: 'parse-failed',
@@ -448,7 +445,7 @@ export class JournalService {
     try {
       await push(userId);
     } catch (e) {
-      await this.repo.writeFileAtomic(tx.file, text); // restore pre-edit content
+      await this.repo.writeFileAtomic(tx.file!, text); // restore pre-edit content
       return {
         ok: false,
         reason: 'stale',
@@ -476,8 +473,8 @@ export class JournalService {
       };
     }
 
-    const text = await this.repo.readFile(tx.file);
-    const fileTxs = parseJournalFile(tx.file, text);
+    const text = await this.repo.readFile(tx.file!);
+    const fileTxs = parseJournalFile(tx.file!, text);
     const current = fileTxs.find((t) => t.uid === input.uid);
     if (!current) {
       return {
@@ -497,8 +494,8 @@ export class JournalService {
     }
 
     const lines = text.split('\n');
-    let removeStart = current.startLine - 1;
-    let removeEnd = current.endLine - 1;
+    let removeStart = current.startLine! - 1;
+    let removeEnd = current.endLine! - 1;
     if (lines[removeEnd + 1] === '') {
       removeEnd++;
     } else if (removeStart > 0 && lines[removeStart - 1] === '') {
@@ -508,13 +505,13 @@ export class JournalService {
       ...lines.slice(0, removeStart),
       ...lines.slice(removeEnd + 1),
     ].join('\n');
-    await this.repo.writeFileAtomic(tx.file, next);
+    await this.repo.writeFileAtomic(tx.file!, next);
 
     const { mainPath } = await this.repo.getLayout(userId);
     const verify = await verifyJournalParseable(mainPath);
     if (!verify.ok) {
       // Roll back so the journal stays parseable.
-      await this.repo.writeFileAtomic(tx.file, text);
+      await this.repo.writeFileAtomic(tx.file!, text);
       return {
         ok: false,
         reason: 'parse-failed',
@@ -524,7 +521,7 @@ export class JournalService {
     try {
       await push(userId);
     } catch (e) {
-      await this.repo.writeFileAtomic(tx.file, text); // restore pre-delete content
+      await this.repo.writeFileAtomic(tx.file!, text); // restore pre-delete content
       return {
         ok: false,
         reason: 'stale',

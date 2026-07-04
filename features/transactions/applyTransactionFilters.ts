@@ -1,4 +1,4 @@
-import type { ParsedTransaction } from '@/lib/journal/parser';
+import type { TransactionData } from '@/lib/transactions/model';
 
 export type TransactionFilters = {
   start?: string;
@@ -13,10 +13,10 @@ export type TransactionFilters = {
  * the `/transactions` page render and the `/api/transactions/export` route
  * so both apply identical semantics to the same query string.
  */
-export const applyTransactionFilters = (
-  txs: ParsedTransaction[],
+export const applyTransactionFilters = <T extends TransactionData>(
+  txs: readonly T[],
   params: TransactionFilters
-): ParsedTransaction[] => {
+): T[] => {
   const start = params.start ? Date.parse(params.start) : null;
   const end = params.end ? Date.parse(params.end) : null;
   const account = params.account?.toLowerCase().trim();

@@ -1,5 +1,6 @@
 import { fingerprintDraft } from './fingerprint';
 import { UID_LINE_REGEX } from './uid';
+import { Transaction } from '@/lib/transactions/model';
 import type { Posting } from '@/lib/transactions/posting';
 
 export type ParsedHeader = {
@@ -149,23 +150,9 @@ export const parseBlock = (block: string): ParsedBlock | null => {
   };
 };
 
-export type ParsedTransaction = {
-  uid: string | null;
-  file: string;
-  startLine: number;
-  endLine: number;
-  date: string;
-  payee: string;
-  status: 'cleared' | 'pending' | 'none';
-  note: string | null;
-  postings: ParsedPosting[];
-  rawBlock: string;
-  fingerprint: string;
-};
-
 export type ParsedJournal = {
   files: Array<{ path: string; mtimeMs: number }>;
-  transactions: ParsedTransaction[];
+  transactions: Transaction[];
 };
 
 const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
@@ -173,9 +160,9 @@ const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
 export const parseJournalFile = (
   filePath: string,
   text: string
-): ParsedTransaction[] => {
+): Transaction[] => {
   const lines = text.split('\n');
-  const transactions: ParsedTransaction[] = [];
+  const transactions: Transaction[] = [];
   let blockStart: number | null = null;
   let blockLines: string[] = [];
 
@@ -191,19 +178,21 @@ export const parseJournalFile = (
         uid: block.uid ?? undefined,
         postings: block.postings,
       });
-      transactions.push({
-        uid: block.uid,
-        file: filePath,
-        startLine: blockStart + 1,
-        endLine: endLine + 1,
-        date: block.date,
-        payee: block.payee,
-        status: block.status,
-        note: block.note,
-        postings: block.postings,
-        rawBlock: blockLines.join('\n'),
-        fingerprint,
-      });
+      transactions.push(
+        new Transaction({
+          uid: block.uid ?? undefined,
+          file: filePath,
+          startLine: blockStart + 1,
+          endLine: endLine + 1,
+          date: block.date,
+          payee: block.payee,
+          status: block.status,
+          note: block.note ?? '',
+          postings: block.postings,
+          rawBlock: blockLines.join('\n'),
+          fingerprint,
+        })
+      );
     }
     blockStart = null;
     blockLines = [];

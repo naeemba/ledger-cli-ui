@@ -31,14 +31,14 @@ export const initDraft = (
   },
   defaultCurrency: string
 ): Transaction =>
-  new Transaction(
-    input.date,
-    input.payee ?? '',
-    input.status ?? 'none',
-    input.note ?? '',
-    input.postings ?? emptyPostings(defaultCurrency),
-    input.uid
-  );
+  new Transaction({
+    date: input.date,
+    payee: input.payee ?? '',
+    status: input.status ?? 'none',
+    note: input.note ?? '',
+    postings: input.postings ?? emptyPostings(defaultCurrency),
+    uid: input.uid,
+  });
 
 export const draftReducer = (
   state: Transaction,

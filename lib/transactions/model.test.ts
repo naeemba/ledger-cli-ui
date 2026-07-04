@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { Transaction } from './model';
-import type { ParsedBlock, ParsedTransaction } from '@/lib/journal/parser';
+import { Transaction, type TransactionData } from './model';
+import type { ParsedBlock } from '@/lib/journal/parser';
 import type { TemplateDraft } from '@/lib/templates/schema';
 
 const transactionFixture = (
-  over: Partial<ParsedTransaction> = {}
-): ParsedTransaction => ({
+  over: Partial<TransactionData> = {}
+): TransactionData => ({
   uid: 'u1',
   file: 'main.ledger',
   startLine: 1,
@@ -13,7 +13,7 @@ const transactionFixture = (
   date: '2024-01-15',
   payee: 'Coffee Shop',
   status: 'cleared',
-  note: null,
+  note: '',
   postings: [
     { account: 'Expenses:Food', amount: '10.00', currency: 'USD' },
     { account: 'Assets:Cash', amount: '-10.00', currency: 'USD' },
@@ -23,23 +23,62 @@ const transactionFixture = (
   ...over,
 });
 
-describe('Transaction.fromTransaction', () => {
-  it('projects the editable core and defaults blank currency', () => {
-    const t = Transaction.fromTransaction(transactionFixture(), 'USD');
-    expect(t.date).toBe('2024-01-15');
+describe('Transaction.from / toData', () => {
+  it('round-trips a plain projection back into an instance', () => {
+    const data = transactionFixture();
+    const t = Transaction.from(data);
     expect(t.payee).toBe('Coffee Shop');
-    expect(t.status).toBe('cleared');
-    expect(t.note).toBe('');
     expect(t.uid).toBe('u1');
-    expect(t.postings[0]).toEqual({
-      account: 'Expenses:Food',
-      amount: '10.00',
-      currency: 'USD',
+    expect(t.file).toBe('main.ledger');
+    expect(t.fingerprint).toBe('fp');
+    expect(t.toData()).toEqual(data);
+  });
+});
+
+describe('Transaction.toRow', () => {
+  it('projects the list fields and drops rawBlock/endLine', () => {
+    const row = Transaction.from(transactionFixture()).toRow();
+    expect(row).toEqual({
+      uid: 'u1',
+      file: 'main.ledger',
+      startLine: 1,
+      date: '2024-01-15',
+      payee: 'Coffee Shop',
+      status: 'cleared',
+      note: '',
+      fingerprint: 'fp',
+      postings: [
+        { account: 'Expenses:Food', amount: '10.00', currency: 'USD' },
+        { account: 'Assets:Cash', amount: '-10.00', currency: 'USD' },
+      ],
     });
   });
+});
 
-  it('carries cost and assertion annotations', () => {
-    const t = Transaction.fromTransaction(
+describe('Transaction.empty', () => {
+  it('builds a blank two-posting draft in the given currency', () => {
+    const t = Transaction.empty('EUR');
+    expect(t.date).toBe('');
+    expect(t.payee).toBe('');
+    expect(t.postings).toEqual([
+      { account: '', amount: '', currency: 'EUR' },
+      { account: '', amount: '', currency: 'EUR' },
+    ]);
+  });
+});
+
+describe('Transaction.withDefaultCurrency', () => {
+  it('fills blank posting currencies with the default', () => {
+    const t = Transaction.from(
+      transactionFixture({
+        postings: [{ account: 'A', amount: '1', currency: '' }],
+      })
+    ).withDefaultCurrency('GBP');
+    expect(t.postings[0].currency).toBe('GBP');
+  });
+
+  it('leaves non-blank currencies and annotations intact', () => {
+    const t = Transaction.from(
       transactionFixture({
         postings: [
           {
@@ -55,21 +94,11 @@ describe('Transaction.fromTransaction', () => {
             assertion: { amount: '500', currency: 'EUR' },
           },
         ],
-      }),
-      'USD'
-    );
+      })
+    ).withDefaultCurrency('GBP');
+    expect(t.postings[0].currency).toBe('USD');
     expect(t.postings[0].cost).toEqual({ amount: '90', currency: 'EUR' });
     expect(t.postings[1].assertion).toEqual({ amount: '500', currency: 'EUR' });
-  });
-
-  it('maps a missing posting currency to the default', () => {
-    const t = Transaction.fromTransaction(
-      transactionFixture({
-        postings: [{ account: 'A', amount: '1', currency: '' }],
-      }),
-      'GBP'
-    );
-    expect(t.postings[0].currency).toBe('GBP');
   });
 });
 
@@ -95,14 +124,14 @@ describe('Transaction.fromParsedBlock', () => {
   });
 
   it('falls back to prev uid when the block omits it', () => {
-    const prev = new Transaction(
-      '2024-02-01',
-      'Rent',
-      'pending',
-      '',
-      [],
-      'keep-me'
-    );
+    const prev = Transaction.from({
+      date: '2024-02-01',
+      payee: 'Rent',
+      status: 'pending',
+      note: '',
+      postings: [],
+      uid: 'keep-me',
+    });
     expect(Transaction.fromParsedBlock(block, prev).uid).toBe('keep-me');
     expect(
       Transaction.fromParsedBlock({ ...block, uid: 'own' }, prev).uid
@@ -143,10 +172,16 @@ describe('Transaction.fromTemplate', () => {
 
 describe('Transaction immutable updates', () => {
   const base = () =>
-    new Transaction('2024-01-01', 'P', 'none', '', [
-      { account: 'A', amount: '1', currency: 'USD' },
-      { account: 'B', amount: '-1', currency: 'USD' },
-    ]);
+    Transaction.from({
+      date: '2024-01-01',
+      payee: 'P',
+      status: 'none',
+      note: '',
+      postings: [
+        { account: 'A', amount: '1', currency: 'USD' },
+        { account: 'B', amount: '-1', currency: 'USD' },
+      ],
+    });
 
   it('withField returns a new instance and does not mutate', () => {
     const a = base();
@@ -154,6 +189,14 @@ describe('Transaction immutable updates', () => {
     expect(b.payee).toBe('Changed');
     expect(a.payee).toBe('P');
     expect(b).not.toBe(a);
+  });
+
+  it('withField preserves identity metadata', () => {
+    const a = Transaction.from(transactionFixture());
+    const b = a.withField('payee', 'Changed');
+    expect(b.uid).toBe('u1');
+    expect(b.fingerprint).toBe('fp');
+    expect(b.file).toBe('main.ledger');
   });
 
   it('withPosting patches one posting only', () => {
@@ -182,12 +225,12 @@ describe('Transaction immutable updates', () => {
 
 describe('Transaction outputs', () => {
   const t = () =>
-    new Transaction(
-      '2024-01-15',
-      '  Coffee  ',
-      'cleared',
-      '  hi  ',
-      [
+    Transaction.from({
+      date: '2024-01-15',
+      payee: '  Coffee  ',
+      status: 'cleared',
+      note: '  hi  ',
+      postings: [
         {
           account: '  Assets:USD  ',
           amount: ' 100 ',
@@ -201,8 +244,8 @@ describe('Transaction outputs', () => {
           assertion: { amount: ' 500 ', currency: ' EUR ' },
         },
       ],
-      'u9'
-    );
+      uid: 'u9',
+    });
 
   it('toWire trims, drops blank note, and keeps uid only in edit mode', () => {
     expect(t().toWire('edit').uid).toBe('u9');
@@ -218,8 +261,13 @@ describe('Transaction outputs', () => {
     });
     expect(w.postings[1].assertion).toEqual({ amount: '500', currency: 'EUR' });
     expect(
-      new Transaction('2024-01-15', 'P', 'none', '   ', []).toWire('create')
-        .note
+      Transaction.from({
+        date: '2024-01-15',
+        payee: 'P',
+        status: 'none',
+        note: '   ',
+        postings: [],
+      }).toWire('create').note
     ).toBeUndefined();
   });
 
@@ -230,10 +278,16 @@ describe('Transaction outputs', () => {
     expect(tpl.payee).toBe('Coffee');
     expect(tpl.postings[0].cost).toEqual({ amount: '90', currency: 'EUR' });
     expect(
-      new Transaction('', '   ', 'none', '', [
-        { account: 'A', amount: '1', currency: 'USD' },
-        { account: 'B', amount: '-1', currency: 'USD' },
-      ]).toTemplate().payee
+      Transaction.from({
+        date: '',
+        payee: '   ',
+        status: 'none',
+        note: '',
+        postings: [
+          { account: 'A', amount: '1', currency: 'USD' },
+          { account: 'B', amount: '-1', currency: 'USD' },
+        ],
+      }).toTemplate().payee
     ).toBe('—');
   });
 });

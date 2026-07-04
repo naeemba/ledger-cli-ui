@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { toTransactionRow } from './transactionRow';
-import type { ParsedTransaction } from '@/lib/journal/parser';
+import type { TransactionData } from '@/lib/transactions/model';
 
-const sample: ParsedTransaction = {
+const sample: TransactionData = {
   uid: 'U1',
   file: 'main.ledger',
   startLine: 1,
@@ -10,7 +10,7 @@ const sample: ParsedTransaction = {
   date: '2026-01-02',
   payee: 'Coffee',
   status: 'cleared',
-  note: null,
+  note: '',
   postings: [
     {
       account: 'Expenses:Food',
@@ -24,7 +24,7 @@ const sample: ParsedTransaction = {
   fingerprint: 'abc',
 };
 
-const withAssertion: ParsedTransaction = {
+const withAssertion: TransactionData = {
   ...sample,
   postings: [
     { account: 'Assets:Cash', amount: '-5.00', currency: '$' },
@@ -80,7 +80,7 @@ describe('toTransactionRow', () => {
       date: '2026-01-02',
       payee: 'Coffee',
       status: 'cleared',
-      note: null,
+      note: '',
       fingerprint: 'abc',
     });
   });

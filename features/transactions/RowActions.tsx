@@ -25,20 +25,13 @@ const RowActions = ({ transaction: t }: Props) => {
   const [saveOpen, setSaveOpen] = useState(false);
 
   const onDelete = async () => {
-    const res = await deleteTransactionAction(t.uid!, t.fingerprint);
+    const res = await deleteTransactionAction(t.uid!, t.fingerprint!);
     if (res.ok) toast.success('Transaction deleted');
     else toast.error(res.message);
     router.refresh();
   };
 
-  const templateDraft = new Transaction(
-    t.date,
-    t.payee,
-    t.status,
-    t.note ?? '',
-    t.postings,
-    t.uid ?? undefined
-  ).toTemplate();
+  const templateDraft = Transaction.from(t).toTemplate();
 
   return (
     <>

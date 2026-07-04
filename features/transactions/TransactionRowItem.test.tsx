@@ -13,7 +13,7 @@ const row: TransactionRow = {
   date: '2026-01-02',
   payee: 'Coffee Shop',
   status: 'cleared',
-  note: null,
+  note: '',
   fingerprint: 'abc',
   postings: [
     { account: 'Expenses:Food', amount: '5.00', currency: '$' },

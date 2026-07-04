@@ -38,7 +38,7 @@ describe('exchangeAdapter.compile', () => {
 });
 
 describe('exchangeAdapter.detect', () => {
-  const draft = new Transaction('2026-06-29', 'Currency exchange', 'none', '', [
+  const draft = Transaction.of('2026-06-29', 'Currency exchange', 'none', '', [
     {
       account: 'Assets:EUR-Wallet',
       amount: '92',
@@ -80,7 +80,7 @@ describe('exchangeAdapter.detect', () => {
   it('rejects a plain expense pair (no cost)', () => {
     expect(
       exchangeAdapter.detect(
-        new Transaction(draft.date, draft.payee, draft.status, draft.note, [
+        Transaction.of(draft.date, draft.payee, draft.status, draft.note, [
           { account: 'Expenses:Groceries', amount: '42.50', currency: 'USD' },
           { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
         ])

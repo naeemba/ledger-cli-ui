@@ -30,7 +30,7 @@ describe('incomeAdapter.compile', () => {
 });
 
 describe('incomeAdapter.detect', () => {
-  const draft = new Transaction('2026-06-29', 'Acme Corp', 'none', '', [
+  const draft = Transaction.of('2026-06-29', 'Acme Corp', 'none', '', [
     { account: 'Assets:Checking', amount: '3000', currency: 'USD' },
     { account: 'Income:Salary', amount: '-3000', currency: 'USD' },
   ]);
@@ -63,7 +63,7 @@ describe('incomeAdapter.detect', () => {
   it('rejects an expense pair', () => {
     expect(
       incomeAdapter.detect(
-        new Transaction(draft.date, draft.payee, draft.status, draft.note, [
+        Transaction.of(draft.date, draft.payee, draft.status, draft.note, [
           { account: 'Expenses:Groceries', amount: '42.50', currency: 'USD' },
           { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
         ])

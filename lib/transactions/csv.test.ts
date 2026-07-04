@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { transactionsToCsv } from './csv';
-import type { ParsedTransaction } from '@/lib/journal/parser';
+import type { TransactionData } from '@/lib/transactions/model';
 
-const tx = (overrides: Partial<ParsedTransaction> = {}): ParsedTransaction => ({
+const tx = (overrides: Partial<TransactionData> = {}): TransactionData => ({
   uid: '01HZX5G5KJDS9HQRYK8E5T0DJC',
   file: '/tmp/main.ledger',
   startLine: 1,
@@ -10,7 +10,7 @@ const tx = (overrides: Partial<ParsedTransaction> = {}): ParsedTransaction => ({
   date: '2024-09-01',
   payee: "Trader Joe's",
   status: 'none',
-  note: null,
+  note: '',
   postings: [
     { account: 'Expenses:Food', amount: '10', currency: 'USD' },
     { account: 'Assets:Cash', amount: '-10', currency: 'USD' },
@@ -40,8 +40,8 @@ describe('transactionsToCsv', () => {
   it('renders null/undefined fields as empty', () => {
     const csv = transactionsToCsv([
       tx({
-        note: null,
-        uid: null,
+        note: '',
+        uid: undefined,
         postings: [{ account: 'A', amount: '', currency: '' }],
       }),
     ]);

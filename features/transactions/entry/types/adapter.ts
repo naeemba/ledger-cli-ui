@@ -32,11 +32,11 @@ export const draftFromHeader = (
   header: HeaderFields,
   postings: DraftPosting[]
 ): DraftState =>
-  new Transaction(
-    header.date,
-    header.payee,
-    header.status,
-    header.note,
+  new Transaction({
+    date: header.date,
+    payee: header.payee,
+    status: header.status,
+    note: header.note,
     postings,
-    header.uid
-  );
+    uid: header.uid,
+  });

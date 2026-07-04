@@ -5,7 +5,6 @@ import { getAccountBalance } from './entry/actions/getAccountBalance';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { getAvailableCurrencies, getEntryTabOrder } from '@/lib/settings';
-import { Transaction } from '@/lib/transactions/model';
 import {
   getAccountSuggestions,
   getPayeeSuggestions,
@@ -21,9 +20,7 @@ const EditTransaction = async ({ uid }: { uid: string }) => {
     getAvailableCurrencies(),
     getEntryTabOrder(),
   ]);
-  const initialDraft = Transaction.fromTransaction(tx, defaultCurrency).toWire(
-    'edit'
-  );
+  const initialDraft = tx.withDefaultCurrency(defaultCurrency).toWire('edit');
   // Carry the parser's canonical fingerprint through unchanged — never re-hash
   // a reconstruction of the transaction. The concurrency guard in performEdit
   // compares against this exact value (recomputed from the parsed postings), so

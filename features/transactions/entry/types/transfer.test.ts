@@ -33,7 +33,7 @@ describe('transferAdapter.compile', () => {
 });
 
 describe('transferAdapter.detect', () => {
-  const draft = new Transaction('2026-06-29', 'Transfer', 'none', '', [
+  const draft = Transaction.of('2026-06-29', 'Transfer', 'none', '', [
     { account: 'Assets:Savings', amount: '500', currency: 'USD' },
     { account: 'Assets:Checking', amount: '-500', currency: 'USD' },
   ]);
@@ -66,7 +66,7 @@ describe('transferAdapter.detect', () => {
   it('rejects an expense pair (one side is an expense)', () => {
     expect(
       transferAdapter.detect(
-        new Transaction(draft.date, draft.payee, draft.status, draft.note, [
+        Transaction.of(draft.date, draft.payee, draft.status, draft.note, [
           { account: 'Expenses:Groceries', amount: '42.50', currency: 'USD' },
           { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
         ])

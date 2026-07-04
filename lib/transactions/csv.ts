@@ -1,5 +1,5 @@
 import { formatRow } from '@/lib/csv';
-import type { ParsedTransaction } from '@/lib/journal/parser';
+import type { TransactionData } from '@/lib/transactions/model';
 
 // One row per posting (long format) is the most useful shape for downstream
 // analysis tools — spreadsheet pivots, pandas DataFrames, etc. Transaction-
@@ -20,7 +20,7 @@ const COLUMNS = [
  * first. Rows are emitted in input order — callers sort beforehand if a
  * particular order is desired.
  */
-export const transactionsToCsv = (txs: ParsedTransaction[]): string => {
+export const transactionsToCsv = (txs: readonly TransactionData[]): string => {
   const lines = [COLUMNS.join(',')];
   for (const t of txs) {
     for (const p of t.postings) {

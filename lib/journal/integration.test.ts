@@ -54,13 +54,13 @@ describe('Phase 4.1 integration', () => {
       const editResult = await service.editTransaction(userId, {
         kind: 'edit',
         uid: lunch.uid!,
-        expectedFingerprint: lunch.fingerprint,
+        expectedFingerprint: lunch.fingerprint!,
         draft: {
           date: lunch.date,
           payee: 'lunch v2',
           status: 'none',
           uid: lunch.uid!,
-          postings: lunch.postings,
+          postings: [...lunch.postings],
         },
       });
       expect(editResult.ok).toBe(true);
@@ -73,7 +73,7 @@ describe('Phase 4.1 integration', () => {
       const deleteResult = await service.deleteTransaction(userId, {
         kind: 'delete',
         uid: lunchV2!.uid!,
-        expectedFingerprint: lunchV2!.fingerprint,
+        expectedFingerprint: lunchV2!.fingerprint!,
       });
       expect(deleteResult.ok).toBe(true);
 
