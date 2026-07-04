@@ -34,6 +34,7 @@
 > | A3 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
 > | A4 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
 > | G3 | ✅ DONE | [#65](https://github.com/naeemba/ledger-cli-ui/pull/65) | `refactor/txn-model-consolidation` | 2026-07-04 |
+> | A5 | ✅ DONE | [#66](https://github.com/naeemba/ledger-cli-ui/pull/66) | `fix/review-a5-template-blank-rows` | 2026-07-05 |
 
 A complete, implementation-ready review of ledger-cli-ui covering performance, correctness, error handling, architecture, UX consistency, and dead code. **Security was deliberately excluded** (covered by a separate review). Test files were not reviewed.
 
@@ -155,6 +156,8 @@ postings: t.draft.postings.map((p) => ({
 > **Verifier notes** (independent adversarial check, confidence: high): Confirmed as code fact: features/transactions/NewTransaction.tsx:44-48 rebuilds initialDraft postings with only account/amount/currency, discarding cost/assertion that templateDraftSchema permits and DraftPosting supports. However, the finding itself admits it is latent — no current UI writer persists the fields (findings 0/1 strip them first), and templates can only gain annotations via direct action calls. No user-visible impact until the writers are fixed, so severity is low, not medium; it should simply be fixed in the same change set. Suggested spread fix is correct (formatPosting ignores currency on assertion-only postings, so the currency-default override is safe).
 
 ### A5. Blank filler posting rows make 'Save as template' fail with an opaque 'Validation failed.' message
+
+**Status:** ✅ DONE — [PR #66](https://github.com/naeemba/ledger-cli-ui/pull/66) (`fix/review-a5-template-blank-rows`) — 2026-07-05. Fixed at the single template builder: `Transaction.toTemplate()` (`lib/transactions/model.ts`) now drops postings whose account is blank, so the saved shape matches the postings `canSaveTemplate` counted — a two-filled-rows draft with a leftover blank scaffold row saves cleanly instead of returning an opaque `Validation failed.`. As a defensive fallback, `SaveAsTemplateDialog` now surfaces `fieldErrors` via a new pure `saveTemplateErrorMessage(result)` helper (`features/templates/saveTemplateError.ts`) that appends the distinct field messages to the base message, so any remaining validation failure names its cause. Regression tests: `model.test.ts` pins blank-row dropping; `saveTemplateError.test.ts` pins the message composition.
 
 **Severity:** MEDIUM · **Effort:** S (<1h) · **Location:** `features/transactions/entry/TransactionEntry.tsx:162`
 
