@@ -146,12 +146,3 @@ const fetchWithRetry = async (
   }
   return null;
 };
-
-// Deprecated compatibility exports — Task 6 removes these when it migrates
-// service.ts to the new FetchPlan-based API.
-export type QuotePair = { symbol: string; quote: string };
-export const fetchPrices = (
-  _pairs: QuotePair[],
-  _opts?: { signal?: AbortSignal }
-): Promise<ProviderResult> =>
-  Promise.reject(new Error('fetchPrices removed — use fetchPricesUsd'));
