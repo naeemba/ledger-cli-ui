@@ -320,6 +320,46 @@ describe('PriceService.refreshAll', () => {
       expect(result.fetched).toBe(1);
     }
   });
+
+  it('keeps both symbols in the plan when two symbols share one CoinGecko id', async () => {
+    // BTC (alice) and XBT (bob) both map to the same CoinGecko id "bitcoin".
+    // With provider-id-based dedup the second symbol would be silently dropped
+    // and receive no commodity_price row. Symbol-based dedup fixes this.
+    await seedUser(
+      ctx,
+      'alice',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
+      'USD'
+    );
+    await seedUser(
+      ctx,
+      'bob',
+      '2026/01/01 Y\n  Assets:Cash  1 XBT\n  Income\n',
+      'USD'
+    );
+    await seedMapping(ctx, 'alice', [
+      { symbol: 'BTC', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
+    await seedMapping(ctx, 'bob', [
+      { symbol: 'XBT', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ bitcoin: { usd: 60000 } }),
+    } as Response);
+
+    const result = await service.refreshAll();
+
+    // Both BTC and XBT must receive a price row (fetched === 2), not just the
+    // first symbol encountered. Only one HTTP request is made because the
+    // provider deduplicates CoinGecko ids internally.
+    expect(result.status).toBe('success');
+    if (result.status === 'success') {
+      expect(result.fetched).toBe(2);
+    }
+  });
 });
 
 describe('PriceService manual prices', () => {

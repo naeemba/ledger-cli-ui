@@ -285,7 +285,7 @@ export class PriceService {
   ): void {
     for (const m of mappings) {
       if (m.kind === 'crypto' && m.providerId) {
-        const key = `c:${m.providerId}`;
+        const key = `c:${m.symbol}`;
         if (!seen.has(key)) {
           seen.add(key);
           into.crypto.push({ symbol: m.symbol, id: m.providerId });

@@ -111,7 +111,7 @@ const CommodityCombobox = ({
       />
       <CommandList>
         <CommandEmpty>{emptyMessage}</CommandEmpty>
-        {!isPending && displayedResults.length > 0 && (
+        {displayedResults.length > 0 && (
           <CommandGroup>
             {displayedResults.map((suggestion) => (
               <CommandItem

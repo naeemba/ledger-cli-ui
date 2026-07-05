@@ -93,8 +93,8 @@ export default function CurrenciesView({ rows: initial }: Props) {
             fetched automatically from CoinGecko.
           </li>
           <li>
-            <span className="text-foreground font-medium">Fiat</span> — exchange
-            rate fetched from the configured rate provider.
+            <span className="text-foreground font-medium">Fiat</span> — priced
+            in USD via CoinGecko.
           </li>
           <li>
             <span className="text-foreground font-medium">Manual</span> — no
