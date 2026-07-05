@@ -7,6 +7,7 @@ export const AUDIT_ACTIONS = [
   'journal.import',
   'price.add',
   'price.delete',
+  'price.map',
   'crypto.enable',
   'crypto.unlock',
   'crypto.lock',

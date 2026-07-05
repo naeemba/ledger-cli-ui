@@ -26,6 +26,7 @@ export function rateLimit(
 }
 
 export {
+  READ,
   UPLOAD,
   WRITE,
   DESTRUCTIVE,
