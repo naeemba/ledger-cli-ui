@@ -20,5 +20,6 @@ export default defineConfig({
     'savedView',
     'encryptionResetChallenge',
     'manual_price',
+    'commodity_mapping',
   ],
 });
