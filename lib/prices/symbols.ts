@@ -1,6 +1,6 @@
 /**
  * Normalize a raw commodity name from `ledger commodities` into a
- * cryptocompare-compatible symbol. Returns null for anything the provider
+ * provider-compatible symbol. Returns null for anything the provider
  * won't recognize (whitespace, slashes, hyphens, empty strings).
  */
 export const normalizeCommoditySymbol = (raw: string): string | null => {

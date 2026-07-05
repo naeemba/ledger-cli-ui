@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BANNER_MARKER } from './formatter';
 import { __resetPriceLockForTests } from './lock';
 import { ManualPriceRepository } from './manualRepository';
+import { CommodityMappingRepository } from './mappingRepository';
 import {
   CommodityPriceRepository,
   PriceFetchRunRepository,
@@ -31,6 +32,23 @@ const seedUser = async (
   await fs.writeFile(path.join(dir, 'main.ledger'), postings, 'utf-8');
 };
 
+const seedMapping = async (
+  ctx: TestDbContext,
+  userId: string,
+  entries: Array<{ symbol: string; kind: string; providerId: string | null }>
+) => {
+  const repository = new CommodityMappingRepository(ctx.db);
+  await repository.upsertMany(
+    entries.map(({ symbol, kind, providerId }) => ({
+      userId,
+      symbol,
+      kind,
+      providerId,
+      source: 'auto' as const,
+    }))
+  );
+};
+
 describe('PriceService.refreshAll', () => {
   let ctx: TestDbContext;
   let service: PriceService;
@@ -45,6 +63,7 @@ describe('PriceService.refreshAll', () => {
       runRepo: new PriceFetchRunRepository(ctx.db),
       journalRepo: new JournalRepository(ctx.db),
       manualRepo: new ManualPriceRepository(ctx.db),
+      mappingRepo: new CommodityMappingRepository(ctx.db),
     });
   });
 
@@ -58,19 +77,25 @@ describe('PriceService.refreshAll', () => {
       ctx,
       'alice',
       '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
-      'EUR'
+      'USD'
     );
     await seedUser(
       ctx,
       'bob',
       '2026/01/01 Y\n  Assets:Cash  1 ADA\n  Income\n',
-      'EUR'
+      'USD'
     );
+    await seedMapping(ctx, 'alice', [
+      { symbol: 'BTC', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
+    await seedMapping(ctx, 'bob', [
+      { symbol: 'ADA', kind: 'crypto', providerId: 'cardano' },
+    ]);
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ BTC: { EUR: 60000 }, ADA: { EUR: 0.38 } }),
+      json: async () => ({ bitcoin: { usd: 60000 }, cardano: { usd: 0.38 } }),
     } as Response);
 
     const result = await service.refreshAll();
@@ -84,13 +109,16 @@ describe('PriceService.refreshAll', () => {
       ctx,
       'alice',
       '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
-      'EUR'
+      'USD'
     );
+    await seedMapping(ctx, 'alice', [
+      { symbol: 'BTC', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ BTC: { EUR: 60000 } }),
+      json: async () => ({ bitcoin: { usd: 60000 } }),
     } as Response);
 
     await service.refreshAll();
@@ -103,27 +131,30 @@ describe('PriceService.refreshAll', () => {
     expect(file).toContain('P ');
     expect(file).toContain('BTC');
     expect(file).toContain('60000');
-    expect(file).toContain('EUR');
+    expect(file).toContain('USD');
   });
 
   it('marks the run as partial when the provider reports failed symbols', async () => {
     await seedUser(
       ctx,
       'alice',
-      '2026/01/01 X\n  Assets:Cash  1 NOPE\n  Income\n',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
       'USD'
     );
+    await seedMapping(ctx, 'alice', [
+      { symbol: 'BTC', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({}),
+      json: async () => ({}), // CoinGecko returns no bitcoin price
     } as Response);
 
     const result = await service.refreshAll();
     expect(result.status).toBe('partial');
     if (result.status === 'partial') {
-      expect(result.failed).toContain('NOPE');
+      expect(result.failed).toContain('BTC');
     }
   });
 
@@ -132,8 +163,11 @@ describe('PriceService.refreshAll', () => {
       ctx,
       'alice',
       '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
-      'EUR'
+      'USD'
     );
+    await seedMapping(ctx, 'alice', [
+      { symbol: 'BTC', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
     const existing = '; user-written content\n';
     await fs.writeFile(
       path.join(getJournalDir('alice'), 'price-db.ledger'),
@@ -158,18 +192,21 @@ describe('PriceService.refreshAll', () => {
       ctx,
       'alice',
       '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
-      'EUR'
+      'USD'
     );
+    await seedMapping(ctx, 'alice', [
+      { symbol: 'BTC', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
     await fs.writeFile(
       path.join(getJournalDir('alice'), 'price-db.ledger'),
-      'P 2026/01/01 12:00:00 BTC 50000 EUR\n',
+      'P 2026/01/01 12:00:00 BTC 50000 USD\n',
       'utf-8'
     );
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ BTC: { EUR: 60000 } }),
+      json: async () => ({ bitcoin: { usd: 60000 } }),
     } as Response);
 
     await service.refreshAll();
@@ -187,13 +224,16 @@ describe('PriceService.refreshAll', () => {
       ctx,
       'alice',
       '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
-      'EUR'
+      'USD'
     );
+    await seedMapping(ctx, 'alice', [
+      { symbol: 'BTC', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ BTC: { EUR: 60000 } }),
+      json: async () => ({ bitcoin: { usd: 60000 } }),
     } as Response);
 
     await service.refreshAll();
@@ -217,8 +257,11 @@ describe('PriceService.refreshAll', () => {
       ctx,
       'alice',
       '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
-      'EUR'
+      'USD'
     );
+    await seedMapping(ctx, 'alice', [
+      { symbol: 'BTC', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
 
     let release: () => void = () => {};
     const gate = new Promise<Response>((r) => {
@@ -226,7 +269,7 @@ describe('PriceService.refreshAll', () => {
         r({
           ok: true,
           status: 200,
-          json: async () => ({ BTC: { EUR: 60000 } }),
+          json: async () => ({ bitcoin: { usd: 60000 } }),
         } as Response);
     });
     const fetchSpy = vi
@@ -242,6 +285,81 @@ describe('PriceService.refreshAll', () => {
     expect(ra.status).toBe('success');
     expect(rb.status).toBe('success');
   });
+
+  it('excludes manual-kind symbols from the fetch plan', async () => {
+    await seedUser(
+      ctx,
+      'alice',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Assets:Cash  1 KIRT\n  Income\n',
+      'USD'
+    );
+    // BTC is a known crypto; KIRT is a manually-priced local commodity.
+    await seedMapping(ctx, 'alice', [
+      { symbol: 'BTC', kind: 'crypto', providerId: 'bitcoin' },
+      { symbol: 'KIRT', kind: 'manual', providerId: null },
+    ]);
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ bitcoin: { usd: 60000 } }),
+    } as Response);
+
+    const result = await service.refreshAll();
+
+    // Only one fetch call; BTC is in the plan, KIRT is excluded.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const calledUrl = fetchSpy.mock.calls[0][0] as string;
+    expect(calledUrl).toContain('bitcoin');
+    expect(calledUrl).not.toContain('kirt');
+    expect(calledUrl).not.toContain('KIRT');
+
+    // KIRT never appears in the failed list; BTC succeeds.
+    expect(result.status).toBe('success');
+    if (result.status === 'success') {
+      expect(result.fetched).toBe(1);
+    }
+  });
+
+  it('keeps both symbols in the plan when two symbols share one CoinGecko id', async () => {
+    // BTC (alice) and XBT (bob) both map to the same CoinGecko id "bitcoin".
+    // With provider-id-based dedup the second symbol would be silently dropped
+    // and receive no commodity_price row. Symbol-based dedup fixes this.
+    await seedUser(
+      ctx,
+      'alice',
+      '2026/01/01 X\n  Assets:Cash  1 BTC\n  Income\n',
+      'USD'
+    );
+    await seedUser(
+      ctx,
+      'bob',
+      '2026/01/01 Y\n  Assets:Cash  1 XBT\n  Income\n',
+      'USD'
+    );
+    await seedMapping(ctx, 'alice', [
+      { symbol: 'BTC', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
+    await seedMapping(ctx, 'bob', [
+      { symbol: 'XBT', kind: 'crypto', providerId: 'bitcoin' },
+    ]);
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ bitcoin: { usd: 60000 } }),
+    } as Response);
+
+    const result = await service.refreshAll();
+
+    // Both BTC and XBT must receive a price row (fetched === 2), not just the
+    // first symbol encountered. Only one HTTP request is made because the
+    // provider deduplicates CoinGecko ids internally.
+    expect(result.status).toBe('success');
+    if (result.status === 'success') {
+      expect(result.fetched).toBe(2);
+    }
+  });
 });
 
 describe('PriceService manual prices', () => {
@@ -255,6 +373,7 @@ describe('PriceService manual prices', () => {
       runRepo: new PriceFetchRunRepository(ctx.db),
       journalRepo: new JournalRepository(ctx.db),
       manualRepo: new ManualPriceRepository(ctx.db),
+      mappingRepo: new CommodityMappingRepository(ctx.db),
     });
 
   beforeEach(async () => {

@@ -85,6 +85,20 @@
       "when": 1782745717694,
       "tag": "0011_giant_firestar",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783277054920,
+      "tag": "0012_tiny_mystique",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1783281475578,
+      "tag": "0013_base_currency_usd",
+      "breakpoints": true
     }
   ]
 }

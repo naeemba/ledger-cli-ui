@@ -3,11 +3,13 @@
 import { Trash2 } from 'lucide-react';
 import { useActionState, useState, useTransition } from 'react';
 import Combobox from '@/components/Combobox/Combobox';
+import CommodityCombobox from '@/components/CommodityCombobox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TableScroll } from '@/components/ui/table';
 import type { ManualPrice } from '@/db/schema';
+import { upsertMappingAction } from '@/features/currencies/actions';
 import {
   addManualPricesAction,
   deleteManualPriceAction,
@@ -37,6 +39,7 @@ export const PricesView = ({ prices, commodities, baseCurrency }: Props) => {
   const [rows, setRows] = useState<Row[]>([{ symbol: '', price: '' }]);
 
   const [isDeleting, startDelete] = useTransition();
+  const [, startPersist] = useTransition();
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -119,12 +122,23 @@ export const PricesView = ({ prices, commodities, baseCurrency }: Props) => {
             >
               <div className="flex-1 space-y-1">
                 {i === 0 && <Label>Commodity</Label>}
-                <Combobox
+                <CommodityCombobox
                   value={row.symbol}
-                  onChange={(v) => updateRow(i, { symbol: v })}
-                  options={commodities}
                   placeholder="KIRT"
-                  allowFreeText
+                  onSelect={(suggestion) => {
+                    updateRow(i, { symbol: suggestion.symbol });
+                    startPersist(
+                      () =>
+                        void upsertMappingAction({
+                          symbol: suggestion.symbol,
+                          kind: suggestion.kind,
+                          providerId: suggestion.providerId,
+                        })
+                    );
+                  }}
+                  onFreeText={(raw) =>
+                    updateRow(i, { symbol: raw.toUpperCase() })
+                  }
                 />
               </div>
               <div className="flex items-end gap-2 sm:contents">

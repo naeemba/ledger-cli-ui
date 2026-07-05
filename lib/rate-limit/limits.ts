@@ -7,6 +7,13 @@ export const UPLOAD: RateLimitPolicy = {
   windowMs: 60_000,
 };
 
+/** Read-only search/typeahead — generous, debounced by the client. */
+export const READ: RateLimitPolicy = {
+  name: 'read',
+  max: 120,
+  windowMs: 60_000,
+};
+
 /** Journal/template/saved-view/settings mutations. */
 export const WRITE: RateLimitPolicy = {
   name: 'write',

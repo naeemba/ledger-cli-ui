@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  Banknote,
   Bookmark,
   Briefcase,
   CalendarRange,
@@ -187,6 +188,16 @@ export const getNavSections = (): NavSection[] => {
           description: 'Record exchange rates for commodities like KIRT.',
           icon: TrendingUp,
           keywords: ['exchange', 'rate', 'commodity', 'currency', 'price'],
+        },
+        {
+          id: 'currencies',
+          title: 'Currencies',
+          href: '/currencies',
+          match: 'exact',
+          description:
+            'Review and map every commodity symbol to its price-provider kind.',
+          icon: Banknote,
+          keywords: ['mapping', 'commodity', 'crypto', 'fiat', 'coingecko'],
         },
       ],
     },

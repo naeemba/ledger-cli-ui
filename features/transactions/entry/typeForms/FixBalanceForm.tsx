@@ -19,7 +19,6 @@ export function FixBalanceForm({
   accounts,
   payees,
   defaultCurrency,
-  currencies = [],
   getAccountBalance,
 }: FixBalanceFormProps): React.JSX.Element {
   const ctx = useMemo(() => ({ defaultCurrency }), [defaultCurrency]);
@@ -98,7 +97,6 @@ export function FixBalanceForm({
               onChange={(targetCurrency) =>
                 update({ ...fields, targetCurrency })
               }
-              currencies={currencies}
               className="w-24"
             />
           </div>

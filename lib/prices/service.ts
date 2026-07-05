@@ -1,23 +1,23 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { eq } from 'drizzle-orm';
 import 'server-only';
+import { classifyCommodity } from './classify';
+import { getCoinSymbolMap } from './coingecko/coinCache';
 import { renderPriceDb, hasGeneratedBanner } from './formatter';
 import type { CommodityPriceRow } from './formatter';
 import { withPriceLock } from './lock';
 import type { ManualPriceRepository } from './manualRepository';
 import { buildPricedAt, type ManualPriceDraft } from './manualSchema';
+import type { CommodityMappingRepository } from './mappingRepository';
 import { parseLegacyPriceDb } from './migration';
-import { fetchPrices, type QuotePair } from './provider';
+import { fetchPricesUsd, type FetchPlan } from './provider';
 import {
   type CommodityPriceRepository,
   type PriceFetchRunRepository,
 } from './repository';
 import { normalizeCommoditySymbol } from './symbols';
-import { userSetting } from '@/db/schema';
-import type { ManualPrice } from '@/db/schema';
+import type { CommodityMapping, ManualPrice } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
-import { env } from '@/lib/env';
 import { PRICE_DB_NAME, getJournalCacheTag } from '@/lib/journal/layout';
 import type { JournalRepository } from '@/lib/journal/repository';
 import { createLogger } from '@/lib/log';
@@ -54,6 +54,7 @@ type Deps = {
   runRepo: PriceFetchRunRepository;
   journalRepo: JournalRepository;
   manualRepo: ManualPriceRepository;
+  mappingRepo: CommodityMappingRepository;
 };
 
 export class PriceService {
@@ -159,17 +160,22 @@ export class PriceService {
       const users = await this.listUsers();
       await this.maybeMigrateLegacyFiles(users);
 
-      const pairs = new Map<string, QuotePair>(); // key: `${symbol}|${quote}`
+      const plan: FetchPlan = { crypto: [], fiat: [] };
+      const seen = new Set<string>();
       for (const userId of users) {
-        const base = await this.resolveBaseCurrency(userId);
         const symbols = await this.listNormalizedSymbolsForUser(userId);
-        const filtered = symbols.filter((s) => s !== base);
-        for (const s of filtered) {
-          pairs.set(`${s}|${base}`, { symbol: s, quote: base });
-        }
+        const filtered = symbols.filter((s) => s !== 'USD');
+        const mappings = await this.ensureMappings(userId, filtered);
+        this.planFromMappings(
+          filtered
+            .map((s) => mappings.get(s))
+            .filter((m): m is CommodityMapping => Boolean(m)),
+          plan,
+          seen
+        );
       }
 
-      const result = await fetchPrices(Array.from(pairs.values()));
+      const result = await fetchPricesUsd(plan);
 
       await this.deps.commodityRepo.insert(
         result.quotes.map((q) => ({
@@ -225,13 +231,11 @@ export class PriceService {
     return rows.map((r) => r.id);
   }
 
-  async resolveBaseCurrency(userId: string): Promise<string> {
-    const rows = await this.deps.db
-      .select({ baseCurrency: userSetting.baseCurrency })
-      .from(userSetting)
-      .where(eq(userSetting.userId, userId))
-      .limit(1);
-    return rows[0]?.baseCurrency ?? env.DEFAULT_CURRENCY;
+  // Pricing base is USD: CoinGecko cannot quote USDT, so all fetched prices are
+  // stored in USD and journals value with `-X USD`. Kept as a method so callers
+  // (price-DB regeneration, prices UI) share one source of truth.
+  async resolveBaseCurrency(_userId: string): Promise<string> {
+    return 'USD';
   }
 
   async listNormalizedSymbolsForUser(userId: string): Promise<string[]> {
@@ -251,6 +255,50 @@ export class PriceService {
       if (sym) out.add(sym);
     }
     return Array.from(out);
+  }
+
+  /**
+   * Ensure every in-use symbol has a mapping row. Symbols with no row are
+   * auto-classified and persisted as source='auto'. Existing rows (auto or
+   * user) are left untouched so a user override is never clobbered.
+   */
+  private async ensureMappings(
+    userId: string,
+    symbols: string[]
+  ): Promise<Map<string, CommodityMapping>> {
+    const existing = await this.deps.mappingRepo.mapForUser(userId);
+    const missing = symbols.filter((s) => !existing.has(s));
+    if (missing.length === 0) return existing;
+    const coinMap = await getCoinSymbolMap();
+    const rows = missing.map((symbol) => {
+      const { kind, providerId } = classifyCommodity(symbol, coinMap);
+      return { userId, symbol, kind, providerId, source: 'auto' as const };
+    });
+    await this.deps.mappingRepo.upsertMany(rows);
+    return this.deps.mappingRepo.mapForUser(userId);
+  }
+
+  private planFromMappings(
+    mappings: Iterable<CommodityMapping>,
+    into: FetchPlan,
+    seen: Set<string>
+  ): void {
+    for (const m of mappings) {
+      if (m.kind === 'crypto' && m.providerId) {
+        const key = `c:${m.symbol}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          into.crypto.push({ symbol: m.symbol, id: m.providerId });
+        }
+      } else if (m.kind === 'fiat' && m.providerId) {
+        const key = `f:${m.symbol}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          into.fiat.push({ symbol: m.symbol, code: m.providerId });
+        }
+      }
+      // kind === 'manual' → skipped: user supplies the price.
+    }
   }
 
   private async maybeMigrateLegacyFiles(users: string[]): Promise<void> {

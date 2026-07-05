@@ -3,6 +3,7 @@ export {
   type AccountDeletionChallenge,
 } from './accountDeletionChallenge';
 export { auditLog, type AuditLog, type NewAuditLog } from './auditLog';
+export { commodityMapping, type CommodityMapping } from './commodityMapping';
 export { commodityPrice, type CommodityPrice } from './commodityPrice';
 export {
   cryptoPasskeyWrap,
