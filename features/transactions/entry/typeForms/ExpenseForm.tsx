@@ -15,7 +15,6 @@ export function ExpenseForm({
   accounts,
   payees,
   defaultCurrency,
-  currencies = [],
 }: TypeFormProps): React.JSX.Element {
   const ctx = useMemo(() => ({ defaultCurrency }), [defaultCurrency]);
   const [fields, setFields] = useState<ExpenseFields>(
@@ -53,7 +52,6 @@ export function ExpenseForm({
             <CurrencyCombobox
               value={fields.currency}
               onChange={(currency) => update({ ...fields, currency })}
-              currencies={currencies}
               className="w-24"
             />
           </div>

@@ -1,9 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useTransition } from 'react';
 import { accountsForRole, type AccountRole } from '../types/accountRole';
 import Combobox from '@/components/Combobox';
+import CommodityCombobox from '@/components/CommodityCombobox';
 import { Label } from '@/components/ui/label';
+import { upsertMappingAction } from '@/features/currencies/actions';
 
 export const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:text-[0.7rem]">
@@ -92,26 +94,38 @@ export const AccountField = ({
 };
 
 /**
- * Inline currency picker used alongside an amount input. Autocompletes against
- * the commodities already present in the journal while still accepting any
- * free-typed ticker.
+ * Inline currency picker used alongside an amount input. Searches the commodity
+ * provider and persists a mapping when the user picks a suggestion for the first
+ * time. Free-typed tickers are accepted without persisting a mapping (the
+ * classifier covers them at fetch time).
  */
 export const CurrencyCombobox = ({
   value,
   onChange,
-  currencies,
   className,
 }: {
   value: string;
   onChange: (v: string) => void;
-  currencies: string[];
   className?: string;
-}) => (
-  <Combobox
-    value={value}
-    onChange={onChange}
-    options={currencies}
-    placeholder="Currency"
-    triggerClassName={className}
-  />
-);
+}) => {
+  const [, startPersist] = useTransition();
+  return (
+    <CommodityCombobox
+      value={value}
+      placeholder="Currency"
+      triggerClassName={className}
+      onSelect={(suggestion) => {
+        onChange(suggestion.symbol);
+        startPersist(
+          () =>
+            void upsertMappingAction({
+              symbol: suggestion.symbol,
+              kind: suggestion.kind,
+              providerId: suggestion.providerId,
+            })
+        );
+      }}
+      onFreeText={(raw) => onChange(raw.toUpperCase())}
+    />
+  );
+};
