@@ -7,6 +7,7 @@ import SaveViewButton from '@/features/savedViews/SaveViewButton';
 import { requireUser } from '@/lib/auth/require-user';
 import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency } from '@/lib/settings';
+import { parseAmountParts } from '@/utils/amountParts';
 import { parseISODate, toISODate } from '@/utils/date';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
@@ -148,7 +149,7 @@ const PeriodBalance = async ({
                 const [account, raw] = each.split('|');
                 return {
                   account,
-                  spend: Number((raw.split(' ')[1] ?? '0').replaceAll(',', '')),
+                  spend: parseAmountParts(raw).signed,
                 };
               })}
               xKey="account"

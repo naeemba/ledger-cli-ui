@@ -8,10 +8,18 @@ describe('FriendlyBalance', () => {
   it('renders an em-dash for a blank balance', () => {
     expect(html(<FriendlyBalance amount="" role="asset" />)).toContain('—');
   });
-  it('renders an em-dash for a non-numeric (non-converted commodity) amount', () => {
-    expect(html(<FriendlyBalance amount="20 AAPL" role="asset" />)).toContain(
-      '—'
-    );
+  it('renders an em-dash when there is no numeric amount at all', () => {
+    expect(html(<FriendlyBalance amount="AAPL" role="asset" />)).toContain('—');
+  });
+  it('shows the original amount inline for an un-converted suffix commodity', () => {
+    // Un-converted holdings (e.g. shares or crypto with no exchange rate) must
+    // show their real amount rather than vanish behind an em-dash — the
+    // BaseCurrencyBanner promises "affected reports show original currencies
+    // inline".
+    const out = html(<FriendlyBalance amount="20 AAPL" role="asset" />);
+    expect(out).toContain('AAPL');
+    expect(out).toMatch(/20/);
+    expect(out).not.toContain('—');
   });
   it('shows an up arrow and positive color for an asset with money', () => {
     const out = html(<FriendlyBalance amount="$ 2,340.00" role="asset" />);

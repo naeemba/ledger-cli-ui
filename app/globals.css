@@ -226,7 +226,7 @@ table tbody tr:hover {
 }
 
 ::selection {
-  background: color-mix(in oklch, var(--accent) 30%, transparent);
+  background: color-mix(in oklch, var(--fg) 18%, transparent);
 }
 
 @layer base {

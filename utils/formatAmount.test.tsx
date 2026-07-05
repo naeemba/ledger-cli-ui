@@ -52,4 +52,16 @@ describe('formatAmount', () => {
     expect(out).toContain('text-negative');
     expect(out).toMatch(/1,234,567\.89/);
   });
+
+  it('renders the number for a suffix commodity when withUnit is false (Kirt rows regression)', () => {
+    const out = html(formatAmount('71,214.5302 Kirt', false));
+    expect(out).toMatch(/71,214\.5302/);
+    expect(out).not.toContain('Kirt');
+  });
+
+  it('renders both unit and number for a suffix commodity when withUnit is true', () => {
+    const out = html(formatAmount('71,214.5302 Kirt', true));
+    expect(out).toContain('Kirt');
+    expect(out).toMatch(/71,214\.5302/);
+  });
 });

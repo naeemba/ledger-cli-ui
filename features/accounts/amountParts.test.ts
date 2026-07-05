@@ -26,6 +26,30 @@ describe('parseAmountParts', () => {
       signed: 1000,
     });
   });
+  it('parses a suffix (amount-first) word commodity like Kirt', () => {
+    expect(parseAmountParts('71,214.5302 Kirt')).toEqual({
+      unit: 'Kirt',
+      magnitude: '71,214.5302',
+      negative: false,
+      signed: 71214.5302,
+    });
+  });
+  it('parses a negative suffix commodity', () => {
+    expect(parseAmountParts('-1,234.56 Kirt')).toEqual({
+      unit: 'Kirt',
+      magnitude: '1,234.56',
+      negative: true,
+      signed: -1234.56,
+    });
+  });
+  it('parses a glued prefix symbol without a space', () => {
+    expect(parseAmountParts('$33000.00')).toEqual({
+      unit: '$',
+      magnitude: '33000.00',
+      negative: false,
+      signed: 33000,
+    });
+  });
   it('parses a unit-less amount', () => {
     expect(parseAmountParts('42.50')).toEqual({
       unit: '',

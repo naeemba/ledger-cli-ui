@@ -1,3 +1,5 @@
+import { parseAmountParts } from '@/utils/amountParts';
+
 // Adds comma thousands separators to the integer part of a numeric string
 // while preserving its original decimal places. Operates on the string (not a
 // parsed Number) so ledger's display precision — including trailing zeros — is
@@ -30,14 +32,17 @@ const formatAmount = (str: string | undefined | null, withUnit: boolean) => {
   if (!str || !str.trim()) {
     return <span className="text-muted-foreground">—</span>;
   }
-  const splitted = str.split(' ');
-  if (splitted.length < 2) {
+  const { unit, magnitude, negative } = parseAmountParts(str);
+  // No numeric token was found (e.g. a bare commodity word) — render the raw
+  // string rather than dropping it.
+  if (magnitude === '') {
     return formatAmountWithoutUnit(str);
-  } else if (withUnit) {
-    return formatAmountWithoutUnit(splitted[1], splitted[0]);
-  } else {
-    return formatAmountWithoutUnit(splitted[1]);
   }
+  const signedNumber = `${negative ? '-' : ''}${magnitude}`;
+  return formatAmountWithoutUnit(
+    signedNumber,
+    withUnit ? unit || undefined : undefined
+  );
 };
 
 export default formatAmount;
