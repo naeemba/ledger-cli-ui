@@ -57,6 +57,10 @@ const envSchema = clientEnvSchema
     PORTFOLIO_ACCOUNT_PREFIX: z.string().default('Assets:Investments'),
 
     // Prices
+    COINGECKO_API_BASE: z
+      .string()
+      .url()
+      .default('https://api.coingecko.com/api/v3'),
     PRICE_REFRESH_HOUR: z.coerce.number().int().min(0).max(23).default(6),
     PRICE_REFRESH_ENABLED: z
       .union([z.literal('true'), z.literal('false')])
