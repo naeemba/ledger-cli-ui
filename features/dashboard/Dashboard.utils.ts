@@ -1,3 +1,4 @@
+import { parseAmountParts } from '@/utils/amountParts';
 import runLedger from '@/utils/runLedger';
 
 export const getHighestExpense = (stdout: string): string => {
@@ -5,9 +6,8 @@ export const getHighestExpense = (stdout: string): string => {
   stdout.split('\n').forEach((expense) => {
     if (!expense) return;
     const amountField = expense.split('|')[1];
-    const amountToken = amountField?.split(' ')[1];
-    if (!amountToken) return;
-    const amount = Number(amountToken.replaceAll(',', ''));
+    if (!amountField) return;
+    const amount = parseAmountParts(amountField).signed;
     if (Number.isFinite(amount) && amount > highestExpense.amount) {
       highestExpense = { amount, str: expense };
     }
