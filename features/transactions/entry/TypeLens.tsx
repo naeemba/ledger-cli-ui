@@ -7,9 +7,9 @@ import { ExpenseForm } from './typeForms/ExpenseForm';
 import { FixBalanceForm } from './typeForms/FixBalanceForm';
 import { IncomeForm } from './typeForms/IncomeForm';
 import { TransferForm } from './typeForms/TransferForm';
-import { isEmptyDraft } from './typeForms/isEmptyDraft';
 import type { TypeFormProps } from './typeForms/props';
-import { TYPE_ADAPTERS, detectType } from './types/registry';
+import { initialPickForDraft, resolveTypeLensState } from './typeLensState';
+import { TYPE_ADAPTERS } from './types/registry';
 import { Button } from '@/components/ui/button';
 
 type Props = TypeFormProps & {
@@ -18,12 +18,11 @@ type Props = TypeFormProps & {
 
 export function TypeLens(props: Props): React.JSX.Element {
   const { draft, getAccountBalance, ...formProps } = props;
-  const detected = detectType(draft);
-  const empty = isEmptyDraft(draft);
-  const [picked, setPicked] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(() =>
+    initialPickForDraft(draft)
+  );
 
-  const selectedId = picked ?? detected?.id ?? null;
-  const chipsDisabled = !empty && !detected;
+  const { selectedId, chipsDisabled } = resolveTypeLensState(draft, picked);
 
   const renderForm = () => {
     const shared = { draft, ...formProps };
