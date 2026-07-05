@@ -25,7 +25,13 @@ export {
   PriceFetchRunRepository,
 } from './repository';
 export { ManualPriceRepository } from './manualRepository';
-export { fetchPrices } from './provider';
-export type { QuotePair, PriceQuote, ProviderResult } from './provider';
+export { fetchPricesUsd } from './provider';
+export type {
+  FetchPlan,
+  CryptoTarget,
+  FiatTarget,
+  PriceQuote,
+  ProviderResult,
+} from './provider';
 export { renderPriceDb, hasGeneratedBanner, BANNER_MARKER } from './formatter';
 export type { CommodityPriceRow } from './formatter';

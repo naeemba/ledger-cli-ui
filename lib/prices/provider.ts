@@ -1,81 +1,116 @@
-export type QuotePair = { symbol: string; quote: string };
-export type PriceQuote = QuotePair & { price: number; fetchedAt: Date };
+import { env } from '@/lib/env';
 
+export type CryptoTarget = { symbol: string; id: string };
+export type FiatTarget = { symbol: string; code: string };
+export type FetchPlan = { crypto: CryptoTarget[]; fiat: FiatTarget[] };
+
+export type PriceQuote = {
+  symbol: string;
+  quote: 'USD';
+  price: number;
+  fetchedAt: Date;
+};
 export type ProviderResult = {
   quotes: PriceQuote[];
-  failed: QuotePair[];
+  failed: { symbol: string }[];
 };
 
-const ENDPOINT = 'https://min-api.cryptocompare.com/data/pricemulti';
+type SimplePriceResponse = Record<string, Record<string, number>>;
+
 const MAX_URL_LENGTH = 2000;
 const TIMEOUT_MS = 10_000;
+const TETHER_ID = 'tether';
 
-type CryptoCompareResponse = Record<string, Record<string, number>>;
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise((r) => setTimeout(r, ms));
+const sleep = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 /**
- * Batch-fetch prices from cryptocompare's pricemulti endpoint. Groups input
- * pairs by quote currency, then issues one request per group (splitting
- * further if the URL would exceed 2KB). One retry on 429 / 5xx.
- *
- * No DB, no fs — pure HTTP + parsing. The same `fetchedAt` Date is attached
- * to every quote in a single call so the caller can use it as the
- * upsert-dedupe key.
+ * Fetch every commodity price in USD from CoinGecko's `/simple/price`. Crypto
+ * ids resolve directly; fiat commodities resolve via the tether pivot
+ * (1 unit F in USD = tether.usd / tether.<f>). One request per URL-length
+ * chunk; one retry on 429/5xx. `fetchedAt` is a single instant per call so the
+ * caller can dedupe upserts by it.
  */
-export const fetchPrices = async (
-  pairs: QuotePair[],
+export const fetchPricesUsd = async (
+  plan: FetchPlan,
   opts?: { signal?: AbortSignal }
 ): Promise<ProviderResult> => {
-  if (pairs.length === 0) return { quotes: [], failed: [] };
-
+  if (plan.crypto.length === 0 && plan.fiat.length === 0) {
+    return { quotes: [], failed: [] };
+  }
   const fetchedAt = new Date();
-  const byQuote = new Map<string, Set<string>>();
-  for (const p of pairs) {
-    if (!byQuote.has(p.quote)) byQuote.set(p.quote, new Set());
-    byQuote.get(p.quote)!.add(p.symbol);
+
+  const vsSet = new Set<string>(['usd']);
+  for (const fiat of plan.fiat) vsSet.add(fiat.code.toLowerCase());
+  const vsCurrencies = Array.from(vsSet);
+
+  const ids = new Set<string>(plan.crypto.map((crypto) => crypto.id));
+  if (plan.fiat.length > 0) ids.add(TETHER_ID);
+
+  // Merge all id → quote responses across URL-length chunks.
+  const merged: SimplePriceResponse = {};
+  for (const idChunk of chunkIds(Array.from(ids), vsCurrencies)) {
+    const url =
+      `${env.COINGECKO_API_BASE}/simple/price` +
+      `?ids=${encodeURIComponent(idChunk.join(','))}` +
+      `&vs_currencies=${encodeURIComponent(vsCurrencies.join(','))}`;
+    const body = await fetchWithRetry(url, opts?.signal);
+    if (body) Object.assign(merged, body);
   }
 
   const quotes: PriceQuote[] = [];
-  const found = new Set<string>(); // `${symbol}|${quote}` of resolved pairs
+  const failed: { symbol: string }[] = [];
 
-  for (const [quote, symbolSet] of byQuote) {
-    for (const fsymsChunk of chunkSymbols(Array.from(symbolSet), quote)) {
-      const url = `${ENDPOINT}?fsyms=${encodeURIComponent(fsymsChunk.join(','))}&tsyms=${encodeURIComponent(quote)}`;
-      const body = await fetchWithRetry(url, opts?.signal);
-      for (const symbol of fsymsChunk) {
-        const price = body?.[symbol]?.[quote];
-        if (typeof price === 'number' && Number.isFinite(price)) {
-          quotes.push({ symbol, quote, price, fetchedAt });
-          found.add(`${symbol}|${quote}`);
-        }
-      }
+  for (const crypto of plan.crypto) {
+    const price = merged[crypto.id]?.usd;
+    if (typeof price === 'number' && Number.isFinite(price)) {
+      quotes.push({ symbol: crypto.symbol, quote: 'USD', price, fetchedAt });
+    } else {
+      failed.push({ symbol: crypto.symbol });
     }
   }
 
-  const failed = pairs.filter((p) => !found.has(`${p.symbol}|${p.quote}`));
+  const tetherUsd = merged[TETHER_ID]?.usd;
+  for (const fiat of plan.fiat) {
+    const perFiat = merged[TETHER_ID]?.[fiat.code.toLowerCase()];
+    if (
+      typeof tetherUsd === 'number' &&
+      typeof perFiat === 'number' &&
+      Number.isFinite(tetherUsd) &&
+      Number.isFinite(perFiat) &&
+      perFiat > 0
+    ) {
+      quotes.push({
+        symbol: fiat.symbol,
+        quote: 'USD',
+        price: tetherUsd / perFiat,
+        fetchedAt,
+      });
+    } else {
+      failed.push({ symbol: fiat.symbol });
+    }
+  }
+
   return { quotes, failed };
 };
 
-const chunkSymbols = (symbols: string[], quote: string): string[][] => {
+const chunkIds = (ids: string[], vsCurrencies: string[]): string[][] => {
   const overhead =
-    ENDPOINT.length +
-    '?fsyms=&tsyms='.length +
-    encodeURIComponent(quote).length;
+    `${env.COINGECKO_API_BASE}/simple/price?ids=&vs_currencies=`.length +
+    encodeURIComponent(vsCurrencies.join(',')).length;
   const budget = MAX_URL_LENGTH - overhead;
   const chunks: string[][] = [];
   let current: string[] = [];
-  let len = 0;
-  for (const s of symbols) {
-    const add = (current.length === 0 ? 0 : 1) + encodeURIComponent(s).length;
-    if (len + add > budget && current.length > 0) {
+  let currentLength = 0;
+  for (const id of ids) {
+    const add = (current.length === 0 ? 0 : 1) + encodeURIComponent(id).length;
+    if (currentLength + add > budget && current.length > 0) {
       chunks.push(current);
       current = [];
-      len = 0;
+      currentLength = 0;
     }
-    current.push(s);
-    len += add;
+    current.push(id);
+    currentLength += add;
   }
   if (current.length > 0) chunks.push(current);
   return chunks;
@@ -84,27 +119,39 @@ const chunkSymbols = (symbols: string[], quote: string): string[][] => {
 const fetchWithRetry = async (
   url: string,
   signal: AbortSignal | undefined
-): Promise<CryptoCompareResponse | null> => {
+): Promise<SimplePriceResponse | null> => {
   for (let attempt = 0; attempt < 2; attempt++) {
     const timeout = AbortSignal.timeout(TIMEOUT_MS);
-    const merged = signal ? AbortSignal.any([signal, timeout]) : timeout;
+    const mergedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
     try {
-      const res = await fetch(url, { signal: merged });
-      if (res.ok) return (await res.json()) as CryptoCompareResponse;
-      if (res.status === 429 || (res.status >= 500 && res.status < 600)) {
+      const response = await fetch(url, { signal: mergedSignal });
+      if (response.ok) return (await response.json()) as SimplePriceResponse;
+      if (
+        response.status === 429 ||
+        (response.status >= 500 && response.status < 600)
+      ) {
         if (attempt === 0) {
           await sleep(1000);
           continue;
         }
       }
       return null;
-    } catch (err) {
+    } catch (error) {
       if (attempt === 0) {
         await sleep(1000);
         continue;
       }
-      throw err;
+      throw error;
     }
   }
   return null;
 };
+
+// Deprecated compatibility exports — Task 6 removes these when it migrates
+// service.ts to the new FetchPlan-based API.
+export type QuotePair = { symbol: string; quote: string };
+export const fetchPrices = (
+  _pairs: QuotePair[],
+  _opts?: { signal?: AbortSignal }
+): Promise<ProviderResult> =>
+  Promise.reject(new Error('fetchPrices removed — use fetchPricesUsd'));

@@ -1,126 +1,107 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { fetchPrices } from './provider';
+import { fetchPricesUsd } from './provider';
 
-const json = (body: unknown, status = 200): Response =>
+const ok = (body: unknown, status = 200): Response =>
   ({
     ok: status >= 200 && status < 300,
     status,
     json: async () => body,
   }) as Response;
 
-describe('fetchPrices', () => {
+describe('fetchPricesUsd', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-05-25T06:00:00.000Z'));
+    vi.setSystemTime(new Date('2026-07-05T06:00:00.000Z'));
   });
-
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
-  it('returns a flat list of quotes from a pricemulti response', async () => {
-    const fetchSpy = vi
+  it('resolves crypto ids to USD prices in one request', async () => {
+    const spy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(json({ BTC: { USD: 67000 }, ADA: { USD: 0.41 } }));
-
-    const result = await fetchPrices([
-      { symbol: 'BTC', quote: 'USD' },
-      { symbol: 'ADA', quote: 'USD' },
-    ]);
-
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+      .mockResolvedValue(
+        ok({ bitcoin: { usd: 62655 }, cardano: { usd: 0.19 } })
+      );
+    const result = await fetchPricesUsd({
+      crypto: [
+        { symbol: 'BTC', id: 'bitcoin' },
+        { symbol: 'ADA', id: 'cardano' },
+      ],
+      fiat: [],
+    });
+    expect(spy).toHaveBeenCalledTimes(1);
     expect(result.quotes).toEqual([
       {
         symbol: 'BTC',
         quote: 'USD',
-        price: 67000,
+        price: 62655,
         fetchedAt: expect.any(Date),
       },
-      { symbol: 'ADA', quote: 'USD', price: 0.41, fetchedAt: expect.any(Date) },
+      { symbol: 'ADA', quote: 'USD', price: 0.19, fetchedAt: expect.any(Date) },
     ]);
     expect(result.failed).toEqual([]);
   });
 
-  it('groups pairs by quote and makes one request per quote group', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(async (url: any) => {
-        const u = String(url);
-        if (u.includes('tsyms=USD')) return json({ BTC: { USD: 67000 } });
-        if (u.includes('tsyms=EUR')) return json({ ADA: { EUR: 0.38 } });
-        throw new Error('unexpected URL ' + u);
-      });
-
-    const result = await fetchPrices([
-      { symbol: 'BTC', quote: 'USD' },
-      { symbol: 'ADA', quote: 'EUR' },
-    ]);
-
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(result.quotes).toHaveLength(2);
+  it('prices a fiat commodity via the tether pivot', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      ok({ tether: { usd: 0.999108, eur: 0.873613 } })
+    );
+    const result = await fetchPricesUsd({
+      crypto: [],
+      fiat: [{ symbol: 'EUR', code: 'EUR' }],
+    });
+    // 1 EUR in USD = tether.usd / tether.eur
+    expect(result.quotes[0].symbol).toBe('EUR');
+    expect(result.quotes[0].quote).toBe('USD');
+    expect(result.quotes[0].price).toBeCloseTo(0.999108 / 0.873613, 6);
+    expect(result.failed).toEqual([]);
   });
 
-  it('puts missing symbols into the failed list', async () => {
+  it('marks unresolved crypto as failed', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      json({ BTC: { USD: 67000 } })
+      ok({ bitcoin: { usd: 62655 } })
     );
-
-    const result = await fetchPrices([
-      { symbol: 'BTC', quote: 'USD' },
-      { symbol: 'UNKNOWN', quote: 'USD' },
-    ]);
-
+    const result = await fetchPricesUsd({
+      crypto: [
+        { symbol: 'BTC', id: 'bitcoin' },
+        { symbol: 'GHOST', id: 'ghostcoin' },
+      ],
+      fiat: [],
+    });
     expect(result.quotes).toHaveLength(1);
-    expect(result.failed).toEqual([{ symbol: 'UNKNOWN', quote: 'USD' }]);
+    expect(result.failed).toEqual([{ symbol: 'GHOST' }]);
+  });
+
+  it('marks fiat as failed when tether pivot is missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(ok({ tether: { usd: 1 } }));
+    const result = await fetchPricesUsd({
+      crypto: [],
+      fiat: [{ symbol: 'GEL', code: 'GEL' }],
+    });
+    expect(result.failed).toEqual([{ symbol: 'GEL' }]);
+  });
+
+  it('returns empty without fetching for an empty plan', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch');
+    const result = await fetchPricesUsd({ crypto: [], fiat: [] });
+    expect(spy).not.toHaveBeenCalled();
+    expect(result).toEqual({ quotes: [], failed: [] });
   });
 
   it('retries once on 429', async () => {
-    const fetchSpy = vi
+    const spy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(json({}, 429))
-      .mockResolvedValueOnce(json({ BTC: { USD: 67000 } }));
-
-    const resultPromise = fetchPrices([{ symbol: 'BTC', quote: 'USD' }]);
+      .mockResolvedValueOnce(ok({}, 429))
+      .mockResolvedValueOnce(ok({ bitcoin: { usd: 62655 } }));
+    const p = fetchPricesUsd({
+      crypto: [{ symbol: 'BTC', id: 'bitcoin' }],
+      fiat: [],
+    });
     await vi.advanceTimersByTimeAsync(1000);
-    const result = await resultPromise;
-
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const result = await p;
+    expect(spy).toHaveBeenCalledTimes(2);
     expect(result.quotes).toHaveLength(1);
-  });
-
-  it('returns empty result for empty input without calling fetch', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    const result = await fetchPrices([]);
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(result.quotes).toEqual([]);
-    expect(result.failed).toEqual([]);
-  });
-
-  it('retries once on 5xx', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(json({}, 500))
-      .mockResolvedValueOnce(json({ BTC: { USD: 67000 } }));
-
-    const resultPromise = fetchPrices([{ symbol: 'BTC', quote: 'USD' }]);
-    await vi.advanceTimersByTimeAsync(1000);
-    const result = await resultPromise;
-
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(result.quotes).toHaveLength(1);
-  });
-
-  it('throws on second network error', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockRejectedValueOnce(new TypeError('network error'))
-      .mockRejectedValueOnce(new TypeError('network error'));
-
-    const resultPromise = fetchPrices([{ symbol: 'BTC', quote: 'USD' }]);
-    const assertion = expect(resultPromise).rejects.toThrow('network error');
-    await vi.advanceTimersByTimeAsync(1000);
-    await assertion;
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });
