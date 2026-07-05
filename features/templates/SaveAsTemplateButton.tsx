@@ -4,6 +4,7 @@ import { BookmarkPlus } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { saveTemplateAction } from './actions';
+import { saveTemplateErrorMessage } from './saveTemplateError';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -54,7 +55,7 @@ export const SaveAsTemplateDialog = ({
       } else if (result.reason === 'name-conflict' && !overwrite) {
         setConflict(true);
       } else {
-        setError(result.message ?? 'Could not save');
+        setError(saveTemplateErrorMessage(result));
       }
     });
   };

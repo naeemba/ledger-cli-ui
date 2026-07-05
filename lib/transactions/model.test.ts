@@ -290,4 +290,23 @@ describe('Transaction outputs', () => {
       }).toTemplate().payee
     ).toBe('—');
   });
+
+  it('toTemplate drops blank filler posting rows', () => {
+    const tpl = Transaction.from({
+      date: '',
+      payee: 'Coffee',
+      status: 'none',
+      note: '',
+      postings: [
+        { account: 'Expenses:Food', amount: '10', currency: 'USD' },
+        { account: 'Assets:Cash', amount: '-10', currency: 'USD' },
+        { account: '  ', amount: '', currency: 'USD' },
+      ],
+    }).toTemplate();
+    expect(tpl.postings).toHaveLength(2);
+    expect(tpl.postings.map((p) => p.account)).toEqual([
+      'Expenses:Food',
+      'Assets:Cash',
+    ]);
+  });
 });

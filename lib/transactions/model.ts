@@ -307,11 +307,17 @@ export class Transaction {
   }
 
   toTemplate(): TemplateDraft {
+    // Drop blank filler rows (the default two-row scaffold and leftover "Add
+    // posting" rows) so the saved template matches the postings the entry form
+    // counted as savable — an empty account fails accountSchema and would
+    // otherwise reject the whole template with an opaque "Validation failed."
     return {
       payee: this.payee.trim() || '—',
       status: this.status,
       note: this.note.trim() || undefined,
-      postings: this.postings.map(trimPosting),
+      postings: this.postings
+        .filter((p) => p.account.trim() !== '')
+        .map(trimPosting),
     };
   }
 }
