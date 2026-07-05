@@ -18,8 +18,10 @@ function sortedRows(rows: MappingRow[]): MappingRow[] {
       if (row.source === 'auto') return 1;
       return 2;
     };
-    const diff = priorityOf(rowA) - priorityOf(rowB);
-    return diff !== 0 ? diff : rowA.symbol.localeCompare(rowB.symbol);
+    const difference = priorityOf(rowA) - priorityOf(rowB);
+    return difference !== 0
+      ? difference
+      : rowA.symbol.localeCompare(rowB.symbol);
   });
 }
 
@@ -55,15 +57,15 @@ export default function CurrenciesView({ rows: initial }: Props) {
       setError(null);
       setRows((previous) =>
         sortedRows(
-          previous.map((r) =>
-            r.symbol === row.symbol
+          previous.map((previousRow) =>
+            previousRow.symbol === row.symbol
               ? {
-                  ...r,
+                  ...previousRow,
                   kind: suggestion.kind,
                   providerId: suggestion.providerId,
                   source: 'user',
                 }
-              : r
+              : previousRow
           )
         )
       );

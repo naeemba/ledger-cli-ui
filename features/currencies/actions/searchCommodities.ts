@@ -4,7 +4,7 @@ import type { CommoditySuggestion } from './types';
 import { requireUser } from '@/lib/auth/require-user';
 import { searchCoins } from '@/lib/prices/coingecko/coinCache';
 import { SUPPORTED_FIAT } from '@/lib/prices/fiat';
-import { rateLimit, READ, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
+import { rateLimit, READ } from '@/lib/rate-limit';
 
 export async function searchCommoditiesAction(
   query: string

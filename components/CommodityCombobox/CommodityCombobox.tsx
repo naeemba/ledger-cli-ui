@@ -160,16 +160,16 @@ const CommodityCombobox = ({
       <>
         {React.cloneElement(trigger, { onClick: () => setOpen(true) })}
         <Dialog open={open} onOpenChange={handleOpenChange}>
-          <DialogHeader className="sr-only">
-            <DialogTitle>{placeholder}</DialogTitle>
-            <DialogDescription>
-              Search commodities or type a new value
-            </DialogDescription>
-          </DialogHeader>
           <DialogContent
             className="top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0"
             showCloseButton={false}
           >
+            <DialogHeader className="sr-only">
+              <DialogTitle>{placeholder}</DialogTitle>
+              <DialogDescription>
+                Search commodities or type a new value
+              </DialogDescription>
+            </DialogHeader>
             <Command shouldFilter={false}>{list}</Command>
           </DialogContent>
         </Dialog>
