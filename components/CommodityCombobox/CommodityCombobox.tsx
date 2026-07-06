@@ -63,27 +63,30 @@ const CommodityCombobox = ({
   };
 
   React.useEffect(() => {
+    if (!open) return;
     const trimmed = query.trim();
-    if (!trimmed) return;
-    const handle = setTimeout(() => {
-      startSearch(async () => {
-        const found = await searchCommoditiesAction(trimmed);
-        setResults(found);
-      });
-    }, 250);
+    // Fetch on open with an empty query too: that surfaces the user's own
+    // journal commodities. Typed queries debounce; the initial load doesn't.
+    const handle = setTimeout(
+      () => {
+        startSearch(async () => {
+          const found = await searchCommoditiesAction(trimmed);
+          setResults(found);
+        });
+      },
+      trimmed ? 250 : 0
+    );
     return () => clearTimeout(handle);
-  }, [query]);
+  }, [query, open]);
 
   const trimmedQuery = query.trim();
-  // Do not show stale results when the query box is empty.
-  const displayedResults = trimmedQuery ? results : [];
+  const displayedResults = results;
 
-  const emptyMessage =
-    isPending && trimmedQuery
-      ? 'Searching…'
-      : trimmedQuery
-        ? 'No matches'
-        : 'Start typing to search';
+  const emptyMessage = isPending
+    ? 'Searching…'
+    : trimmedQuery
+      ? 'No matches'
+      : 'No commodities in your journal yet';
 
   const trigger = (
     <Button

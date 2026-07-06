@@ -1,10 +1,17 @@
 'use server';
 
+import { buildCommoditySuggestions } from './buildCommoditySuggestions';
 import type { CommoditySuggestion } from './types';
 import { requireUser } from '@/lib/auth/require-user';
-import { searchCoins } from '@/lib/prices/coingecko/coinCache';
+import { commodityMappingRepository } from '@/lib/prices';
+import {
+  getCoinSymbolMap,
+  searchCoins,
+  type CoinSearchHit,
+} from '@/lib/prices/coingecko/coinCache';
 import { SUPPORTED_FIAT } from '@/lib/prices/fiat';
 import { rateLimit, READ } from '@/lib/rate-limit';
+import { getAvailableCurrencies } from '@/lib/settings/getAvailableCurrencies';
 
 export async function searchCommoditiesAction(
   query: string
@@ -13,48 +20,36 @@ export async function searchCommoditiesAction(
   if (!rateLimit(READ, user.id).allowed) return [];
 
   const trimmed = query.trim();
-  if (!trimmed) return [];
-  const upper = trimmed.toUpperCase();
 
-  const suggestions: CommoditySuggestion[] = [];
+  // Journal commodities + the user's own mappings ground the list in what they
+  // actually use; CoinGecko/fiat only add discovery once they start typing.
+  const [{ currencies }, mappings] = await Promise.all([
+    getAvailableCurrencies(),
+    commodityMappingRepository.mapForUser(user.id),
+  ]);
 
-  // Fiat matches first (short, exact-ish).
-  for (const code of SUPPORTED_FIAT) {
-    if (code.startsWith(upper)) {
-      suggestions.push({
-        symbol: code,
-        kind: 'fiat',
-        providerId: code,
-        label: `${code} (fiat)`,
-        detail: null,
-      });
-    }
-  }
-
-  // Crypto from CoinGecko, ranked.
+  let coinMap = new Map<string, string>();
   try {
-    const hits = await searchCoins(trimmed);
-    for (const hit of hits.slice(0, 15)) {
-      suggestions.push({
-        symbol: hit.symbol.toUpperCase(),
-        kind: 'crypto',
-        providerId: hit.id,
-        label: hit.name,
-        detail: `${hit.symbol.toUpperCase()}${hit.marketCapRank ? ` · rank ${hit.marketCapRank}` : ''}`,
-      });
-    }
+    coinMap = await getCoinSymbolMap();
   } catch {
-    // CoinGecko is unavailable — continue with fiat + manual below.
+    // CoinGecko is unavailable — journal symbols fall back to manual/fiat.
   }
 
-  // Always offer an explicit manual mapping for the typed symbol.
-  suggestions.push({
-    symbol: upper,
-    kind: 'manual',
-    providerId: null,
-    label: `Use "${upper}" as a manual commodity`,
-    detail: 'price entered by hand',
-  });
+  let coinHits: CoinSearchHit[] = [];
+  if (trimmed) {
+    try {
+      coinHits = await searchCoins(trimmed);
+    } catch {
+      // CoinGecko is unavailable — continue with journal + fiat + manual.
+    }
+  }
 
-  return suggestions;
+  return buildCommoditySuggestions({
+    query,
+    journal: currencies,
+    mappings,
+    coinMap,
+    fiatCodes: SUPPORTED_FIAT,
+    coinHits,
+  });
 }
