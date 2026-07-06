@@ -89,8 +89,8 @@ describe('initialPickForDraft', () => {
     expect(initialPickForDraft(expenseDraft())).toBe('expense');
   });
 
-  it('seeds nothing for an empty draft', () => {
-    expect(initialPickForDraft(emptyDraft())).toBe(null);
+  it('seeds the Expense type for an empty draft', () => {
+    expect(initialPickForDraft(emptyDraft())).toBe('expense');
   });
 
   it('seeds nothing for an unrecognized draft', () => {
