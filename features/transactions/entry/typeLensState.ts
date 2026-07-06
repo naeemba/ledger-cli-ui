@@ -1,15 +1,17 @@
 // features/transactions/entry/typeLensState.ts
 import type { DraftState } from './draftReducer';
 import { isEmptyDraft } from './typeForms/isEmptyDraft';
-import { detectType } from './types/registry';
+import { detectType, TYPE_ADAPTERS } from './types/registry';
 
 /**
  * The type to preselect when the Types tab first mounts for a draft. A
  * recognized draft seeds its detected type so that editing it in the guided
  * form keeps the form open even if a mid-edit draft briefly stops matching.
+ * A fresh (empty) draft preselects the first type so the tab opens with a
+ * type already active instead of nothing selected.
  */
 export const initialPickForDraft = (draft: DraftState): string | null =>
-  detectType(draft)?.id ?? null;
+  detectType(draft)?.id ?? (isEmptyDraft(draft) ? TYPE_ADAPTERS[0].id : null);
 
 /**
  * Decide what the Types tab shows for the current draft and the type the user
