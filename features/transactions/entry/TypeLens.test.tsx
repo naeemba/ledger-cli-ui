@@ -14,12 +14,15 @@ const base = {
 };
 
 describe('TypeLens', () => {
-  it('shows a pick-a-type prompt for an empty draft', () => {
+  it('preselects the Expense type for an empty draft', () => {
     const out = html(
       <TypeLens draft={initDraft({ date: '2026-06-29' }, 'USD')} {...base} />
     );
-    expect(out).toContain('Pick a type');
+    // An empty draft preselects Expense, so its form renders ("Paid from" is an
+    // Expense-form field) instead of the "Pick a type" prompt.
+    expect(out).not.toContain('Pick a type');
     expect(out).toContain('Expense');
+    expect(out).toContain('Paid from');
   });
 
   it('renders the matching form for an expense-shaped draft', () => {

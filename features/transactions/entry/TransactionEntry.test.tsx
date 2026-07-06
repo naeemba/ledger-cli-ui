@@ -116,8 +116,11 @@ describe('TransactionEntry', () => {
       />
     );
     expect(out).toContain('Types');
-    // Types is default → its "Pick a type" prompt is present on first render.
-    expect(out).toContain('Pick a type');
+    // Types is the default lens in create mode. An empty draft preselects the
+    // Expense type, so the type picker renders (the "Fix balance" option is
+    // unique to it) instead of the "Pick a type" prompt.
+    expect(out).toContain('Fix balance');
+    expect(out).not.toContain('Pick a type');
   });
 
   it('defaults to the Form tab in edit mode when the draft matches no type', () => {
