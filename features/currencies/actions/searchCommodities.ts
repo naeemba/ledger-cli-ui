@@ -1,9 +1,9 @@
 'use server';
 
 import { buildCommoditySuggestions } from './buildCommoditySuggestions';
+import type { CommodityContext } from './loadCommodityContext';
 import type { CommoditySuggestion } from './types';
 import { requireUser } from '@/lib/auth/require-user';
-import { commodityMappingRepository } from '@/lib/prices';
 import {
   getCoinSymbolMap,
   searchCoins,
@@ -11,23 +11,19 @@ import {
 } from '@/lib/prices/coingecko/coinCache';
 import { SUPPORTED_FIAT } from '@/lib/prices/fiat';
 import { rateLimit, READ } from '@/lib/rate-limit';
-import { getAvailableCurrencies } from '@/lib/settings/getAvailableCurrencies';
 
 export async function searchCommoditiesAction(
-  query: string
+  query: string,
+  context: CommodityContext
 ): Promise<CommoditySuggestion[]> {
   const user = await requireUser();
   if (!rateLimit(READ, user.id).allowed) return [];
 
   const trimmed = query.trim();
 
-  // Journal commodities + the user's own mappings ground the list in what they
-  // actually use; CoinGecko/fiat only add discovery once they start typing.
-  const [{ currencies }, mappings] = await Promise.all([
-    getAvailableCurrencies(),
-    commodityMappingRepository.mapForUser(user.id),
-  ]);
-
+  // Journal + mappings arrive pre-loaded from the open handler; only CoinGecko
+  // discovery is query-dependent, so that is all this per-keystroke call fetches.
+  // getCoinSymbolMap is module-cached (24h TTL), so it only classifies here.
   let coinMap = new Map<string, string>();
   try {
     coinMap = await getCoinSymbolMap();
@@ -46,8 +42,8 @@ export async function searchCommoditiesAction(
 
   return buildCommoditySuggestions({
     query,
-    journal: currencies,
-    mappings,
+    journal: context.journal,
+    mappings: context.mappings,
     coinMap,
     fiatCodes: SUPPORTED_FIAT,
     coinHits,

@@ -23,8 +23,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import type { CommoditySuggestion } from '@/features/currencies/actions';
-import { searchCommoditiesAction } from '@/features/currencies/actions';
+import type {
+  CommodityContext,
+  CommoditySuggestion,
+} from '@/features/currencies/actions';
+import {
+  loadCommodityContextAction,
+  searchCommoditiesAction,
+} from '@/features/currencies/actions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -48,12 +54,17 @@ const CommodityCombobox = ({
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<CommoditySuggestion[]>([]);
   const [isPending, startSearch] = React.useTransition();
+  // Journal commodities + mappings are invariant while the picker is open, so
+  // load them once and reuse across keystrokes rather than re-spawning the
+  // `ledger commodities` subprocess and re-querying mappings on every search.
+  const contextRef = React.useRef<CommodityContext | null>(null);
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (!next) {
       setQuery('');
       setResults([]);
+      contextRef.current = null;
     }
   };
 
@@ -70,7 +81,10 @@ const CommodityCombobox = ({
     const handle = setTimeout(
       () => {
         startSearch(async () => {
-          const found = await searchCommoditiesAction(trimmed);
+          const context =
+            contextRef.current ??
+            (contextRef.current = await loadCommodityContextAction());
+          const found = await searchCommoditiesAction(trimmed, context);
           setResults(found);
         });
       },
