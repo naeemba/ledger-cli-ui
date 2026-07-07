@@ -9,18 +9,21 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { priceFormatter } from './format.util';
 import { TableScroll } from '@/components/ui/table';
 import type { PricePoint } from '@/lib/prices';
+import { normalizeCommoditySymbol } from '@/lib/prices/symbols';
 import Link from 'next/link';
 
 type Props = { symbol: string; points: PricePoint[] };
 
-const priceFormatter = new Intl.NumberFormat('en-US', {
-  maximumFractionDigits: 8,
-});
+// Match the known-prices list, which renders the normalized quote (e.g. `$`
+// becomes `USD`) so the same commodity reads identically on both pages.
+const displayQuote = (raw: string): string =>
+  raw ? (normalizeCommoditySymbol(raw) ?? raw) : raw;
 
 export const PriceHistoryView = ({ symbol, points }: Props) => {
-  const quote = points.at(-1)?.quote ?? '';
+  const quote = displayQuote(points.at(-1)?.quote ?? '');
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-4">
@@ -94,7 +97,9 @@ export const PriceHistoryView = ({ symbol, points }: Props) => {
                       <td className="text-right tabular-nums whitespace-nowrap">
                         {priceFormatter.format(point.price)}
                       </td>
-                      <td className="whitespace-nowrap">{point.quote}</td>
+                      <td className="whitespace-nowrap">
+                        {displayQuote(point.quote)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
