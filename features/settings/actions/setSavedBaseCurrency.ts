@@ -6,8 +6,7 @@ import { baseCurrencySchema, userSettingService } from '@/lib/settings';
 import { revalidatePath } from 'next/cache';
 
 export type SetSavedBaseCurrencyResult =
-  | { ok: true }
-  | { ok: false; message: string };
+  { ok: true } | { ok: false; message: string };
 
 export const setSavedBaseCurrencyAction = async (
   value: unknown

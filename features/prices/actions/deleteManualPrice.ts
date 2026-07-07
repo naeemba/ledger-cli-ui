@@ -7,8 +7,7 @@ import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 import { revalidatePath } from 'next/cache';
 
 export type DeleteManualPriceResult =
-  | { ok: true }
-  | { ok: false; message: string };
+  { ok: true } | { ok: false; message: string };
 
 export async function deleteManualPriceAction(
   id: number

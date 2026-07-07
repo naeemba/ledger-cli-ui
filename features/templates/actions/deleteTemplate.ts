@@ -6,8 +6,7 @@ import { templateRepository } from '@/lib/templates';
 import { revalidatePath } from 'next/cache';
 
 export type DeleteTemplateResult =
-  | { ok: true }
-  | { ok: false; message: string };
+  { ok: true } | { ok: false; message: string };
 
 export const deleteTemplateAction = async (
   id: string

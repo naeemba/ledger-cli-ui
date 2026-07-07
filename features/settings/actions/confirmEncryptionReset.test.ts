@@ -13,11 +13,9 @@ vi.mock('@/lib/auth/require-user', () => ({
 
 const { mockVerifyAndReset, mockRateLimit, mockRevalidatePath } = vi.hoisted(
   () => ({
-    mockVerifyAndReset: vi.fn(
-      async (): Promise<VerifyResult> => ({
-        ok: true,
-      })
-    ),
+    mockVerifyAndReset: vi.fn(async (): Promise<VerifyResult> => ({
+      ok: true,
+    })),
     mockRateLimit: vi.fn(() => ({ allowed: true })),
     mockRevalidatePath: vi.fn(),
   })

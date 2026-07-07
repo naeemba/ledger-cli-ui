@@ -1,10 +1,5 @@
 export type AccountRole =
-  | 'asset'
-  | 'liability'
-  | 'income'
-  | 'expense'
-  | 'equity'
-  | 'unknown';
+  'asset' | 'liability' | 'income' | 'expense' | 'equity' | 'unknown';
 
 const ROOT_TO_ROLE: Record<string, AccountRole> = {
   Assets: 'asset',

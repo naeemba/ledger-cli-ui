@@ -9,8 +9,7 @@ import {
 import { rateLimit, DESTRUCTIVE } from '@/lib/rate-limit';
 
 export type RequestEncryptionResetResult =
-  | IssueResult
-  | { ok: false; reason: 'not-set-up' };
+  IssueResult | { ok: false; reason: 'not-set-up' };
 
 export const requestEncryptionResetAction =
   async (): Promise<RequestEncryptionResetResult> => {

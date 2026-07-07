@@ -5,8 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
 export type SetSessionBaseCurrencyResult =
-  | { ok: true }
-  | { ok: false; message: string };
+  { ok: true } | { ok: false; message: string };
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 

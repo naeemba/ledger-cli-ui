@@ -7,8 +7,7 @@ import { entryTabOrderSchema } from '@/lib/transactions/entryTabs';
 import { revalidatePath } from 'next/cache';
 
 export type SetEntryTabOrderResult =
-  | { ok: true }
-  | { ok: false; message: string };
+  { ok: true } | { ok: false; message: string };
 
 export const setEntryTabOrderAction = async (
   value: unknown
