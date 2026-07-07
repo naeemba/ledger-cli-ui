@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AmountInput from '../../AmountInput';
+import { groupAmountInput, decimalPlaces } from '../../AmountInput.util';
 import { headerOf } from '../types/adapter';
 import { fixBalanceAdapter, type FixBalanceFields } from '../types/fixBalance';
 import { HeaderFieldsEditor } from './HeaderFields';
@@ -63,7 +64,9 @@ export function FixBalanceForm({
 
   const implied =
     current !== null && fields.targetAmount.trim() !== ''
-      ? (Number(fields.targetAmount) - Number(current)).toFixed(2)
+      ? (Number(fields.targetAmount) - Number(current)).toFixed(
+          Math.max(decimalPlaces(current), decimalPlaces(fields.targetAmount))
+        )
       : null;
 
   return (
@@ -105,10 +108,11 @@ export function FixBalanceForm({
         <div className="text-xs text-muted-foreground tabular-nums">
           {current === null
             ? 'Enter an account to see its current balance.'
-            : `Now: ${current} ${fields.targetCurrency}`}
+            : `Now: ${groupAmountInput(current)} ${fields.targetCurrency}`}
           {implied !== null && (
             <span className="ml-2">
-              · Implied adjustment: {implied} {fields.targetCurrency}
+              · Implied adjustment: {groupAmountInput(implied)}{' '}
+              {fields.targetCurrency}
             </span>
           )}
         </div>
