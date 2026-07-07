@@ -1,0 +1,123 @@
+import { describe, it, expect } from 'vitest';
+import {
+  parsePriceHistory,
+  ageInDays,
+  deriveSource,
+  priceKey,
+  STALE_THRESHOLD_DAYS,
+} from './knownPrices';
+
+describe('parsePriceHistory', () => {
+  it('parses date|quantity|quote rows into points', () => {
+    const stdout = '2026-01-01|40000|$\n2026-06-15|50000|$\n';
+    expect(parsePriceHistory(stdout)).toEqual([
+      { date: '2026-01-01', price: 40000, quote: '$' },
+      { date: '2026-06-15', price: 50000, quote: '$' },
+    ]);
+  });
+
+  it('strips thousands separators from the quantity', () => {
+    expect(parsePriceHistory('2026-01-01|1,234.50|$\n')).toEqual([
+      { date: '2026-01-01', price: 1234.5, quote: '$' },
+    ]);
+  });
+
+  it('dedupes exact (date, price) duplicates', () => {
+    const stdout =
+      '2026-01-01|40000|$\n2026-01-01|40000|$\n2026-01-02|40000|$\n';
+    expect(parsePriceHistory(stdout)).toEqual([
+      { date: '2026-01-01', price: 40000, quote: '$' },
+      { date: '2026-01-02', price: 40000, quote: '$' },
+    ]);
+  });
+
+  it('skips blank and malformed lines', () => {
+    const stdout = '\n2026-01-01|40000|$\ngarbage\n|bad|\n';
+    expect(parsePriceHistory(stdout)).toEqual([
+      { date: '2026-01-01', price: 40000, quote: '$' },
+    ]);
+  });
+});
+
+describe('ageInDays', () => {
+  it('counts whole UTC days between two ISO dates', () => {
+    expect(ageInDays('2026-07-01', '2026-07-08')).toBe(7);
+    expect(ageInDays('2026-07-08', '2026-07-08')).toBe(0);
+  });
+});
+
+describe('deriveSource', () => {
+  const base = 'USD';
+  const empty = new Set<string>();
+
+  it('returns base when the symbol is the base currency', () => {
+    expect(
+      deriveSource({
+        symbolNormalized: 'USD',
+        quoteNormalized: 'USD',
+        date: null,
+        base,
+        manualKeys: empty,
+        fetchedKeys: empty,
+      })
+    ).toBe('base');
+  });
+
+  it('returns none when there is no date', () => {
+    expect(
+      deriveSource({
+        symbolNormalized: 'BTC',
+        quoteNormalized: 'USD',
+        date: null,
+        base,
+        manualKeys: empty,
+        fetchedKeys: empty,
+      })
+    ).toBe('none');
+  });
+
+  it('prefers manual over fetched when both match', () => {
+    const key = priceKey('BTC', 'USD', '2026-06-15');
+    expect(
+      deriveSource({
+        symbolNormalized: 'BTC',
+        quoteNormalized: 'USD',
+        date: '2026-06-15',
+        base,
+        manualKeys: new Set([key]),
+        fetchedKeys: new Set([key]),
+      })
+    ).toBe('manual');
+  });
+
+  it('returns fetched when only the fetched set matches', () => {
+    const key = priceKey('BTC', 'USD', '2026-06-15');
+    expect(
+      deriveSource({
+        symbolNormalized: 'BTC',
+        quoteNormalized: 'USD',
+        date: '2026-06-15',
+        base,
+        manualKeys: empty,
+        fetchedKeys: new Set([key]),
+      })
+    ).toBe('fetched');
+  });
+
+  it('falls back to journal when nothing matches', () => {
+    expect(
+      deriveSource({
+        symbolNormalized: 'BTC',
+        quoteNormalized: 'USD',
+        date: '2026-06-15',
+        base,
+        manualKeys: empty,
+        fetchedKeys: empty,
+      })
+    ).toBe('journal');
+  });
+});
+
+it('exposes a 7 day stale threshold', () => {
+  expect(STALE_THRESHOLD_DAYS).toBe(7);
+});
