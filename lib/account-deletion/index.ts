@@ -4,8 +4,8 @@ import { AccountDeletionChallengeRepository } from './repository';
 import { AccountDeletionService } from './service';
 import { APP_NAME } from '@/lib/app';
 import { db } from '@/lib/db';
-import { emailTransport } from '@/lib/email-transport';
 import { env } from '@/lib/env';
+import { sendEmail } from '@naeemba/next-starter/email';
 
 const sendCode = async (email: string, code: string): Promise<void> => {
   const from = env.EMAIL_FROM;
@@ -19,7 +19,7 @@ const sendCode = async (email: string, code: string): Promise<void> => {
     `<p>Your account deletion code is <strong style="font-size:1.25rem;letter-spacing:0.15em">${code}</strong>.</p>` +
     `<p>It expires in 10 minutes.</p>` +
     `<p>If you didn't request this, ignore this email — nothing will happen.</p>`;
-  await emailTransport({ to: email, from, subject, html, text });
+  await sendEmail({ to: email, from, subject, html, text });
 };
 
 const accountDeletionChallengeRepository =

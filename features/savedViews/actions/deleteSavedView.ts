@@ -6,8 +6,7 @@ import { savedViewService } from '@/lib/savedViews';
 import { revalidatePath } from 'next/cache';
 
 export type DeleteSavedViewResult =
-  | { ok: true }
-  | { ok: false; message: string };
+  { ok: true } | { ok: false; message: string };
 
 export const deleteSavedViewAction = async (
   id: string

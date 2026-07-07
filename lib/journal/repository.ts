@@ -18,8 +18,8 @@ import type { ParsedTransaction } from '@/lib/transactions/model';
  * return identical data. React's `cache()` coalesces same-userId callers in one
  * request to a single pull. Keyed by userId so distinct users don't collide.
  */
-const cachedPull = cache(
-  (userId: string): Promise<{ fingerprint: string }> => pullLocked(userId)
+const cachedPull = cache((userId: string): Promise<{ fingerprint: string }> =>
+  pullLocked(userId)
 );
 
 export type JournalLayout = {

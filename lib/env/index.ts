@@ -28,8 +28,9 @@ const envSchema = clientEnvSchema
     JOURNAL_QUOTA_MB: z.coerce.number().int().positive().default(100),
 
     // Email (magic link). 'postal' delivers via the self-hosted Postal server
-    // (see lib/email-transport.ts); 'console' prints the link/code to the dev
-    // server console and sends nothing — for local development. When 'postal',
+    // through the starter's built-in Postal transport; 'console' prints the
+    // link/code to the dev server console and sends nothing — for local
+    // development (both resolved by the starter from EMAIL_TRANSPORT). When 'postal',
     // both POSTAL_* vars are required (enforced by the superRefine below) so a
     // missing value fails fast at startup rather than the first time someone
     // signs in.
@@ -124,4 +125,16 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+// The starter's email layer resolves the transport from `process.env` directly
+// (resolveProvider / the Postal sender read `process.env.EMAIL_TRANSPORT` and
+// `process.env.EMAIL_FROM`), not from this parsed `env` object. Zod defaults
+// therefore never reach the starter: with EMAIL_TRANSPORT unset the starter
+// would fall through to the `console` transport and silently log magic links
+// and account-deletion / encryption-reset codes instead of sending them. Mirror
+// the validated values back so the app and the starter agree on one source of
+// truth.
+process.env.EMAIL_TRANSPORT = env.EMAIL_TRANSPORT;
+process.env.EMAIL_FROM = env.EMAIL_FROM;
+
 export type Env = z.infer<typeof envSchema>;

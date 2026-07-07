@@ -13,8 +13,9 @@ process.env.DATABASE_URL =
 process.env.DATA_DIR = process.env.DATA_DIR ?? '/tmp/ledger-cli-ui-tests';
 process.env.BETTER_AUTH_URL =
   process.env.BETTER_AUTH_URL ?? 'http://localhost:3000';
-// Magic-link delivery (lib/email-transport.ts) reads these via the validated
-// env schema; placeholders satisfy the validators without contacting Postal.
+// Magic-link delivery goes through the starter's built-in Postal transport,
+// which reads these from process.env; placeholders satisfy the env-schema
+// validators without contacting Postal.
 process.env.POSTAL_API_URL =
   process.env.POSTAL_API_URL ?? 'https://postal.test';
 process.env.POSTAL_API_KEY = process.env.POSTAL_API_KEY ?? 'test-key';

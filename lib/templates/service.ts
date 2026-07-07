@@ -4,8 +4,7 @@ import type { Template } from '@/db/schema/template';
 import { isUniqueConflict } from '@/lib/db/isUniqueConflict';
 
 export type SaveResult =
-  | { ok: true; template: Template }
-  | { ok: false; reason: 'name-conflict' };
+  { ok: true; template: Template } | { ok: false; reason: 'name-conflict' };
 
 export type RenameResult =
   | { ok: true; template: Template }

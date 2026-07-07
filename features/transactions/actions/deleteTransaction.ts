@@ -7,8 +7,7 @@ import { getJournalDirSize } from '@/lib/journal/quota';
 import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 
 export type DeleteTransactionResult =
-  | { ok: true }
-  | { ok: false; message: string };
+  { ok: true } | { ok: false; message: string };
 
 export async function deleteTransactionAction(
   uid: string,

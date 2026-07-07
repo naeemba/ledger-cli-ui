@@ -18,11 +18,17 @@ function PopoverContent({
   alignOffset = 0,
   side = 'bottom',
   sideOffset = 4,
+  // Keep the popup on the vertical axis. Base UI defaults to
+  // `fallbackAxisSide: 'end'`, which flings a too-tall popup to the trigger's
+  // inline side when it fits neither above nor below — producing dropdowns that
+  // open off to the right. `'none'` keeps it flipping/shifting on the block axis
+  // instead. Callers can override for genuinely side-anchored popovers.
+  collisionAvoidance = { fallbackAxisSide: 'none' },
   ...props
 }: PopoverPrimitive.Popup.Props &
   Pick<
     PopoverPrimitive.Positioner.Props,
-    'align' | 'alignOffset' | 'side' | 'sideOffset'
+    'align' | 'alignOffset' | 'side' | 'sideOffset' | 'collisionAvoidance'
   >) {
   return (
     <PopoverPrimitive.Portal>
@@ -31,6 +37,7 @@ function PopoverContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
+        collisionAvoidance={collisionAvoidance}
         className="isolate z-50"
       >
         <PopoverPrimitive.Popup

@@ -4,8 +4,7 @@ import type { SavedView } from '@/db/schema/savedView';
 import { isUniqueConflict } from '@/lib/db/isUniqueConflict';
 
 export type SaveResult =
-  | { ok: true; view: SavedView }
-  | { ok: false; reason: 'name-conflict' };
+  { ok: true; view: SavedView } | { ok: false; reason: 'name-conflict' };
 
 export type RenameResult =
   | { ok: true; view: SavedView }
