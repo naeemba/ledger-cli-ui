@@ -489,3 +489,64 @@ describe('PriceService manual prices', () => {
     expect(await service.deleteManualPrice('alice', 999999)).toBe(false);
   });
 });
+
+describe('PriceService known-price reads', () => {
+  let ctx: TestDbContext;
+  let service: PriceService;
+
+  beforeEach(async () => {
+    ctx = await setupTestDb('prices-known-');
+    service = new PriceService({
+      db: ctx.db,
+      commodityRepo: new CommodityPriceRepository(ctx.db),
+      runRepo: new PriceFetchRunRepository(ctx.db),
+      journalRepo: new JournalRepository(ctx.db),
+      manualRepo: new ManualPriceRepository(ctx.db),
+      mappingRepo: new CommodityMappingRepository(ctx.db),
+    });
+  });
+
+  afterEach(async () => {
+    await teardownTestDb(ctx);
+  });
+
+  it('lists held commodities including the base symbol', async () => {
+    await seedUser(
+      ctx,
+      'u-comm',
+      [
+        '2026-01-02 buy',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const held = await service.listHeldCommodities('u-comm');
+    expect(held).toContain('BTC');
+    expect(held).toContain('$');
+  });
+
+  it('returns ascending price points for a held commodity', async () => {
+    await seedUser(
+      ctx,
+      'u-hist',
+      [
+        'P 2026-01-01 BTC $40000',
+        'P 2026-06-15 BTC $50000',
+        '2026-01-02 buy',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const points = await service.listPriceHistory('u-hist', 'BTC');
+    expect(points.length).toBeGreaterThanOrEqual(2);
+    expect(points.at(-1)).toEqual({
+      date: '2026-06-15',
+      price: 50000,
+      quote: '$',
+    });
+  });
+});

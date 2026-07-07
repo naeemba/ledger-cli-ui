@@ -5,6 +5,11 @@ import { classifyCommodity } from './classify';
 import { getCoinSymbolMap } from './coingecko/coinCache';
 import { renderPriceDb, hasGeneratedBanner } from './formatter';
 import type { CommodityPriceRow } from './formatter';
+import {
+  PRICES_FORMAT,
+  parsePriceHistory,
+  type PricePoint,
+} from './knownPrices';
 import { withPriceLock } from './lock';
 import type { ManualPriceRepository } from './manualRepository';
 import { buildPricedAt, type ManualPriceDraft } from './manualSchema';
@@ -236,6 +241,48 @@ export class PriceService {
   // (price-DB regeneration, prices UI) share one source of truth.
   async resolveBaseCurrency(_userId: string): Promise<string> {
     return 'USD';
+  }
+
+  /** Raw commodity symbols the user holds, as `ledger commodities` prints them. */
+  async listHeldCommodities(userId: string): Promise<string[]> {
+    let stdout: string;
+    try {
+      stdout = await runLedgerForUser(
+        userId,
+        ['commodities'],
+        this.deps.journalRepo
+      );
+    } catch {
+      return [];
+    }
+    return stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+  }
+
+  /** Full known price history for one commodity, ascending by date. */
+  async listPriceHistory(
+    userId: string,
+    symbol: string
+  ): Promise<PricePoint[]> {
+    let stdout: string;
+    try {
+      // ledger prices only surfaces P directives when --price-db is present,
+      // even if the file is empty. Ensure one exists before shelling out.
+      const layout = await this.deps.journalRepo.ensureLayout(userId);
+      if (!layout.priceDbPath) {
+        await fs.writeFile(path.join(layout.dir, PRICE_DB_NAME), '', 'utf-8');
+      }
+      stdout = await runLedgerForUser(
+        userId,
+        ['prices', symbol, '--prices-format', PRICES_FORMAT],
+        this.deps.journalRepo
+      );
+    } catch {
+      return [];
+    }
+    return parsePriceHistory(stdout);
   }
 
   async listNormalizedSymbolsForUser(userId: string): Promise<string[]> {
