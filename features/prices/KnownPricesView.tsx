@@ -1,14 +1,11 @@
 'use client';
 
+import { priceFormatter } from './format.util';
 import { TableScroll } from '@/components/ui/table';
 import type { KnownPrice } from '@/lib/prices';
 import Link from 'next/link';
 
 type Props = { rows: KnownPrice[] };
-
-const priceFormatter = new Intl.NumberFormat('en-US', {
-  maximumFractionDigits: 8,
-});
 
 const sourceLabel: Record<KnownPrice['source'], string> = {
   fetched: 'Fetched',
