@@ -5,6 +5,17 @@ import { classifyCommodity } from './classify';
 import { getCoinSymbolMap } from './coingecko/coinCache';
 import { renderPriceDb, hasGeneratedBanner } from './formatter';
 import type { CommodityPriceRow } from './formatter';
+import {
+  PRICES_FORMAT,
+  STALE_THRESHOLD_DAYS,
+  ageInDays,
+  deriveSource,
+  latestGenuinePrice,
+  parsePriceHistory,
+  priceKey,
+  type KnownPrice,
+  type PricePoint,
+} from './knownPrices';
 import { withPriceLock } from './lock';
 import type { ManualPriceRepository } from './manualRepository';
 import { buildPricedAt, type ManualPriceDraft } from './manualSchema';
@@ -21,11 +32,17 @@ import type { DbInstance } from '@/lib/db/connection';
 import { PRICE_DB_NAME, getJournalCacheTag } from '@/lib/journal/layout';
 import type { JournalRepository } from '@/lib/journal/repository';
 import { createLogger } from '@/lib/log';
+import { mapWithConcurrency } from '@/utils/mapWithConcurrency';
 import { runLedgerForUser } from '@/utils/runLedgerForUser';
 import { user as userTable } from '@naeemba/next-starter/schema';
 import { revalidateTag } from 'next/cache';
 
 const log = createLogger('prices');
+
+// listKnownPrices shells out to `ledger prices` once per held commodity. Cap the
+// fan-out so a user holding many commodities cannot spawn an unbounded number of
+// subprocesses at once.
+const PRICE_HISTORY_CONCURRENCY = 8;
 
 export type RefreshResult =
   | { status: 'success'; fetched: number }
@@ -238,6 +255,65 @@ export class PriceService {
     return 'USD';
   }
 
+  /** Raw commodity symbols the user holds, as `ledger commodities` prints them. */
+  async listHeldCommodities(userId: string): Promise<string[]> {
+    let stdout: string;
+    try {
+      stdout = await runLedgerForUser(
+        userId,
+        ['commodities'],
+        this.deps.journalRepo
+      );
+    } catch {
+      return [];
+    }
+    return stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+  }
+
+  /**
+   * Full known price history for one commodity, ascending by date.
+   *
+   * Side effect: when no price-db.ledger exists yet this method creates an
+   * empty one so that `ledger prices` can surface P directives. The file is
+   * created with an exclusive open (`wx`) so a concurrent regeneration is never
+   * clobbered.
+   */
+  async listPriceHistory(
+    userId: string,
+    symbol: string
+  ): Promise<PricePoint[]> {
+    if (!symbol.trim() || /[\n\r]/.test(symbol)) return [];
+    let stdout: string;
+    try {
+      // ledger prices only surfaces P directives when --price-db is present,
+      // even if the file is empty. Ensure one exists before shelling out.
+      const layout = await this.deps.journalRepo.ensureLayout(userId);
+      if (!layout.priceDbPath) {
+        await fs
+          .writeFile(path.join(layout.dir, PRICE_DB_NAME), '', {
+            encoding: 'utf-8',
+            flag: 'wx',
+          })
+          .catch((error: NodeJS.ErrnoException) => {
+            if (error.code !== 'EEXIST') throw error;
+            // File already exists (a prior call or a concurrent regeneration created
+            // it). Either way --price-db will be passed by runLedgerForUser.
+          });
+      }
+      stdout = await runLedgerForUser(
+        userId,
+        ['prices', '--prices-format', PRICES_FORMAT, '--', symbol],
+        this.deps.journalRepo
+      );
+    } catch {
+      return [];
+    }
+    return parsePriceHistory(stdout);
+  }
+
   async listNormalizedSymbolsForUser(userId: string): Promise<string[]> {
     let stdout: string;
     try {
@@ -299,6 +375,86 @@ export class PriceService {
       }
       // kind === 'manual' → skipped: user supplies the price.
     }
+  }
+
+  /** Latest known price for every held commodity, with provenance and staleness. */
+  async listKnownPrices(userId: string): Promise<KnownPrice[]> {
+    const base = await this.resolveBaseCurrency(userId);
+    const [held, manual, fetched] = await Promise.all([
+      this.listHeldCommodities(userId),
+      this.deps.manualRepo.listForUser(userId),
+      this.deps.commodityRepo.listForQuote(base),
+    ]);
+
+    const manualKeys = new Set(
+      manual.map((row) =>
+        priceKey(row.symbol, row.quote, utcDate(row.pricedAt))
+      )
+    );
+    const fetchedKeys = new Set(
+      fetched.map((row) => priceKey(row.symbol, row.quote, row.fetchedDate))
+    );
+
+    const today = utcDate(new Date());
+
+    const rows = await mapWithConcurrency(
+      held,
+      PRICE_HISTORY_CONCURRENCY,
+      async (symbol): Promise<KnownPrice> => {
+        const symbolNormalized = normalizeCommoditySymbol(symbol);
+
+        if (symbolNormalized && symbolNormalized === base) {
+          return {
+            symbol,
+            price: 1,
+            quote: base,
+            date: null,
+            ageDays: null,
+            stale: false,
+            source: 'base',
+          };
+        }
+
+        const history = await this.listPriceHistory(userId, symbol);
+        const latest = latestGenuinePrice(history);
+
+        if (!latest) {
+          return {
+            symbol,
+            price: null,
+            quote: null,
+            date: null,
+            ageDays: null,
+            stale: false,
+            source: 'none',
+          };
+        }
+
+        const quoteNormalized =
+          normalizeCommoditySymbol(latest.quote) ?? latest.quote;
+        const ageDays = ageInDays(latest.date, today);
+        return {
+          symbol,
+          price: latest.price,
+          quote: quoteNormalized,
+          date: latest.date,
+          ageDays,
+          stale: ageDays > STALE_THRESHOLD_DAYS,
+          source: deriveSource({
+            symbolNormalized,
+            quoteNormalized,
+            date: latest.date,
+            base,
+            manualKeys,
+            fetchedKeys,
+          }),
+        };
+      }
+    );
+
+    return rows.sort((a, b) =>
+      a.symbol.localeCompare(b.symbol, undefined, { sensitivity: 'base' })
+    );
   }
 
   private async maybeMigrateLegacyFiles(users: string[]): Promise<void> {

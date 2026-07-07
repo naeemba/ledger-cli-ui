@@ -69,16 +69,7 @@ export const PricesView = ({ prices, commodities, baseCurrency }: Props) => {
   });
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-8 p-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Prices</h1>
-        <p className="text-muted-foreground text-sm">
-          Record exchange rates for commodities (e.g. KIRT) your price provider
-          doesn&apos;t cover. Each rate is dated, so historical reports use the
-          rate in effect at the time.
-        </p>
-      </header>
-
+    <div className="space-y-8">
       <form action={formAction} className="space-y-4 rounded-lg border p-4">
         <input type="hidden" name="draft" value={draft} />
 

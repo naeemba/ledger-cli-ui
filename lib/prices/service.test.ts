@@ -489,3 +489,239 @@ describe('PriceService manual prices', () => {
     expect(await service.deleteManualPrice('alice', 999999)).toBe(false);
   });
 });
+
+describe('PriceService known-price reads', () => {
+  let ctx: TestDbContext;
+  let service: PriceService;
+
+  beforeEach(async () => {
+    ctx = await setupTestDb('prices-known-');
+    service = new PriceService({
+      db: ctx.db,
+      commodityRepo: new CommodityPriceRepository(ctx.db),
+      runRepo: new PriceFetchRunRepository(ctx.db),
+      journalRepo: new JournalRepository(ctx.db),
+      manualRepo: new ManualPriceRepository(ctx.db),
+      mappingRepo: new CommodityMappingRepository(ctx.db),
+    });
+  });
+
+  afterEach(async () => {
+    await teardownTestDb(ctx);
+  });
+
+  it('lists held commodities including the base symbol', async () => {
+    await seedUser(
+      ctx,
+      'u-comm',
+      [
+        '2026-01-02 buy',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const held = await service.listHeldCommodities('u-comm');
+    expect(held).toContain('BTC');
+    expect(held).toContain('$');
+  });
+
+  it('returns ascending price points for a held commodity', async () => {
+    await seedUser(
+      ctx,
+      'u-hist',
+      [
+        'P 2026-01-01 BTC $40000',
+        'P 2026-06-15 BTC $50000',
+        '2026-01-02 buy',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const points = await service.listPriceHistory('u-hist', 'BTC');
+    expect(points.length).toBeGreaterThanOrEqual(2);
+    expect(points.at(-1)).toEqual({
+      date: '2026-06-15',
+      price: 50000,
+      quote: '$',
+    });
+  });
+
+  it('treats a flag-like symbol as an inert query, not a ledger flag', async () => {
+    await seedUser(
+      ctx,
+      'u-inject',
+      [
+        'P 2026-06-15 BTC $50000',
+        '2026-01-02 buy',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const points = await service.listPriceHistory('u-inject', '--version');
+    expect(points).toEqual([]);
+  });
+});
+
+describe('PriceService.listKnownPrices', () => {
+  let ctx: TestDbContext;
+  let service: PriceService;
+
+  beforeEach(async () => {
+    ctx = await setupTestDb('prices-list-');
+    service = new PriceService({
+      db: ctx.db,
+      commodityRepo: new CommodityPriceRepository(ctx.db),
+      runRepo: new PriceFetchRunRepository(ctx.db),
+      journalRepo: new JournalRepository(ctx.db),
+      manualRepo: new ManualPriceRepository(ctx.db),
+      mappingRepo: new CommodityMappingRepository(ctx.db),
+    });
+  });
+
+  afterEach(async () => {
+    await teardownTestDb(ctx);
+  });
+
+  it('reports latest price, base row, and journal source', async () => {
+    await seedUser(
+      ctx,
+      'u-known',
+      [
+        'P 2026-01-01 BTC $40000',
+        'P 2026-06-15 BTC $50000',
+        '2026-01-02 buy',
+        '    Assets:Crypto        1 BTC @ $40000',
+        '    Assets:Metal         2 GOLD @ $10',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const rows = await service.listKnownPrices('u-known');
+    const bySymbol = Object.fromEntries(rows.map((r) => [r.symbol, r]));
+
+    // BTC: latest journal price, denominated in $.
+    expect(bySymbol.BTC.price).toBe(50000);
+    expect(bySymbol.BTC.date).toBe('2026-06-15');
+    expect(bySymbol.BTC.source).toBe('journal');
+    expect(bySymbol.BTC.stale).toBe(true); // 2026-06-15 is well over 7 days old
+
+    // GOLD held with a cost → has a price row.
+    expect(bySymbol.GOLD.price).toBe(10);
+
+    // Base currency row synthesized.
+    expect(bySymbol['$'].source).toBe('base');
+    expect(bySymbol['$'].price).toBe(1);
+    expect(bySymbol['$'].stale).toBe(false);
+  });
+
+  it('labels a fetched price as fetched', async () => {
+    await seedUser(
+      ctx,
+      'u-fetch',
+      [
+        'P 2026-06-15 BTC $50000',
+        '2026-01-02 buy',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    // Record a fetched price on the same day/value as the latest known price.
+    await new CommodityPriceRepository(ctx.db).insert([
+      {
+        symbol: 'BTC',
+        quote: 'USD',
+        price: 50000,
+        fetchedAt: new Date('2026-06-15T00:00:00Z'),
+        fetchedDate: '2026-06-15',
+      },
+    ]);
+    const rows = await service.listKnownPrices('u-fetch');
+    const btc = rows.find((r) => r.symbol === 'BTC');
+    expect(btc?.source).toBe('fetched');
+  });
+
+  it('labels a manual price as manual', async () => {
+    // Posting and P directive on the same date so latestGenuinePrice returns
+    // that date, which then matches the manual key (BTC|USD|2026-06-15).
+    await seedUser(
+      ctx,
+      'u-manual',
+      [
+        'P 2026-06-15 BTC $50000',
+        '2026-06-15 buy',
+        '    Assets:Crypto   1 BTC @ $50000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    await new ManualPriceRepository(ctx.db).upsertMany([
+      {
+        userId: 'u-manual',
+        symbol: 'BTC',
+        quote: 'USD',
+        price: 50000,
+        pricedAt: new Date('2026-06-15T00:00:00Z'),
+      },
+    ]);
+    const rows = await service.listKnownPrices('u-manual');
+    const btc = rows.find((r) => r.symbol === 'BTC');
+    expect(btc?.source).toBe('manual');
+  });
+
+  it('returns a gap row for a held commodity with no price', async () => {
+    // WIDGET appears in commodities but has no P directive, so ledger prices
+    // WIDGET returns nothing → the service emits a gap row.
+    await seedUser(
+      ctx,
+      'u-gap',
+      [
+        '2026-01-02 open',
+        '    Assets:Stuff   5 WIDGET',
+        '    Assets:Stuff  -5 WIDGET',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const rows = await service.listKnownPrices('u-gap');
+    const widget = rows.find((r) => r.symbol === 'WIDGET');
+    expect(widget).toBeDefined();
+    expect(widget?.price).toBeNull();
+    expect(widget?.source).toBe('none');
+  });
+
+  it('dates staleness from when the price was set, not a later posting', async () => {
+    await seedUser(
+      ctx,
+      'u-stale',
+      [
+        // BTC's only genuine price is set 2026-01-01. A later 2026-07-01 posting
+        // transacts BTC at the same (forward-carried) price — it must NOT be
+        // read as the "latest" price date.
+        'P 2026-01-01 BTC $40000',
+        '2026-01-02 buy',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '2026-07-01 buy more',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const rows = await service.listKnownPrices('u-stale');
+    const btc = rows.find((row) => row.symbol === 'BTC');
+    expect(btc?.date).toBe('2026-01-01');
+    expect(btc?.price).toBe(40000);
+    expect(btc?.stale).toBe(true);
+  });
+});
