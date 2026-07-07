@@ -35,4 +35,25 @@ describe('email env', () => {
     const env = await loadEnv({ EMAIL_TRANSPORT: 'console' });
     expect(env.EMAIL_TRANSPORT).toBe('console');
   });
+
+  it('mirrors the resolved EMAIL_TRANSPORT default back into process.env', async () => {
+    // The starter resolves the transport from process.env, not the parsed env
+    // object, so the Zod default must be written back or delivery silently
+    // falls through to the console transport.
+    vi.resetModules();
+    const prev = process.env;
+    const overrides: Record<string, string | undefined> = {
+      ...BASE_ENV,
+      POSTAL_API_URL: 'https://postal.example.com',
+      POSTAL_API_KEY: 'k',
+    };
+    process.env = overrides as NodeJS.ProcessEnv;
+    try {
+      await import('./index');
+      expect(process.env.EMAIL_TRANSPORT).toBe('postal');
+      expect(process.env.EMAIL_FROM).toBe('auth@example.com');
+    } finally {
+      process.env = prev;
+    }
+  });
 });

@@ -125,4 +125,16 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+// The starter's email layer resolves the transport from `process.env` directly
+// (resolveProvider / the Postal sender read `process.env.EMAIL_TRANSPORT` and
+// `process.env.EMAIL_FROM`), not from this parsed `env` object. Zod defaults
+// therefore never reach the starter: with EMAIL_TRANSPORT unset the starter
+// would fall through to the `console` transport and silently log magic links
+// and account-deletion / encryption-reset codes instead of sending them. Mirror
+// the validated values back so the app and the starter agree on one source of
+// truth.
+process.env.EMAIL_TRANSPORT = env.EMAIL_TRANSPORT;
+process.env.EMAIL_FROM = env.EMAIL_FROM;
+
 export type Env = z.infer<typeof envSchema>;
