@@ -567,3 +567,85 @@ describe('PriceService known-price reads', () => {
     expect(points).toEqual([]);
   });
 });
+
+describe('PriceService.listKnownPrices', () => {
+  let ctx: TestDbContext;
+  let service: PriceService;
+
+  beforeEach(async () => {
+    ctx = await setupTestDb('prices-list-');
+    service = new PriceService({
+      db: ctx.db,
+      commodityRepo: new CommodityPriceRepository(ctx.db),
+      runRepo: new PriceFetchRunRepository(ctx.db),
+      journalRepo: new JournalRepository(ctx.db),
+      manualRepo: new ManualPriceRepository(ctx.db),
+      mappingRepo: new CommodityMappingRepository(ctx.db),
+    });
+  });
+
+  afterEach(async () => {
+    await teardownTestDb(ctx);
+  });
+
+  it('reports latest price, base row, and journal source', async () => {
+    await seedUser(
+      ctx,
+      'u-known',
+      [
+        'P 2026-01-01 BTC $40000',
+        'P 2026-06-15 BTC $50000',
+        '2026-01-02 buy',
+        '    Assets:Crypto        1 BTC @ $40000',
+        '    Assets:Metal         2 GOLD @ $10',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const rows = await service.listKnownPrices('u-known');
+    const bySymbol = Object.fromEntries(rows.map((r) => [r.symbol, r]));
+
+    // BTC: latest journal price, denominated in $.
+    expect(bySymbol.BTC.price).toBe(50000);
+    expect(bySymbol.BTC.date).toBe('2026-06-15');
+    expect(bySymbol.BTC.source).toBe('journal');
+    expect(bySymbol.BTC.stale).toBe(true); // 2026-06-15 is well over 7 days old
+
+    // GOLD held with a cost → has a price row.
+    expect(bySymbol.GOLD.price).toBe(10);
+
+    // Base currency row synthesized.
+    expect(bySymbol['$'].source).toBe('base');
+    expect(bySymbol['$'].price).toBe(1);
+    expect(bySymbol['$'].stale).toBe(false);
+  });
+
+  it('labels a fetched price as fetched', async () => {
+    await seedUser(
+      ctx,
+      'u-fetch',
+      [
+        'P 2026-06-15 BTC $50000',
+        '2026-01-02 buy',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    // Record a fetched price on the same day/value as the latest known price.
+    await new CommodityPriceRepository(ctx.db).insert([
+      {
+        symbol: 'BTC',
+        quote: 'USD',
+        price: 50000,
+        fetchedAt: new Date('2026-06-15T00:00:00Z'),
+        fetchedDate: '2026-06-15',
+      },
+    ]);
+    const rows = await service.listKnownPrices('u-fetch');
+    const btc = rows.find((r) => r.symbol === 'BTC');
+    expect(btc?.source).toBe('fetched');
+  });
+});

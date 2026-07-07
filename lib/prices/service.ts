@@ -7,7 +7,12 @@ import { renderPriceDb, hasGeneratedBanner } from './formatter';
 import type { CommodityPriceRow } from './formatter';
 import {
   PRICES_FORMAT,
+  STALE_THRESHOLD_DAYS,
+  ageInDays,
+  deriveSource,
   parsePriceHistory,
+  priceKey,
+  type KnownPrice,
   type PricePoint,
 } from './knownPrices';
 import { withPriceLock } from './lock';
@@ -362,6 +367,82 @@ export class PriceService {
       }
       // kind === 'manual' → skipped: user supplies the price.
     }
+  }
+
+  /** Latest known price for every held commodity, with provenance and staleness. */
+  async listKnownPrices(userId: string): Promise<KnownPrice[]> {
+    const base = await this.resolveBaseCurrency(userId);
+    const [held, manual, fetched] = await Promise.all([
+      this.listHeldCommodities(userId),
+      this.deps.manualRepo.listForUser(userId),
+      this.deps.commodityRepo.listForQuote(base),
+    ]);
+
+    const manualKeys = new Set(
+      manual.map((row) =>
+        priceKey(row.symbol, row.quote, utcDate(row.pricedAt))
+      )
+    );
+    const fetchedKeys = new Set(
+      fetched.map((row) => priceKey(row.symbol, row.quote, row.fetchedDate))
+    );
+
+    const today = utcDate(new Date());
+
+    const rows = await Promise.all(
+      held.map(async (symbol): Promise<KnownPrice> => {
+        const symbolNormalized = normalizeCommoditySymbol(symbol);
+
+        if (symbolNormalized && symbolNormalized === base) {
+          return {
+            symbol,
+            price: 1,
+            quote: base,
+            date: null,
+            ageDays: null,
+            stale: false,
+            source: 'base',
+          };
+        }
+
+        const history = await this.listPriceHistory(userId, symbol);
+        const latest: PricePoint | undefined = history.at(-1);
+
+        if (!latest) {
+          return {
+            symbol,
+            price: null,
+            quote: null,
+            date: null,
+            ageDays: null,
+            stale: false,
+            source: 'none',
+          };
+        }
+
+        const quoteNormalized =
+          normalizeCommoditySymbol(latest.quote) ?? latest.quote;
+        const ageDays = ageInDays(latest.date, today);
+        return {
+          symbol,
+          price: latest.price,
+          quote: latest.quote,
+          date: latest.date,
+          ageDays,
+          stale: ageDays > STALE_THRESHOLD_DAYS,
+          source: deriveSource({
+            symbolNormalized,
+            quoteNormalized,
+            date: latest.date,
+            base,
+            manualKeys,
+            fetchedKeys,
+          }),
+        };
+      })
+    );
+
+    return rows.sort((a, b) => a.symbol.localeCompare(b.symbol));
   }
 
   private async maybeMigrateLegacyFiles(users: string[]): Promise<void> {
