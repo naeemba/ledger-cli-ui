@@ -15,7 +15,7 @@ export async function getAccountBalance(
   if (!isSafeLedgerArg(acct)) return '0';
   if (ccy !== '' && !isSafeLedgerArg(ccy)) return '0';
   try {
-    const args = ['balance', '--no-total', '--collapse', '--format', '%A|%T\n'];
+    const args = ['balance', '--no-total', '--format', '%A|%T\n'];
     if (ccy) args.push('-X', ccy);
     // `--` stops ledger option parsing so a crafted account can't smuggle a flag.
     args.push('--', acct);
