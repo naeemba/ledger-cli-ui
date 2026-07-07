@@ -39,3 +39,4 @@ export type {
 } from './provider';
 export { renderPriceDb, hasGeneratedBanner, BANNER_MARKER } from './formatter';
 export type { CommodityPriceRow } from './formatter';
+export type { KnownPrice, PricePoint, PriceSource } from './knownPrices';
