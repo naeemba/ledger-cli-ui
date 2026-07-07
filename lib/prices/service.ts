@@ -261,22 +261,38 @@ export class PriceService {
       .filter((line) => line.length > 0);
   }
 
-  /** Full known price history for one commodity, ascending by date. */
+  /**
+   * Full known price history for one commodity, ascending by date.
+   *
+   * Side effect: when no price-db.ledger exists yet this method creates an
+   * empty one so that `ledger prices` can surface P directives. The file is
+   * created with an exclusive open (`wx`) so a concurrent regeneration is never
+   * clobbered.
+   */
   async listPriceHistory(
     userId: string,
     symbol: string
   ): Promise<PricePoint[]> {
+    if (!symbol.trim() || /[\n\r]/.test(symbol)) return [];
     let stdout: string;
     try {
       // ledger prices only surfaces P directives when --price-db is present,
       // even if the file is empty. Ensure one exists before shelling out.
       const layout = await this.deps.journalRepo.ensureLayout(userId);
       if (!layout.priceDbPath) {
-        await fs.writeFile(path.join(layout.dir, PRICE_DB_NAME), '', 'utf-8');
+        await fs
+          .writeFile(path.join(layout.dir, PRICE_DB_NAME), '', {
+            encoding: 'utf-8',
+            flag: 'wx',
+          })
+          .catch(() => {
+            // File already exists (a prior call or a concurrent regeneration created
+            // it). Either way --price-db will be passed by runLedgerForUser.
+          });
       }
       stdout = await runLedgerForUser(
         userId,
-        ['prices', symbol, '--prices-format', PRICES_FORMAT],
+        ['prices', '--prices-format', PRICES_FORMAT, '--', symbol],
         this.deps.journalRepo
       );
     } catch {

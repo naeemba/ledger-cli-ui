@@ -549,4 +549,21 @@ describe('PriceService known-price reads', () => {
       quote: '$',
     });
   });
+
+  it('treats a flag-like symbol as an inert query, not a ledger flag', async () => {
+    await seedUser(
+      ctx,
+      'u-inject',
+      [
+        'P 2026-06-15 BTC $50000',
+        '2026-01-02 buy',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const points = await service.listPriceHistory('u-inject', '--version');
+    expect(points).toEqual([]);
+  });
 });
