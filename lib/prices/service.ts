@@ -32,11 +32,17 @@ import type { DbInstance } from '@/lib/db/connection';
 import { PRICE_DB_NAME, getJournalCacheTag } from '@/lib/journal/layout';
 import type { JournalRepository } from '@/lib/journal/repository';
 import { createLogger } from '@/lib/log';
+import { mapWithConcurrency } from '@/utils/mapWithConcurrency';
 import { runLedgerForUser } from '@/utils/runLedgerForUser';
 import { user as userTable } from '@naeemba/next-starter/schema';
 import { revalidateTag } from 'next/cache';
 
 const log = createLogger('prices');
+
+// listKnownPrices shells out to `ledger prices` once per held commodity. Cap the
+// fan-out so a user holding many commodities cannot spawn an unbounded number of
+// subprocesses at once.
+const PRICE_HISTORY_CONCURRENCY = 8;
 
 export type RefreshResult =
   | { status: 'success'; fetched: number }
@@ -391,8 +397,10 @@ export class PriceService {
 
     const today = utcDate(new Date());
 
-    const rows = await Promise.all(
-      held.map(async (symbol): Promise<KnownPrice> => {
+    const rows = await mapWithConcurrency(
+      held,
+      PRICE_HISTORY_CONCURRENCY,
+      async (symbol): Promise<KnownPrice> => {
         const symbolNormalized = normalizeCommoditySymbol(symbol);
 
         if (symbolNormalized && symbolNormalized === base) {
@@ -441,7 +449,7 @@ export class PriceService {
             fetchedKeys,
           }),
         };
-      })
+      }
     );
 
     return rows.sort((a, b) =>
