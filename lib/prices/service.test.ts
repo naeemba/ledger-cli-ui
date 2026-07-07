@@ -698,4 +698,30 @@ describe('PriceService.listKnownPrices', () => {
     expect(widget?.price).toBeNull();
     expect(widget?.source).toBe('none');
   });
+
+  it('dates staleness from when the price was set, not a later posting', async () => {
+    await seedUser(
+      ctx,
+      'u-stale',
+      [
+        // BTC's only genuine price is set 2026-01-01. A later 2026-07-01 posting
+        // transacts BTC at the same (forward-carried) price — it must NOT be
+        // read as the "latest" price date.
+        'P 2026-01-01 BTC $40000',
+        '2026-01-02 buy',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '2026-07-01 buy more',
+        '    Assets:Crypto   1 BTC @ $40000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const rows = await service.listKnownPrices('u-stale');
+    const btc = rows.find((row) => row.symbol === 'BTC');
+    expect(btc?.date).toBe('2026-01-01');
+    expect(btc?.price).toBe(40000);
+    expect(btc?.stale).toBe(true);
+  });
 });
