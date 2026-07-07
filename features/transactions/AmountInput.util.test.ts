@@ -3,6 +3,7 @@ import {
   cleanAmountInput,
   groupAmountInput,
   caretAfterFormat,
+  decimalPlaces,
 } from './AmountInput.util';
 
 describe('cleanAmountInput', () => {
@@ -57,6 +58,29 @@ describe('groupAmountInput', () => {
 
   it('returns empty for empty input', () => {
     expect(groupAmountInput('')).toBe('');
+  });
+});
+
+describe('decimalPlaces', () => {
+  it('counts digits after the decimal point', () => {
+    expect(decimalPlaces('1779.540')).toBe(3);
+    expect(decimalPlaces('220.46')).toBe(2);
+  });
+
+  it('returns 0 when there is no decimal point', () => {
+    expect(decimalPlaces('1234')).toBe(0);
+  });
+
+  it('ignores comma separators', () => {
+    expect(decimalPlaces('1,779.540')).toBe(3);
+  });
+
+  it('returns 0 for a trailing dot with no decimals', () => {
+    expect(decimalPlaces('1234.')).toBe(0);
+  });
+
+  it('returns 0 for empty input', () => {
+    expect(decimalPlaces('')).toBe(0);
   });
 });
 

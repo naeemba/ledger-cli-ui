@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AmountInput from '../../AmountInput';
-import { groupAmountInput } from '../../AmountInput.util';
+import { groupAmountInput, decimalPlaces } from '../../AmountInput.util';
 import { headerOf } from '../types/adapter';
 import { fixBalanceAdapter, type FixBalanceFields } from '../types/fixBalance';
 import { HeaderFieldsEditor } from './HeaderFields';
@@ -64,7 +64,9 @@ export function FixBalanceForm({
 
   const implied =
     current !== null && fields.targetAmount.trim() !== ''
-      ? (Number(fields.targetAmount) - Number(current)).toFixed(2)
+      ? (Number(fields.targetAmount) - Number(current)).toFixed(
+          Math.max(decimalPlaces(current), decimalPlaces(fields.targetAmount))
+        )
       : null;
 
   return (

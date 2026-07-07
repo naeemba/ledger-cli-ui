@@ -50,6 +50,15 @@ export const caretAfterFormat = (
   return formatted.length;
 };
 
+// Counts the decimal places in a raw number string (digits after a single dot).
+// Used to render a derived amount at the same precision as its source rather
+// than a hard-coded scale.
+export const decimalPlaces = (raw: string): number => {
+  const clean = cleanAmountInput(raw);
+  const dot = clean.indexOf('.');
+  return dot === -1 ? 0 : clean.length - dot - 1;
+};
+
 const SIGNIFICANT = /[0-9.-]/;
 
 export const countSignificant = (value: string, end: number): number => {
