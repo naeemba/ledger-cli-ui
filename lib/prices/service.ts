@@ -10,6 +10,7 @@ import {
   STALE_THRESHOLD_DAYS,
   ageInDays,
   deriveSource,
+  latestGenuinePrice,
   parsePriceHistory,
   priceKey,
   type KnownPrice,
@@ -290,7 +291,8 @@ export class PriceService {
             encoding: 'utf-8',
             flag: 'wx',
           })
-          .catch(() => {
+          .catch((error: NodeJS.ErrnoException) => {
+            if (error.code !== 'EEXIST') throw error;
             // File already exists (a prior call or a concurrent regeneration created
             // it). Either way --price-db will be passed by runLedgerForUser.
           });
@@ -406,7 +408,7 @@ export class PriceService {
         }
 
         const history = await this.listPriceHistory(userId, symbol);
-        const latest: PricePoint | undefined = history.at(-1);
+        const latest = latestGenuinePrice(history);
 
         if (!latest) {
           return {
@@ -426,7 +428,7 @@ export class PriceService {
         return {
           symbol,
           price: latest.price,
-          quote: latest.quote,
+          quote: quoteNormalized,
           date: latest.date,
           ageDays,
           stale: ageDays > STALE_THRESHOLD_DAYS,
@@ -442,7 +444,9 @@ export class PriceService {
       })
     );
 
-    return rows.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    return rows.sort((a, b) =>
+      a.symbol.localeCompare(b.symbol, undefined, { sensitivity: 'base' })
+    );
   }
 
   private async maybeMigrateLegacyFiles(users: string[]): Promise<void> {

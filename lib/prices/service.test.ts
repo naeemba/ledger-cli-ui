@@ -648,4 +648,54 @@ describe('PriceService.listKnownPrices', () => {
     const btc = rows.find((r) => r.symbol === 'BTC');
     expect(btc?.source).toBe('fetched');
   });
+
+  it('labels a manual price as manual', async () => {
+    // Posting and P directive on the same date so latestGenuinePrice returns
+    // that date, which then matches the manual key (BTC|USD|2026-06-15).
+    await seedUser(
+      ctx,
+      'u-manual',
+      [
+        'P 2026-06-15 BTC $50000',
+        '2026-06-15 buy',
+        '    Assets:Crypto   1 BTC @ $50000',
+        '    Assets:Cash',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    await new ManualPriceRepository(ctx.db).upsertMany([
+      {
+        userId: 'u-manual',
+        symbol: 'BTC',
+        quote: 'USD',
+        price: 50000,
+        pricedAt: new Date('2026-06-15T00:00:00Z'),
+      },
+    ]);
+    const rows = await service.listKnownPrices('u-manual');
+    const btc = rows.find((r) => r.symbol === 'BTC');
+    expect(btc?.source).toBe('manual');
+  });
+
+  it('returns a gap row for a held commodity with no price', async () => {
+    // WIDGET appears in commodities but has no P directive, so ledger prices
+    // WIDGET returns nothing → the service emits a gap row.
+    await seedUser(
+      ctx,
+      'u-gap',
+      [
+        '2026-01-02 open',
+        '    Assets:Stuff   5 WIDGET',
+        '    Assets:Stuff  -5 WIDGET',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const rows = await service.listKnownPrices('u-gap');
+    const widget = rows.find((r) => r.symbol === 'WIDGET');
+    expect(widget).toBeDefined();
+    expect(widget?.price).toBeNull();
+    expect(widget?.source).toBe('none');
+  });
 });

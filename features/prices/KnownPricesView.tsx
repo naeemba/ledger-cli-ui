@@ -6,6 +6,10 @@ import Link from 'next/link';
 
 type Props = { rows: KnownPrice[] };
 
+const priceFormatter = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 8,
+});
+
 const sourceLabel: Record<KnownPrice['source'], string> = {
   fetched: 'Fetched',
   manual: 'Manual',
@@ -59,7 +63,7 @@ export const KnownPricesView = ({ rows }: Props) => (
                   {row.price === null ? (
                     <span className="text-muted-foreground">no price</span>
                   ) : (
-                    `${row.price} ${row.quote ?? ''}`.trim()
+                    `${priceFormatter.format(row.price)} ${row.quote ?? ''}`.trim()
                   )}
                 </td>
                 <td className="whitespace-nowrap text-muted-foreground">

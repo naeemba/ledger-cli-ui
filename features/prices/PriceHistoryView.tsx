@@ -15,6 +15,10 @@ import Link from 'next/link';
 
 type Props = { symbol: string; points: PricePoint[] };
 
+const priceFormatter = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 8,
+});
+
 export const PriceHistoryView = ({ symbol, points }: Props) => {
   const quote = points.at(-1)?.quote ?? '';
 
@@ -51,9 +55,15 @@ export const PriceHistoryView = ({ symbol, points }: Props) => {
                   tick={{ fontSize: 12 }}
                   width={72}
                   domain={['auto', 'auto']}
+                  tickFormatter={(value) =>
+                    priceFormatter.format(value as number)
+                  }
                 />
                 <Tooltip
-                  formatter={(value) => [`${value ?? ''} ${quote}`, 'Price']}
+                  formatter={(value) => [
+                    `${priceFormatter.format(value as number)} ${quote}`,
+                    'Price',
+                  ]}
                 />
                 <Line
                   type="monotone"
@@ -82,7 +92,7 @@ export const PriceHistoryView = ({ symbol, points }: Props) => {
                         {point.date}
                       </td>
                       <td className="text-right tabular-nums whitespace-nowrap">
-                        {point.price}
+                        {priceFormatter.format(point.price)}
                       </td>
                       <td className="whitespace-nowrap">{point.quote}</td>
                     </tr>

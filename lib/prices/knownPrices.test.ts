@@ -3,6 +3,7 @@ import {
   parsePriceHistory,
   ageInDays,
   deriveSource,
+  latestGenuinePrice,
   priceKey,
   STALE_THRESHOLD_DAYS,
 } from './knownPrices';
@@ -116,8 +117,52 @@ describe('deriveSource', () => {
       })
     ).toBe('journal');
   });
+
+  it('returns journal when symbolNormalized is null but a date is present', () => {
+    expect(
+      deriveSource({
+        symbolNormalized: null,
+        quoteNormalized: 'USD',
+        date: '2026-06-15',
+        base,
+        manualKeys: empty,
+        fetchedKeys: empty,
+      })
+    ).toBe('journal');
+  });
 });
 
 it('exposes a 7 day stale threshold', () => {
   expect(STALE_THRESHOLD_DAYS).toBe(7);
+});
+
+describe('latestGenuinePrice', () => {
+  it('returns null for empty input', () => {
+    expect(latestGenuinePrice([])).toBeNull();
+  });
+
+  it('uses the first (set) date when the price never changes across posting rows', () => {
+    const points = [
+      { date: '2026-01-01', price: 40000, quote: '$' },
+      { date: '2026-01-02', price: 40000, quote: '$' },
+      { date: '2026-07-01', price: 40000, quote: '$' },
+    ];
+    expect(latestGenuinePrice(points)).toEqual({
+      date: '2026-01-01',
+      price: 40000,
+      quote: '$',
+    });
+  });
+
+  it('returns the change date when the price changes', () => {
+    const points = [
+      { date: '2026-01-01', price: 40000, quote: '$' },
+      { date: '2026-06-15', price: 50000, quote: '$' },
+    ];
+    expect(latestGenuinePrice(points)).toEqual({
+      date: '2026-06-15',
+      price: 50000,
+      quote: '$',
+    });
+  });
 });

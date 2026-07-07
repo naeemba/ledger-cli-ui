@@ -36,11 +36,18 @@ export const PricesTabs = ({
       {active === 'known' ? (
         <KnownPricesView rows={known} />
       ) : (
-        <PricesView
-          prices={prices}
-          commodities={commodities}
-          baseCurrency={baseCurrency}
-        />
+        <>
+          <p className="text-muted-foreground text-sm">
+            Record exchange rates for commodities (e.g. KIRT) your price
+            provider doesn&apos;t cover. Each rate is dated, so historical
+            reports use the rate in effect at the time.
+          </p>
+          <PricesView
+            prices={prices}
+            commodities={commodities}
+            baseCurrency={baseCurrency}
+          />
+        </>
       )}
     </div>
   );

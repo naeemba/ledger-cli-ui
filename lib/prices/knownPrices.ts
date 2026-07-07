@@ -50,11 +50,34 @@ export const parsePriceHistory = (stdout: string): PricePoint[] => {
   return points;
 };
 
-/** Whole UTC days from `dateIso` to `todayIso` (both `YYYY-MM-DD`). */
+/**
+ * Whole UTC days from `dateIso` to `todayIso` (both `YYYY-MM-DD`). Returns a
+ * negative number when `dateIso` is in the future relative to `todayIso`.
+ */
 export const ageInDays = (dateIso: string, todayIso: string): number => {
   const a = Date.parse(`${dateIso}T00:00:00Z`);
   const b = Date.parse(`${todayIso}T00:00:00Z`);
   return Math.round((b - a) / 86_400_000);
+};
+
+/**
+ * The current price and the date it last changed. `ledger prices` forward-
+ * carries the prevailing price onto every posting date, so the final row's
+ * date can be a transaction date rather than when the price was actually set.
+ * Returns the last point's price/quote paired with the date the price value
+ * last changed (the start of the final constant-price run), so staleness
+ * reflects how long the current price has stood. Returns null for empty input.
+ */
+export const latestGenuinePrice = (points: PricePoint[]): PricePoint | null => {
+  if (points.length === 0) return null;
+  const last = points[points.length - 1];
+  let changeDate = points[0].date;
+  for (let index = 1; index < points.length; index += 1) {
+    if (points[index].price !== points[index - 1].price) {
+      changeDate = points[index].date;
+    }
+  }
+  return { date: changeDate, price: last.price, quote: last.quote };
 };
 
 /**
@@ -79,7 +102,8 @@ export const deriveSource = (args: {
     fetchedKeys,
   } = args;
   if (symbolNormalized && symbolNormalized === base) return 'base';
-  if (!date || !symbolNormalized || !quoteNormalized) return 'none';
+  if (!date) return 'none';
+  if (!symbolNormalized || !quoteNormalized) return 'journal';
   const key = priceKey(symbolNormalized, quoteNormalized, date);
   if (manualKeys.has(key)) return 'manual';
   if (fetchedKeys.has(key)) return 'fetched';
