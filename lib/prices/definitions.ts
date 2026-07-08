@@ -22,11 +22,43 @@ const PRICE_LINE =
  */
 export const extractDefinitions = (text: string): string => {
   const kept: string[] = [];
+  let currentCommodity: string | null = null;
   for (const raw of text.split('\n')) {
     const line = raw.replace(/\s+$/, '');
     const trimmed = line.trim();
     if (PRICE_LINE.test(trimmed)) continue;
     if (trimmed.includes(BANNER_MARKER)) continue;
+
+    // Track the enclosing `commodity <symbol>` block. A non-indented, non-blank
+    // line closes it; blank lines and comments leave it open.
+    const commodityMatch = /^commodity\s+(.+)$/.exec(trimmed);
+    if (commodityMatch) {
+      // Store unquoted so we can re-quote consistently in the format below.
+      currentCommodity = commodityMatch[1].trim().replace(/^"(.*)"$/, '$1');
+      kept.push(line);
+      continue;
+    }
+    if (trimmed && !/^\s/.test(line)) currentCommodity = null;
+
+    // ledger tolerates a symbol-less `format` sample (e.g. `format 1,000`) in a
+    // --price-db but rejects it in a journal include ("commodity directive
+    // symbol X and format directive symbol '' should be the same"). Give a
+    // numeric-only sample its commodity — quoted, so a symbol containing a `.`
+    // or other separator (e.g. `د.إ`) isn't mis-tokenized. A sample that
+    // already carries a symbol (`format KIRT 1,000` / `format $1,000.00`) is
+    // left untouched.
+    const formatMatch = /^format\s+(.+)$/.exec(trimmed);
+    if (
+      formatMatch &&
+      currentCommodity &&
+      /^[\d.,\s+-]+$/.test(formatMatch[1])
+    ) {
+      const indent = line.slice(0, line.length - trimmed.length);
+      kept.push(
+        `${indent}format ${formatMatch[1].trim()} "${currentCommodity}"`
+      );
+      continue;
+    }
     kept.push(line);
   }
   return kept.join('\n').replace(/^\n+/, '').replace(/\n+$/, '');
