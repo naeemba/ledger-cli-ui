@@ -4,6 +4,7 @@ import AdmZip from 'adm-zip';
 import 'server-only';
 import {
   DEFAULT_MAIN,
+  GENERATED_PRICE_DB_NAME,
   PRICE_DB_NAME,
   VALID_EXTS,
   getJournalDir,
@@ -99,8 +100,9 @@ const detectMain = (entries: { name: string }[]): string => {
     if (match) return match.name;
   }
 
+  const priceFiles = new Set([GENERATED_PRICE_DB_NAME, PRICE_DB_NAME]);
   const sorted = ledgerEntries
-    .filter((e) => path.basename(e.name).toLowerCase() !== PRICE_DB_NAME)
+    .filter((e) => !priceFiles.has(path.basename(e.name).toLowerCase()))
     .sort((a, b) => {
       const depthA = a.name.split('/').length;
       const depthB = b.name.split('/').length;

@@ -105,7 +105,7 @@ describe('PriceService.refreshAll', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('writes the per-user price-db.ledger with the banner + P lines', async () => {
+  it('writes the per-user generated-prices.ledger with the banner + P lines', async () => {
     await seedUser(
       ctx,
       'alice',
@@ -125,7 +125,7 @@ describe('PriceService.refreshAll', () => {
     await service.refreshAll();
 
     const file = await fs.readFile(
-      path.join(getJournalDir('alice'), 'price-db.ledger'),
+      path.join(getJournalDir('alice'), 'generated-prices.ledger'),
       'utf-8'
     );
     expect(file).toContain(BANNER_MARKER);
@@ -213,7 +213,7 @@ describe('PriceService.refreshAll', () => {
     await service.refreshAll();
 
     const file = await fs.readFile(
-      path.join(getJournalDir('alice'), 'price-db.ledger'),
+      path.join(getJournalDir('alice'), 'generated-prices.ledger'),
       'utf-8'
     );
     expect(file).toContain('50000');
@@ -389,7 +389,10 @@ describe('PriceService manual prices', () => {
   });
 
   const readPriceDb = async (userId: string) =>
-    fs.readFile(path.join(getJournalDir(userId), 'price-db.ledger'), 'utf-8');
+    fs.readFile(
+      path.join(getJournalDir(userId), 'generated-prices.ledger'),
+      'utf-8'
+    );
 
   it('emits a never-transacted manual symbol into price-db', async () => {
     await seedUser(

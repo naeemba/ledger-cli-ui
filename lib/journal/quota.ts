@@ -1,7 +1,11 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import 'server-only';
-import { PRICE_DB_NAME, getJournalDir } from './layout';
+import {
+  GENERATED_PRICE_DB_NAME,
+  PRICE_DB_NAME,
+  getJournalDir,
+} from './layout';
 import { listLocalRelPaths } from '@/lib/storage/manifest';
 
 const DEFAULT_QUOTA_MB = 100;
@@ -25,18 +29,21 @@ export const journalQuotaBytes = (): number => journalQuotaMb() * 1024 * 1024;
 /**
  * Total bytes of user-authored files under the journal dir (0 if absent).
  *
- * Excludes the auto-managed price DB (`price-db.ledger`): it is system-generated
- * price data from refreshPrices, not user content. Counting it would let a large
- * price DB block addTransaction even when the user's own content is under quota,
- * while imports (which don't count it) would still succeed — an inconsistency the
- * user can't fix by trimming their journal.
+ * Excludes the auto-managed price DBs (`generated-prices.ledger` and the legacy
+ * `price-db.ledger`): they are system-generated price data from refreshPrices,
+ * not user content. Counting them would let a large price DB block
+ * addTransaction even when the user's own content is under quota, while imports
+ * (which don't count them) would still succeed — an inconsistency the user
+ * can't fix by trimming their journal.
  */
+const SYSTEM_PRICE_FILES = new Set([GENERATED_PRICE_DB_NAME, PRICE_DB_NAME]);
+
 export const getJournalDirSize = async (userId: string): Promise<number> => {
   const dir = getJournalDir(userId);
   const rels = await listLocalRelPaths(dir);
   let total = 0;
   for (const rel of rels) {
-    if (path.basename(rel) === PRICE_DB_NAME) continue;
+    if (SYSTEM_PRICE_FILES.has(path.basename(rel))) continue;
     try {
       total += (await fs.stat(path.join(dir, rel))).size;
     } catch {
