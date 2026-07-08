@@ -140,8 +140,15 @@ export class PriceService {
       await this.listNormalizedSymbolsForUser(userId)
     );
     // Match on the canonical symbol: a stored alias-symbol row still belongs to
-    // a journal that only ever names the canonical commodity.
-    const fetched = all.filter((r) => userSymbols.has(canonical(r.symbol)));
+    // a journal that only ever names the canonical commodity. Normalize the
+    // canonical name before the membership test — `userSymbols` is upper-cased
+    // (listNormalizedSymbolsForUser), while canonical() preserves the journal's
+    // raw case, so a lower/mixed-case declaration (`commodity Bitcoin` / `alias
+    // BTC`) would otherwise never match and drop the row silently.
+    const fetched = all.filter((r) => {
+      const canonicalSymbol = normalizeCommoditySymbol(canonical(r.symbol));
+      return canonicalSymbol !== null && userSymbols.has(canonicalSymbol);
+    });
     const manual = await this.deps.manualRepo.listForUser(userId);
     const manualRows: CommodityPriceRow[] = manual.map((m) => ({
       symbol: m.symbol,
