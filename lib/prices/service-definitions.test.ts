@@ -208,6 +208,43 @@ describe('PriceService.relocateLegacyDefinitions', () => {
     expect(await service.relocateLegacyDefinitions('erin')).toBe('skipped');
   });
 
+  it('recognizes a bare `include definitions.ledger` and does not add a duplicate', async () => {
+    // A hand-authored split whose main file includes it without the `./` prefix.
+    // An exact-string match would miss it, prepend a second `./`-prefixed include,
+    // load the file twice, and abort on the duplicate `alias`. The relocation must
+    // resolve include targets to paths so it appends without a second include.
+    await seedDroppedDefinitions(ctx, 'frank');
+    const dir = getJournalDir('frank');
+    const handAuthored = ['commodity BTC', '\tnomarket', ''].join('\n');
+    await fs.writeFile(
+      path.join(dir, 'definitions.ledger'),
+      handAuthored,
+      'utf-8'
+    );
+    await fs.writeFile(
+      path.join(dir, 'ledger.ledger'),
+      'include definitions.ledger\ninclude ./2025.ledger\n',
+      'utf-8'
+    );
+    await push('frank');
+
+    expect(await service.relocateLegacyDefinitions('frank')).toBe('relocated');
+
+    // No second include was added — the bare directive is left as-is.
+    const main = await fs.readFile(path.join(dir, 'ledger.ledger'), 'utf-8');
+    const includes = main
+      .split('\n')
+      .filter((line) => /definitions\.ledger/.test(line));
+    expect(includes).toEqual(['include definitions.ledger']);
+
+    const defs = await fs.readFile(
+      path.join(dir, 'definitions.ledger'),
+      'utf-8'
+    );
+    expect(defs).toContain('commodity BTC');
+    expect(defs).toContain('alias Kirt');
+  });
+
   it('skips a user with no dropped definitions', async () => {
     await ctx.insertUser('carol', 'carol', 'carol@example.com');
     await new UserSettingRepository(ctx.db).upsertBaseCurrency('carol', 'USD');

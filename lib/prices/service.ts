@@ -796,7 +796,15 @@ export class PriceService {
       .join('/');
     if (!rel.startsWith('.')) rel = `./${rel}`;
     const directive = `include ${rel}`;
-    if (main.split('\n').some((line) => line.trim() === directive)) return;
+    const mainDir = path.dirname(mainPath);
+    const alreadyIncluded = main.split('\n').some((line) => {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('include ')) return false;
+      const target = trimmed.slice('include '.length).trim();
+      if (!target) return false;
+      return path.resolve(mainDir, target) === path.resolve(defsPath);
+    });
+    if (alreadyIncluded) return;
     await this.deps.journalRepo.writeFileAtomic(
       mainPath,
       `${directive}\n${main}`
