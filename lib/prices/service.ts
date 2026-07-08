@@ -484,12 +484,15 @@ export class PriceService {
     const base = targetCurrency ?? (await this.resolveBaseCurrency(userId));
     const raw = await this.listKnownPrices(userId);
 
-    // The base row keeps whatever symbol ledger prints for it (e.g. `$`), so
-    // the row's identity matches the original-quote view exactly — only the
-    // non-base rows get re-valued.
+    // The base row is the target currency valued in itself, so represent it as
+    // the identity `1 <target>` rather than its raw quote. For the USD default
+    // the raw row is already `1 USD`, so this is a no-op there; for a non-USD
+    // target it stops the held target currency from rendering at its raw
+    // USD-quoted price (e.g. `1.10 USD`) among rows all valued in the target.
+    // Its symbol (e.g. `$`), date, staleness and provenance are preserved.
     const toBaseRow = (row: KnownPrice): KnownPrice =>
       normalizeCommoditySymbol(row.symbol) === base
-        ? row
+        ? { ...row, price: 1, quote: base }
         : { ...row, price: null, quote: null };
 
     // `ledger commodities` surrounds any name that is not a bare alphanumeric
@@ -604,7 +607,9 @@ export class PriceService {
 
     const valued = parseBaseBalance(stdout);
     return raw.map((row) => {
-      if (normalizeCommoditySymbol(row.symbol) === base) return row;
+      // The target valued in itself is the identity `1 <target>` (see toBaseRow).
+      if (normalizeCommoditySymbol(row.symbol) === base)
+        return { ...row, price: 1, quote: base };
       const index = symbolIndex.get(row.symbol);
       const hit = index !== undefined ? valued.get(index) : undefined;
       // Ledger emits `$` for dollar-denominated legs even when `base` is the
