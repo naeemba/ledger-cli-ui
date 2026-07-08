@@ -48,4 +48,11 @@ describe('parseUnconverted', () => {
     `;
     expect(parseUnconverted(stdout, 'USD')).toEqual(['EUR', 'JPY']);
   });
+
+  it('treats a case-variant of the base as the base, not unconverted', () => {
+    const stdout = ['20 Kirt  Assets:A', '5 EUR  Assets:B'].join('\n');
+    // Base is `KIRT`; the `Kirt` row is the same currency, so only EUR needs
+    // a rate.
+    expect(parseUnconverted(stdout, 'KIRT')).toEqual(['EUR']);
+  });
 });

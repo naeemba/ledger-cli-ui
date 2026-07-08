@@ -20,6 +20,11 @@ export const parseCommodityList = (stdout: string, base: string): string[] => {
     out.push(line);
   }
 
-  const rest = out.filter((c) => c !== base).sort(collator.compare);
+  // Filter the base case-insensitively so a case-variant of the base (e.g.
+  // `Kirt` when the base is `KIRT`) is not offered as a second, distinct
+  // currency alongside the pinned base.
+  const rest = out
+    .filter((c) => collator.compare(c, base) !== 0)
+    .sort(collator.compare);
   return [base, ...rest];
 };

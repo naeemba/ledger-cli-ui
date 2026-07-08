@@ -48,4 +48,13 @@ describe('parseCommodityList', () => {
   it('appends the base even when absent from the input', () => {
     expect(parseCommodityList('EUR\n', 'USD')).toEqual(['USD', 'EUR']);
   });
+
+  it('does not offer a case-variant of the base as a separate currency', () => {
+    // Journal holds both `KIRT` and `Kirt`; with `Kirt` chosen as the base,
+    // only the pinned base appears — not a duplicate `KIRT` option.
+    expect(parseCommodityList('KIRT\nEUR\nKirt\n', 'Kirt')).toEqual([
+      'Kirt',
+      'EUR',
+    ]);
+  });
 });
