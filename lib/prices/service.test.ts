@@ -10,6 +10,7 @@ import {
   PriceFetchRunRepository,
 } from './repository';
 import { PriceService } from './service';
+import { normalizeCommoditySymbol } from './symbols';
 import { getJournalDir } from '@/lib/journal/layout';
 import { JournalRepository } from '@/lib/journal/repository';
 import { UserSettingRepository } from '@/lib/settings/repository';
@@ -800,11 +801,15 @@ describe('PriceService.listKnownPricesInBase', () => {
     expect(bySymbol.XOF.price).toBeNull();
     expect(bySymbol.XOF.quote).toBeNull();
 
-    // Base row untouched. Ledger canonicalizes the held USD holding to `$`,
-    // and USD mode keeps the same symbol as the original-quote view.
-    expect(bySymbol['$'].price).toBe(1);
-    expect(bySymbol['$'].quote).toBe('USD');
-    expect(bySymbol['$'].source).toBe('base');
+    // Base row untouched. Identify it by its stable `base` source, and assert
+    // the symbol only after normalizing — ledger prints the held base holding
+    // as `$` on 3.4.x but `USD` on older apt builds, so a literal `$` would be
+    // build-specific.
+    const baseRow = rows.find((row) => row.source === 'base');
+    expect(baseRow).toBeDefined();
+    expect(normalizeCommoditySymbol(baseRow!.symbol)).toBe('USD');
+    expect(baseRow?.price).toBe(1);
+    expect(baseRow?.quote).toBe('USD');
   });
 
   it('values a dollar-denominated holding via the injected $=USD bridge', async () => {
