@@ -33,7 +33,9 @@ export const parseUnconverted = (stdout: string, base: string): string[] => {
     if (!line) continue;
 
     const commodity = extractCommodity(line);
-    if (commodity && commodity !== base) {
+    // Match the base case-insensitively: a case-variant of the base (e.g. `Kirt`
+    // when the base is `KIRT`) is the same currency, not an unconverted holding.
+    if (commodity && collator.compare(commodity, base) !== 0) {
       found.add(commodity);
     }
   }
