@@ -51,6 +51,40 @@ describe('extractDefinitions', () => {
     const text = 'P 2026/07/06 BTC 64000 USD\nP 2026/07/06 ETH 3000 USD\n';
     expect(extractDefinitions(text)).toBe('');
   });
+
+  it('gives a symbol-less `format` sample its commodity (journal-valid)', () => {
+    const text = [
+      'commodity KIRT',
+      '\talias Kirt',
+      '\tformat 1,000',
+      '\tnomarket',
+      'commodity $',
+      '\tformat 1,000.00',
+    ].join('\n');
+    expect(extractDefinitions(text)).toBe(
+      [
+        'commodity KIRT',
+        '\talias Kirt',
+        '\tformat 1,000 "KIRT"',
+        '\tnomarket',
+        'commodity $',
+        '\tformat 1,000.00 "$"',
+      ].join('\n')
+    );
+  });
+
+  it('quotes a symbol containing a separator (e.g. د.إ) when injecting', () => {
+    const text = 'commodity د.إ\n\tformat 1,000.00';
+    expect(extractDefinitions(text)).toBe(
+      'commodity د.إ\n\tformat 1,000.00 "د.إ"'
+    );
+  });
+
+  it('leaves a `format` sample that already carries its commodity', () => {
+    const text =
+      'commodity KIRT\n\tformat KIRT 1,000.000\ncommodity $\n\tformat $1,000.00';
+    expect(extractDefinitions(text)).toBe(text);
+  });
 });
 
 describe('hasDefinitions', () => {
