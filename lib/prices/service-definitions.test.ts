@@ -358,6 +358,60 @@ describe('PriceService.relocateLegacyDefinitions', () => {
     expect(generated).not.toMatch(/\bUSD\b/);
   });
 
+  it('keeps a row whose canonical commodity is mixed-case when regenerating', async () => {
+    // Regression for the membership test in regenerateUserPriceDb. A stored row
+    // names the alias (`BTC`); the journal declares `commodity Bitcoin / alias
+    // BTC`, so canonical('BTC') = 'Bitcoin' — the journal's raw, mixed case.
+    // `userSymbols` comes from `ledger commodities`, which is upper-cased
+    // ('BITCOIN'). Without normalizing the canonical name before the lookup,
+    // `has('Bitcoin')` is false, the row is silently dropped, and Bitcoin gets
+    // no price line. Both the gina and hank cases use already-uppercase
+    // canonicals, so only this one exercises the normalize wrapper.
+    await ctx.insertUser('ivy', 'ivy', 'ivy@example.com');
+    await new UserSettingRepository(ctx.db).upsertBaseCurrency('ivy', 'USD');
+    await new JournalRepository(ctx.db).setMainFile('ivy', 'ledger.ledger');
+    const dir = getJournalDir('ivy');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(
+      path.join(dir, 'ledger.ledger'),
+      [
+        'commodity Bitcoin',
+        '\talias BTC',
+        '\tnomarket',
+        'include ./2025.ledger',
+        '',
+      ].join('\n'),
+      'utf-8'
+    );
+    await fs.writeFile(
+      path.join(dir, '2025.ledger'),
+      '2025/01/01 x\n  Assets:Wallet  1 Bitcoin\n  Income\n',
+      'utf-8'
+    );
+    // A fetched row stored under the alias, quoting the base as the DB always does.
+    await new CommodityPriceRepository(ctx.db).insert([
+      {
+        symbol: 'BTC',
+        quote: 'USD',
+        price: 50000,
+        fetchedAt: new Date('2026-07-07T23:59:59Z'),
+        fetchedDate: '2026-07-07',
+      },
+    ]);
+    await push('ivy');
+
+    await service.regenerateUserPriceDb('ivy');
+
+    const generated = await fs.readFile(
+      path.join(dir, 'generated-prices.ledger'),
+      'utf-8'
+    );
+    // The row survived the mixed-case membership test and renders under the
+    // canonical commodity, never the alias.
+    expect(generated).toMatch(/^P .* Bitcoin 50000 USD$/m);
+    expect(generated).not.toMatch(/\bBTC\b/);
+  });
+
   it('skips a user with no dropped definitions', async () => {
     await ctx.insertUser('carol', 'carol', 'carol@example.com');
     await new UserSettingRepository(ctx.db).upsertBaseCurrency('carol', 'USD');
