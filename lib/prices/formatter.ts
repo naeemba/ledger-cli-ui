@@ -17,11 +17,22 @@ const BANNER = [
   '; Manual price overrides belong in your main journal.',
 ].join('\n');
 
+// Ledger reads a bare commodity symbol as a run of characters that excludes
+// whitespace, digits, and the punctuation it reserves for amount syntax. A name
+// outside that set (e.g. `Real Estate`, `1INCH`, `د.إ`) is only legal
+// double-quoted. Fetched/manual tickers (`$`, `BTC`, `USD`) contain none of
+// these and stay bare, but a canonical substitution can pull in a `commodity`
+// target that does — `parseAliasMap` unquotes those targets, so re-quote here.
+const RESERVED_COMMODITY_CHARS = /[\s\d.,;:?!+\-*/^&|=<>[\]{}()@"]/;
+
+const renderCommodity = (symbol: string): string =>
+  RESERVED_COMMODITY_CHARS.test(symbol) ? `"${symbol}"` : symbol;
+
 export const renderPriceDb = (rows: CommodityPriceRow[]): string => {
   const generatedAt = `; Last regenerated: ${new Date().toISOString()}`;
   const lines = rows.map(
     (r) =>
-      `P ${formatLedgerDateTime(r.fetchedAt)} ${r.symbol} ${r.price} ${r.quote}`
+      `P ${formatLedgerDateTime(r.fetchedAt)} ${renderCommodity(r.symbol)} ${r.price} ${renderCommodity(r.quote)}`
   );
   return [BANNER, generatedAt, '', ...lines, ''].join('\n');
 };

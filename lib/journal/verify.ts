@@ -54,31 +54,35 @@ const sanitize = (stderr: string): string => {
  * diverges from ledger's grammar, we catch it before the user has to find
  * out via a broken report page.
  *
+ * Pass `priceDbPath` to load a `--price-db` alongside the journal, exactly as
+ * the real read paths do. This matters because some parse errors only surface
+ * with the price DB present: ledger auto-vivifies a commodity from a `P` line's
+ * symbol/quote, so a price DB that names an alias (e.g. `BTC`) collides with the
+ * journal's `alias BTC` directive and aborts (pool.cc assertion). Verifying the
+ * journal alone would miss it and let a broken layout through.
+ *
  * On failure, returns the actual ledger diagnostic with absolute paths
  * redacted so the message is safe to surface to the client.
  */
 export const verifyJournalParseable = async (
-  mainPath: string
+  mainPath: string,
+  priceDbPath?: string
 ): Promise<VerifyResult> => {
   try {
     // Run hermetically: ignore the server's `~/.ledgerrc` (--init-file) and its
     // ambient LEDGER_* env (a personal LEDGER_PRICE_DB can declare commodities
     // that collide with the journal's own, failing an otherwise valid parse).
-    // The real read paths pass an explicit --price-db, which already overrides
-    // the env; verify only checks the journal, so it needs no price DB at all.
+    // An explicit --price-db still overrides the env, so passing one is safe.
     const {
       LEDGER_PRICE_DB: _priceDb,
       LEDGER_FILE: _file,
       LEDGER_INIT: _init,
       ...env
     } = process.env;
-    await execFileP(
-      'ledger',
-      ['--init-file', '/dev/null', '-f', mainPath, 'stats'],
-      {
-        env,
-      }
-    );
+    const args = ['--init-file', '/dev/null', '-f', mainPath];
+    if (priceDbPath) args.push('--price-db', priceDbPath);
+    args.push('stats');
+    await execFileP('ledger', args, { env });
     return { ok: true };
   } catch (e) {
     const err = e as { stderr?: string; message?: string };
