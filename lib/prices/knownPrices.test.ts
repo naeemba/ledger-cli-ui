@@ -198,4 +198,10 @@ describe('parseBaseBalance', () => {
     expect([...map.keys()]).toEqual([0]);
     expect(map.get(0)).toEqual({ price: 5, commodity: 'USD' });
   });
+
+  it('exposes the exact ledger balance format string', () => {
+    expect(BALANCE_BASE_FORMAT).toBe(
+      '%(account)|%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))\n'
+    );
+  });
 });

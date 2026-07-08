@@ -133,7 +133,7 @@ export { normalizeCommoditySymbol };
 export const parseBaseBalance = (
   stdout: string
 ): Map<number, { price: number; commodity: string }> => {
-  const out = new Map<number, { price: number; commodity: string }>();
+  const result = new Map<number, { price: number; commodity: string }>();
   for (const line of stdout.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -143,7 +143,7 @@ export const parseBaseBalance = (
     if (!match) continue;
     const price = Number(quantity.replace(/,/g, ''));
     if (!Number.isFinite(price)) continue;
-    out.set(Number(match[1]), { price, commodity });
+    result.set(Number(match[1]), { price, commodity });
   }
-  return out;
+  return result;
 };
