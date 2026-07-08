@@ -6,6 +6,8 @@ import {
   latestGenuinePrice,
   priceKey,
   STALE_THRESHOLD_DAYS,
+  parseBaseBalance,
+  BALANCE_BASE_FORMAT,
 } from './knownPrices';
 
 describe('parsePriceHistory', () => {
@@ -164,5 +166,36 @@ describe('latestGenuinePrice', () => {
       price: 50000,
       quote: '$',
     });
+  });
+});
+
+describe('parseBaseBalance', () => {
+  it('parses Probe:cN|quantity|commodity rows keyed by index', () => {
+    const stdout =
+      'Probe:c0|107393.21686406863836|USD\nProbe:c1|117.045492|USD\n';
+    const map = parseBaseBalance(stdout);
+    expect(map.get(0)).toEqual({
+      price: 107393.21686406863836,
+      commodity: 'USD',
+    });
+    expect(map.get(1)).toEqual({ price: 117.045492, commodity: 'USD' });
+  });
+
+  it('keeps an unconvertible row in its own commodity', () => {
+    const map = parseBaseBalance('Probe:c2|1|XOF\n');
+    expect(map.get(2)).toEqual({ price: 1, commodity: 'XOF' });
+  });
+
+  it('strips thousands separators from the quantity', () => {
+    const map = parseBaseBalance('Probe:c0|1,234.50|USD\n');
+    expect(map.get(0)).toEqual({ price: 1234.5, commodity: 'USD' });
+  });
+
+  it('ignores offset accounts, blanks, and malformed lines', () => {
+    const stdout =
+      '\nOffset:c0|-1|USD\nProbe:c0|5|USD\ngarbage\nProbe:cX|9|USD\n';
+    const map = parseBaseBalance(stdout);
+    expect([...map.keys()]).toEqual([0]);
+    expect(map.get(0)).toEqual({ price: 5, commodity: 'USD' });
   });
 });
