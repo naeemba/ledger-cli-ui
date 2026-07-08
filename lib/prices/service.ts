@@ -1,4 +1,6 @@
+import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
+import os from 'os';
 import path from 'path';
 import 'server-only';
 import { classifyCommodity } from './classify';
@@ -6,11 +8,13 @@ import { getCoinSymbolMap } from './coingecko/coinCache';
 import { renderPriceDb, hasGeneratedBanner } from './formatter';
 import type { CommodityPriceRow } from './formatter';
 import {
+  BALANCE_BASE_FORMAT,
   PRICES_FORMAT,
   STALE_THRESHOLD_DAYS,
   ageInDays,
   deriveSource,
   latestGenuinePrice,
+  parseBaseBalance,
   parsePriceHistory,
   priceKey,
   type KnownPrice,
@@ -455,6 +459,91 @@ export class PriceService {
     return rows.sort((a, b) =>
       a.symbol.localeCompare(b.symbol, undefined, { sensitivity: 'base' })
     );
+  }
+
+  /**
+   * Latest known price for every held commodity, valued into the base currency.
+   * Reuses the raw rows from `listKnownPrices` for provenance and staleness,
+   * then re-values each non-base holding through ledger's full price graph in a
+   * single `balance -X <base>` call driven by a throwaway probe journal. A
+   * holding with no conversion path to the base yields `price: null`.
+   */
+  async listKnownPricesInBase(userId: string): Promise<KnownPrice[]> {
+    const base = await this.resolveBaseCurrency(userId);
+    const raw = await this.listKnownPrices(userId);
+
+    const toBaseRow = (row: KnownPrice): KnownPrice =>
+      normalizeCommoditySymbol(row.symbol) === base
+        ? { ...row, symbol: base }
+        : { ...row, price: null, quote: null };
+
+    // Probe only non-base commodities; reject symbols that could break the
+    // throwaway journal (quotes / newlines).
+    const probeSymbols = raw
+      .filter(
+        (row) =>
+          normalizeCommoditySymbol(row.symbol) !== base &&
+          !/["\n\r]/.test(row.symbol)
+      )
+      .map((row) => row.symbol);
+
+    if (probeSymbols.length === 0) return raw.map(toBaseRow);
+
+    // One balanced `1 <symbol>` transaction per commodity, indexed by position
+    // so the account name carries no commodity-specific characters. Blank lines
+    // separate transactions; an explicit offset balances each one.
+    const journal = probeSymbols
+      .map((symbol, index) => {
+        const needsQuote = /[^A-Za-z0-9_]/.test(symbol);
+        const amount = needsQuote ? `1 "${symbol}"` : `1 ${symbol}`;
+        const offset = needsQuote ? `-1 "${symbol}"` : `-1 ${symbol}`;
+        return `2000-01-01 * probe\n  Probe:c${index}    ${amount}\n  Offset:c${index}    ${offset}\n`;
+      })
+      .join('\n');
+
+    const probePath = path.join(
+      os.tmpdir(),
+      `ledger-probe-${randomUUID()}.ledger`
+    );
+    try {
+      await fs.writeFile(probePath, journal, 'utf-8');
+      let stdout: string;
+      try {
+        stdout = await runLedgerForUser(
+          userId,
+          [
+            '--file',
+            probePath,
+            'balance',
+            '^Probe:c',
+            '--flat',
+            '--empty',
+            '--no-total',
+            '-X',
+            base,
+            '--format',
+            BALANCE_BASE_FORMAT,
+          ],
+          this.deps.journalRepo
+        );
+      } catch {
+        // Ledger failed → no valuation available; degrade to no-price rows.
+        return raw.map(toBaseRow);
+      }
+
+      const valued = parseBaseBalance(stdout);
+      return raw.map((row) => {
+        if (normalizeCommoditySymbol(row.symbol) === base)
+          return { ...row, symbol: base };
+        const index = probeSymbols.indexOf(row.symbol);
+        const hit = index >= 0 ? valued.get(index) : undefined;
+        return hit && hit.commodity === base
+          ? { ...row, price: hit.price, quote: base }
+          : { ...row, price: null, quote: null };
+      });
+    } finally {
+      await fs.rm(probePath, { force: true }).catch(() => {});
+    }
   }
 
   private async maybeMigrateLegacyFiles(users: string[]): Promise<void> {

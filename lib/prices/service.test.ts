@@ -725,3 +725,77 @@ describe('PriceService.listKnownPrices', () => {
     expect(btc?.stale).toBe(true);
   });
 });
+
+describe('PriceService.listKnownPricesInBase', () => {
+  let ctx: TestDbContext;
+  let service: PriceService;
+
+  beforeEach(async () => {
+    ctx = await setupTestDb('prices-base-');
+    service = new PriceService({
+      db: ctx.db,
+      commodityRepo: new CommodityPriceRepository(ctx.db),
+      runRepo: new PriceFetchRunRepository(ctx.db),
+      journalRepo: new JournalRepository(ctx.db),
+      manualRepo: new ManualPriceRepository(ctx.db),
+      mappingRepo: new CommodityMappingRepository(ctx.db),
+    });
+  });
+
+  afterEach(async () => {
+    await teardownTestDb(ctx);
+  });
+
+  it('values held commodities into the base via ledger cross-rate chains', async () => {
+    await seedUser(
+      ctx,
+      'u-base',
+      [
+        'P 2026-07-01 DAI 1 USD',
+        'P 2026-07-01 BTC 100 DAI',
+        'P 2026-07-01 KIRT 2 USD',
+        'P 2026-07-01 Nim 10 KIRT',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:A   1 BTC',
+        '  Equity    -1 BTC',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:B   1 Nim',
+        '  Equity    -1 Nim',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:E   1 XOF',
+        '  Equity    -1 XOF',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:F   1 USD',
+        '  Equity    -1 USD',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+
+    const rows = await service.listKnownPricesInBase('u-base');
+    const bySymbol = Object.fromEntries(rows.map((r) => [r.symbol, r]));
+
+    // BTC = 100 DAI * 1 USD/DAI = 100 USD (chained BTC->DAI->USD).
+    expect(bySymbol.BTC.price).toBeCloseTo(100, 6);
+    expect(bySymbol.BTC.quote).toBe('USD');
+    // Provenance / recency carried over from the raw row (keep-raw).
+    expect(bySymbol.BTC.source).toBe('journal');
+    expect(bySymbol.BTC.date).toBe('2026-07-01');
+
+    // Nim = 10 KIRT * 2 USD/KIRT = 20 USD (chained Nim->KIRT->USD).
+    expect(bySymbol.Nim.price).toBeCloseTo(20, 6);
+    expect(bySymbol.Nim.quote).toBe('USD');
+
+    // XOF has no path to USD → no price.
+    expect(bySymbol.XOF.price).toBeNull();
+    expect(bySymbol.XOF.quote).toBeNull();
+
+    // Base row untouched.
+    expect(bySymbol.USD.price).toBe(1);
+    expect(bySymbol.USD.source).toBe('base');
+  });
+});
