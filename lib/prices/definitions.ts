@@ -30,7 +30,7 @@ export const extractDefinitions = (text: string): string => {
     if (trimmed.includes(BANNER_MARKER)) continue;
 
     // Track the enclosing `commodity <symbol>` block. A non-indented, non-blank
-    // line closes it; blank lines and comments leave it open.
+    // line closes it; blank lines and indented comments leave it open.
     const commodityMatch = /^commodity\s+(.+)$/.exec(trimmed);
     if (commodityMatch) {
       // Store unquoted so we can re-quote consistently in the format below.
