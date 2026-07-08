@@ -21,6 +21,8 @@ export type {
 
 export {
   DEFAULT_MAIN,
+  DEFINITIONS_NAME,
+  GENERATED_PRICE_DB_NAME,
   PRICE_DB_NAME,
   getJournalDir,
   getJournalCacheTag,

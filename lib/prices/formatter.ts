@@ -28,3 +28,15 @@ export const renderPriceDb = (rows: CommodityPriceRow[]): string => {
 
 export const hasGeneratedBanner = (text: string): boolean =>
   text.includes(BANNER_MARKER);
+
+/**
+ * Header for the relocated-definitions file we create. Carries {@link
+ * BANNER_MARKER} so {@link hasGeneratedBanner} recognizes a definitions file we
+ * generated (and can distinguish it from a hand-authored `definitions.ledger`).
+ * Unlike the price DB, this file is safe for the user to edit — the fetcher
+ * never rewrites it.
+ */
+export const DEFINITIONS_BANNER = [
+  `; ${BANNER_MARKER} — relocated commodity/account declarations.`,
+  '; Safe to edit; the price fetcher never rewrites this file.',
+].join('\n');

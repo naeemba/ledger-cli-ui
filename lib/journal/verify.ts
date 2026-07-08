@@ -61,7 +61,24 @@ export const verifyJournalParseable = async (
   mainPath: string
 ): Promise<VerifyResult> => {
   try {
-    await execFileP('ledger', ['-f', mainPath, 'stats']);
+    // Run hermetically: ignore the server's `~/.ledgerrc` (--init-file) and its
+    // ambient LEDGER_* env (a personal LEDGER_PRICE_DB can declare commodities
+    // that collide with the journal's own, failing an otherwise valid parse).
+    // The real read paths pass an explicit --price-db, which already overrides
+    // the env; verify only checks the journal, so it needs no price DB at all.
+    const {
+      LEDGER_PRICE_DB: _priceDb,
+      LEDGER_FILE: _file,
+      LEDGER_INIT: _init,
+      ...env
+    } = process.env;
+    await execFileP(
+      'ledger',
+      ['--init-file', '/dev/null', '-f', mainPath, 'stats'],
+      {
+        env,
+      }
+    );
     return { ok: true };
   } catch (e) {
     const err = e as { stderr?: string; message?: string };

@@ -2,7 +2,12 @@ import { cache } from 'react';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { eq, sql } from 'drizzle-orm';
-import { DEFAULT_MAIN, PRICE_DB_NAME, getJournalDir } from './layout';
+import {
+  DEFAULT_MAIN,
+  GENERATED_PRICE_DB_NAME,
+  PRICE_DB_NAME,
+  getJournalDir,
+} from './layout';
 import { parseJournal } from './loader';
 import { type ParsedJournal } from './parser';
 import { userSetting } from '@/db/schema';
@@ -135,13 +140,22 @@ export class JournalRepository {
     return fingerprint;
   }
 
+  /**
+   * Resolves the file to pass as `--price-db`. Prefers the system-owned
+   * generated file; falls back to the legacy `price-db.ledger` so users who
+   * haven't been regenerated onto the new filename keep valuing correctly until
+   * the next refresh writes {@link GENERATED_PRICE_DB_NAME}.
+   */
   private async findPriceDb(dir: string): Promise<string | null> {
-    const candidate = path.join(dir, PRICE_DB_NAME);
-    try {
-      await fs.access(candidate);
-      return candidate;
-    } catch {
-      return null;
+    for (const name of [GENERATED_PRICE_DB_NAME, PRICE_DB_NAME]) {
+      const candidate = path.join(dir, name);
+      try {
+        await fs.access(candidate);
+        return candidate;
+      } catch {
+        // try next candidate
+      }
     }
+    return null;
   }
 }
