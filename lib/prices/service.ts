@@ -11,7 +11,11 @@ import {
 import { classifyCommodity } from './classify';
 import { getCoinSymbolMap } from './coingecko/coinCache';
 import { extractDefinitions, hasDefinitions } from './definitions';
-import { renderPriceDb, hasGeneratedBanner } from './formatter';
+import {
+  renderPriceDb,
+  hasGeneratedBanner,
+  DEFINITIONS_BANNER,
+} from './formatter';
 import type { CommodityPriceRow } from './formatter';
 import {
   BALANCE_BASE_FORMAT,
@@ -44,7 +48,6 @@ import {
   GENERATED_PRICE_DB_NAME,
   PRICE_DB_NAME,
   getJournalCacheTag,
-  getJournalDir,
 } from '@/lib/journal/layout';
 import { withUserLock } from '@/lib/journal/mutex';
 import type { JournalRepository } from '@/lib/journal/repository';
@@ -61,12 +64,6 @@ const log = createLogger('prices');
 // Backup written when a hand-maintained price DB was first migrated to the
 // generated format. Holds the user's original commodity/account declarations.
 const PRICE_DB_OLD_NAME = 'price-db_old.ledger';
-
-const fileExists = (p: string): Promise<boolean> =>
-  fs.access(p).then(
-    () => true,
-    () => false
-  );
 
 // listKnownPrices shells out to `ledger prices` once per held commodity. Cap the
 // fan-out so a user holding many commodities cannot spawn an unbounded number of
@@ -674,24 +671,20 @@ export class PriceService {
    *
    * Sources, in order: the `price-db_old.ledger` backup written when the file
    * was first migrated, else a still-legacy (non-banner) `price-db.ledger`.
-   * Idempotent — a no-op once `definitions.ledger` exists.
+   * Idempotent — a no-op once we've relocated (recognized by our banner in
+   * `definitions.ledger`, not by the filename, since `definitions.ledger` is
+   * also a common hand-authored split) or once the legacy source is gone.
    *
-   * MUST be called from a request context that has already pulled the user's
-   * journal (so the local cache is current and, for an encryption-enabled user,
-   * the session DEK is present for the push). It takes the per-user lock,
-   * re-pulls, relocates, and pushes. The two cheap pre-checks below skip the
-   * lock/pull entirely for the common case (already relocated, or nothing to
-   * relocate), so an unaffected user never pays for a mirror-pull.
+   * Takes the per-user lock, pulls fresh under it, relocates, verifies, and
+   * pushes — a single lock acquisition and a single mirror-pull per call, so the
+   * caller does NOT need to pull first. The session DEK (for an encryption-
+   * enabled user) comes from the request context, not the pull. If the pull or
+   * anything up to the verify fails, the pre-relocation state is restored so a
+   * failure is a clean no-op rather than a persistently broken journal.
    */
   async relocateLegacyDefinitions(
     userId: string
   ): Promise<'relocated' | 'skipped'> {
-    const dir = getJournalDir(userId);
-    // Cheap local pre-checks outside the lock: already relocated, or nothing to
-    // relocate. Both avoid the destructive mirror-pull for unaffected users.
-    if (await fileExists(path.join(dir, DEFINITIONS_NAME))) return 'skipped';
-    if (!(await this.readDefinitionsSource(dir))) return 'skipped';
-
     return withUserLock(userId, async () => {
       try {
         await pull(userId);
@@ -704,34 +697,71 @@ export class PriceService {
 
       const layout = await this.deps.journalRepo.ensureLayout(userId);
       const defsPath = path.join(layout.dir, DEFINITIONS_NAME);
-      if (await fileExists(defsPath)) return 'skipped';
+
+      // A `definitions.ledger` we generated carries our banner → already
+      // relocated, nothing to do. A hand-authored one (no banner) is a normal
+      // user split we must never clobber; we append to it below instead.
+      const existingDefs = await this.deps.journalRepo
+        .readFile(defsPath)
+        .catch(() => null);
+      if (existingDefs !== null && hasGeneratedBanner(existingDefs)) {
+        return 'skipped';
+      }
 
       const source = await this.readDefinitionsSource(layout.dir);
       if (!source) return 'skipped';
+
+      // Snapshot everything we mutate so a failed verify restores the exact
+      // pre-relocation state (the legacy source stays the source of truth until
+      // verify passes and we delete it below).
+      const mainOriginal = await this.deps.journalRepo
+        .readFile(layout.mainPath)
+        .catch(() => null);
 
       // Preserve any prices the legacy file still carried (idempotent upsert).
       const rows = parseLegacyPriceDb(source);
       if (rows.length > 0) await this.deps.commodityRepo.insert(rows);
 
-      await this.deps.journalRepo.writeFileAtomic(
-        defsPath,
-        `${extractDefinitions(source)}\n`
-      );
+      const relocated = extractDefinitions(source);
+      // Never overwrite a hand-authored definitions file: append to it, so its
+      // own declarations survive. A resulting duplicate declaration fails the
+      // verify below and is rolled back cleanly.
+      const body =
+        existingDefs !== null && existingDefs.trim()
+          ? `${existingDefs.replace(/\n+$/, '')}\n\n${relocated}\n`
+          : `${DEFINITIONS_BANNER}\n${relocated}\n`;
+      await this.deps.journalRepo.writeFileAtomic(defsPath, body);
       await this.prependInclude(layout.mainPath, defsPath);
 
-      // Rebuild the generated price file under its own name, then drop the
-      // superseded legacy files so the declarations aren't loaded twice
-      // (ledger aborts on a duplicate `alias`).
+      // Rebuild the generated price file under its own name (fully derived from
+      // the DB, so safe to leave in place even on rollback).
       await this.regenerateUserPriceDb(userId);
-      await fs.rm(path.join(layout.dir, PRICE_DB_NAME), { force: true });
-      await fs.rm(path.join(layout.dir, PRICE_DB_OLD_NAME), { force: true });
 
+      // Verify the NEW layout parses BEFORE deleting the legacy files, so a
+      // failure is fully reversible.
       const verify = await verifyJournalParseable(layout.mainPath);
       if (!verify.ok) {
+        if (existingDefs === null) {
+          await fs.rm(defsPath, { force: true });
+        } else {
+          await this.deps.journalRepo.writeFileAtomic(defsPath, existingDefs);
+        }
+        if (mainOriginal !== null) {
+          await this.deps.journalRepo.writeFileAtomic(
+            layout.mainPath,
+            mainOriginal
+          );
+        }
         throw new Error(
           `definitions relocation left journal unparseable: ${verify.message}`
         );
       }
+
+      // New layout is valid — drop the superseded legacy files so their
+      // declarations aren't loaded twice (ledger aborts on a duplicate `alias`).
+      await fs.rm(path.join(layout.dir, PRICE_DB_NAME), { force: true });
+      await fs.rm(path.join(layout.dir, PRICE_DB_OLD_NAME), { force: true });
+
       await push(userId);
       return 'relocated';
     });
