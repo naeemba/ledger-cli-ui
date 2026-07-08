@@ -806,4 +806,28 @@ describe('PriceService.listKnownPricesInBase', () => {
     expect(bySymbol['$'].quote).toBe('USD');
     expect(bySymbol['$'].source).toBe('base');
   });
+
+  it('values a dollar-denominated holding via the injected $=USD bridge', async () => {
+    // The common journal convention prices in `$`, which ledger will not bridge
+    // to a `USD` base on its own. The probe's injected `$` = 1 USD directive
+    // must let the value resolve instead of reporting "no price".
+    await seedUser(
+      ctx,
+      'u-dollar',
+      [
+        'P 2026-07-01 BTC $40000',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:A   1 BTC',
+        '  Equity    -1 BTC',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+
+    const rows = await service.listKnownPricesInBase('u-dollar');
+    const btc = rows.find((row) => row.symbol === 'BTC');
+    expect(btc?.price).toBeCloseTo(40000, 6);
+    expect(btc?.quote).toBe('USD');
+  });
 });

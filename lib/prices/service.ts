@@ -492,17 +492,26 @@ export class PriceService {
 
     if (probeSymbols.length === 0) return raw.map(toBaseRow);
 
+    // Ledger treats `$` and the literal `USD` as distinct commodities and will
+    // not bridge them on its own, so a holding priced in `$` (the common
+    // journal convention) would fail to value into a `USD` base. Seed the probe
+    // journal with the identity `$` = 1 USD, dated in the distant past so any
+    // real `$`/USD price in the user's journal takes precedence over it.
+    const bridge = base === 'USD' ? 'P 2000-01-01 $ 1 USD\n\n' : '';
+
     // One balanced `1 <symbol>` transaction per commodity, indexed by position
     // so the account name carries no commodity-specific characters. Blank lines
     // separate transactions; an explicit offset balances each one.
-    const journal = probeSymbols
-      .map((symbol, index) => {
-        const needsQuote = /[^A-Za-z0-9_]/.test(symbol);
-        const amount = needsQuote ? `1 "${symbol}"` : `1 ${symbol}`;
-        const offset = needsQuote ? `-1 "${symbol}"` : `-1 ${symbol}`;
-        return `2000-01-01 * probe\n  Probe:c${index}    ${amount}\n  Offset:c${index}    ${offset}\n`;
-      })
-      .join('\n');
+    const journal =
+      bridge +
+      probeSymbols
+        .map((symbol, index) => {
+          const needsQuote = /[^A-Za-z0-9_]/.test(symbol);
+          const amount = needsQuote ? `1 "${symbol}"` : `1 ${symbol}`;
+          const offset = needsQuote ? `-1 "${symbol}"` : `-1 ${symbol}`;
+          return `2000-01-01 * probe\n  Probe:c${index}    ${amount}\n  Offset:c${index}    ${offset}\n`;
+        })
+        .join('\n');
 
     const probePath = path.join(
       os.tmpdir(),
@@ -539,7 +548,10 @@ export class PriceService {
         if (normalizeCommoditySymbol(row.symbol) === base) return row;
         const index = probeSymbols.indexOf(row.symbol);
         const hit = index >= 0 ? valued.get(index) : undefined;
-        return hit && hit.commodity === base
+        // Ledger emits `$` for dollar-denominated legs even when `base` is the
+        // string `USD`, so normalize before comparing — otherwise a genuinely
+        // convertible holding would be reported as having no price.
+        return hit && normalizeCommoditySymbol(hit.commodity) === base
           ? { ...row, price: hit.price, quote: base }
           : { ...row, price: null, quote: null };
       });
