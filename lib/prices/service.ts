@@ -472,9 +472,12 @@ export class PriceService {
     const base = await this.resolveBaseCurrency(userId);
     const raw = await this.listKnownPrices(userId);
 
+    // The base row keeps whatever symbol ledger prints for it (e.g. `$`), so
+    // the row's identity matches the original-quote view exactly — only the
+    // non-base rows get re-valued.
     const toBaseRow = (row: KnownPrice): KnownPrice =>
       normalizeCommoditySymbol(row.symbol) === base
-        ? { ...row, symbol: base }
+        ? row
         : { ...row, price: null, quote: null };
 
     // Probe only non-base commodities; reject symbols that could break the
@@ -533,8 +536,7 @@ export class PriceService {
 
       const valued = parseBaseBalance(stdout);
       return raw.map((row) => {
-        if (normalizeCommoditySymbol(row.symbol) === base)
-          return { ...row, symbol: base };
+        if (normalizeCommoditySymbol(row.symbol) === base) return row;
         const index = probeSymbols.indexOf(row.symbol);
         const hit = index >= 0 ? valued.get(index) : undefined;
         return hit && hit.commodity === base

@@ -794,8 +794,10 @@ describe('PriceService.listKnownPricesInBase', () => {
     expect(bySymbol.XOF.price).toBeNull();
     expect(bySymbol.XOF.quote).toBeNull();
 
-    // Base row untouched.
-    expect(bySymbol.USD.price).toBe(1);
-    expect(bySymbol.USD.source).toBe('base');
+    // Base row untouched. Ledger canonicalizes the held USD holding to `$`,
+    // and USD mode keeps the same symbol as the original-quote view.
+    expect(bySymbol['$'].price).toBe(1);
+    expect(bySymbol['$'].quote).toBe('USD');
+    expect(bySymbol['$'].source).toBe('base');
   });
 });
