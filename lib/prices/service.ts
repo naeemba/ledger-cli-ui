@@ -1,16 +1,25 @@
+import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
+import os from 'os';
 import path from 'path';
 import 'server-only';
+import {
+  getBridgeViability,
+  recordBridgeAborts,
+  recordBridgeViable,
+} from './bridgeViability';
 import { classifyCommodity } from './classify';
 import { getCoinSymbolMap } from './coingecko/coinCache';
 import { renderPriceDb, hasGeneratedBanner } from './formatter';
 import type { CommodityPriceRow } from './formatter';
 import {
+  BALANCE_BASE_FORMAT,
   PRICES_FORMAT,
   STALE_THRESHOLD_DAYS,
   ageInDays,
   deriveSource,
   latestGenuinePrice,
+  parseBaseBalance,
   parsePriceHistory,
   priceKey,
   type KnownPrice,
@@ -455,6 +464,145 @@ export class PriceService {
     return rows.sort((a, b) =>
       a.symbol.localeCompare(b.symbol, undefined, { sensitivity: 'base' })
     );
+  }
+
+  /**
+   * Latest known price for every held commodity, valued into the base currency.
+   * Reuses the raw rows from `listKnownPrices` for provenance and staleness,
+   * then re-values each non-base holding through ledger's full price graph in a
+   * single `balance -X <base>` call driven by a throwaway probe journal. A
+   * holding with no conversion path to the base yields `price: null`.
+   */
+  async listKnownPricesInBase(userId: string): Promise<KnownPrice[]> {
+    const base = await this.resolveBaseCurrency(userId);
+    const raw = await this.listKnownPrices(userId);
+
+    // The base row keeps whatever symbol ledger prints for it (e.g. `$`), so
+    // the row's identity matches the original-quote view exactly — only the
+    // non-base rows get re-valued.
+    const toBaseRow = (row: KnownPrice): KnownPrice =>
+      normalizeCommoditySymbol(row.symbol) === base
+        ? row
+        : { ...row, price: null, quote: null };
+
+    // `ledger commodities` surrounds any name that is not a bare alphanumeric
+    // run with double quotes (e.g. it prints `"1INCH"` for the digit-bearing
+    // 1inch ticker — such names are only legal quoted in a journal anyway).
+    // Recover the bare commodity name by stripping one surrounding quote pair,
+    // then reject anything that still carries a quote or newline, which would
+    // let a crafted holding break out of the throwaway journal.
+    const probeName = (symbol: string): string | null => {
+      const stripped =
+        symbol.length >= 2 &&
+        ((symbol.startsWith('"') && symbol.endsWith('"')) ||
+          (symbol.startsWith("'") && symbol.endsWith("'")))
+          ? symbol.slice(1, -1)
+          : symbol;
+      return /["\n\r]/.test(stripped) ? null : stripped;
+    };
+
+    // Probe only non-base commodities with a journal-safe name. Keep the raw
+    // symbol as the row identity so results match back exactly.
+    const probeSymbols = raw
+      .filter(
+        (row) =>
+          normalizeCommoditySymbol(row.symbol) !== base &&
+          probeName(row.symbol) !== null
+      )
+      .map((row) => row.symbol);
+
+    if (probeSymbols.length === 0) return raw.map(toBaseRow);
+
+    // Map each held symbol to its probe index once, so the final re-value pass
+    // is linear rather than O(n²) via a per-row `indexOf` scan. First index
+    // wins on the off chance two rows carry the same symbol.
+    const symbolIndex = new Map<string, number>();
+    probeSymbols.forEach((symbol, index) => {
+      if (!symbolIndex.has(symbol)) symbolIndex.set(symbol, index);
+    });
+
+    // One balanced `1 <symbol>` transaction per commodity, indexed by position
+    // so the account name carries no commodity-specific characters. Blank lines
+    // separate transactions; an explicit offset balances each one. The bare
+    // commodity name is always double-quoted, which is legal for every name and
+    // is required for digit-bearing tickers (`1 1INCH` fails: "Unexpected char
+    // '1'"). An optional bridge directive may be prepended.
+    const buildJournal = (bridge: string): string =>
+      bridge +
+      probeSymbols
+        .map((symbol, index) => {
+          const name = probeName(symbol) as string;
+          return `2000-01-01 * probe\n  Probe:c${index}    1 "${name}"\n  Offset:c${index}    -1 "${name}"\n`;
+        })
+        .join('\n');
+
+    const runProbe = async (journal: string): Promise<string> => {
+      const probePath = path.join(
+        os.tmpdir(),
+        `ledger-probe-${randomUUID()}.ledger`
+      );
+      try {
+        await fs.writeFile(probePath, journal, 'utf-8');
+        return await runLedgerForUser(
+          userId,
+          [
+            '--file',
+            probePath,
+            'balance',
+            '^Probe:c',
+            '--flat',
+            '--empty',
+            '--no-total',
+            '-X',
+            base,
+            '--format',
+            BALANCE_BASE_FORMAT,
+          ],
+          this.deps.journalRepo
+        );
+      } finally {
+        await fs.rm(probePath, { force: true }).catch(() => {});
+      }
+    };
+
+    // Ledger builds that keep `$` and the literal `USD` distinct will not
+    // bridge a `$`-priced holding into a `USD` base on their own, so seed the
+    // identity `$` = 1 USD, dated in the distant past so any real `$`/USD price
+    // in the user's journal takes precedence over it. Builds that canonicalize
+    // `$` to `USD` (e.g. Ledger 3.4.x) reject that directive as a self-price
+    // ("Assertion failed … source != price.commodity()") and abort the whole
+    // parse — but they also already value `$` into `USD` natively, so the
+    // bridge is redundant there. Try with the bridge, then retry without it on
+    // failure to stay correct across both build behaviours — and remember which
+    // build this binary is, so a canonicalizing build skips the known-fatal
+    // bridge attempt (and its guaranteed retry) on every later render.
+    const bridge = 'P 2000-01-01 $ 1 USD\n\n';
+    const wantsBridge = base === 'USD' && getBridgeViability() !== 'aborts';
+    let stdout: string | null = null;
+    try {
+      stdout = await runProbe(buildJournal(wantsBridge ? bridge : ''));
+      if (wantsBridge) recordBridgeViable();
+    } catch {
+      if (wantsBridge) {
+        recordBridgeAborts();
+        stdout = await runProbe(buildJournal('')).catch(() => null);
+      }
+    }
+    // Ledger failed outright → no valuation available; degrade to no-price rows.
+    if (stdout === null) return raw.map(toBaseRow);
+
+    const valued = parseBaseBalance(stdout);
+    return raw.map((row) => {
+      if (normalizeCommoditySymbol(row.symbol) === base) return row;
+      const index = symbolIndex.get(row.symbol);
+      const hit = index !== undefined ? valued.get(index) : undefined;
+      // Ledger emits `$` for dollar-denominated legs even when `base` is the
+      // string `USD`, so normalize before comparing — otherwise a genuinely
+      // convertible holding would be reported as having no price.
+      return hit && normalizeCommoditySymbol(hit.commodity) === base
+        ? { ...row, price: hit.price, quote: base }
+        : { ...row, price: null, quote: null };
+    });
   }
 
   private async maybeMigrateLegacyFiles(users: string[]): Promise<void> {

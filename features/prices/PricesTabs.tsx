@@ -12,6 +12,7 @@ type Props = {
   prices: ManualPrice[];
   commodities: string[];
   baseCurrency: string;
+  baseMode: boolean;
 };
 
 const TABS = [
@@ -24,6 +25,7 @@ export const PricesTabs = ({
   prices,
   commodities,
   baseCurrency,
+  baseMode,
 }: Props) => {
   const [active, setActive] = useState('known');
 
@@ -34,7 +36,11 @@ export const PricesTabs = ({
       </header>
       <TabBar tabs={TABS} active={active} onSelect={setActive} />
       {active === 'known' ? (
-        <KnownPricesView rows={known} />
+        <KnownPricesView
+          rows={known}
+          baseMode={baseMode}
+          baseCurrency={baseCurrency}
+        />
       ) : (
         <>
           <p className="text-muted-foreground text-sm">

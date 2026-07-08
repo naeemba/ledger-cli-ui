@@ -10,6 +10,7 @@ import {
   PriceFetchRunRepository,
 } from './repository';
 import { PriceService } from './service';
+import { normalizeCommoditySymbol } from './symbols';
 import { getJournalDir } from '@/lib/journal/layout';
 import { JournalRepository } from '@/lib/journal/repository';
 import { UserSettingRepository } from '@/lib/settings/repository';
@@ -723,5 +724,143 @@ describe('PriceService.listKnownPrices', () => {
     expect(btc?.date).toBe('2026-01-01');
     expect(btc?.price).toBe(40000);
     expect(btc?.stale).toBe(true);
+  });
+});
+
+describe('PriceService.listKnownPricesInBase', () => {
+  let ctx: TestDbContext;
+  let service: PriceService;
+
+  beforeEach(async () => {
+    ctx = await setupTestDb('prices-base-');
+    service = new PriceService({
+      db: ctx.db,
+      commodityRepo: new CommodityPriceRepository(ctx.db),
+      runRepo: new PriceFetchRunRepository(ctx.db),
+      journalRepo: new JournalRepository(ctx.db),
+      manualRepo: new ManualPriceRepository(ctx.db),
+      mappingRepo: new CommodityMappingRepository(ctx.db),
+    });
+  });
+
+  afterEach(async () => {
+    await teardownTestDb(ctx);
+  });
+
+  it('values held commodities into the base via ledger cross-rate chains', async () => {
+    await seedUser(
+      ctx,
+      'u-base',
+      [
+        'P 2026-07-01 DAI 1 USD',
+        'P 2026-07-01 BTC 100 DAI',
+        'P 2026-07-01 KIRT 2 USD',
+        'P 2026-07-01 Nim 10 KIRT',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:A   1 BTC',
+        '  Equity    -1 BTC',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:B   1 Nim',
+        '  Equity    -1 Nim',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:E   1 XOF',
+        '  Equity    -1 XOF',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:F   1 USD',
+        '  Equity    -1 USD',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+
+    const rows = await service.listKnownPricesInBase('u-base');
+    const bySymbol = Object.fromEntries(rows.map((r) => [r.symbol, r]));
+
+    // BTC = 100 DAI * 1 USD/DAI = 100 USD (chained BTC->DAI->USD).
+    expect(bySymbol.BTC.price).toBeCloseTo(100, 6);
+    expect(bySymbol.BTC.quote).toBe('USD');
+    // Provenance / recency carried over from the raw row (keep-raw).
+    expect(bySymbol.BTC.source).toBe('journal');
+    expect(bySymbol.BTC.date).toBe('2026-07-01');
+    // ageDays / stale must match the original-quote view exactly. Comparing
+    // against listKnownPrices keeps the guard independent of the run date.
+    const rawRows = await service.listKnownPrices('u-base');
+    const rawBtc = rawRows.find((row) => row.symbol === 'BTC');
+    expect(bySymbol.BTC.ageDays).toBe(rawBtc?.ageDays);
+    expect(bySymbol.BTC.stale).toBe(rawBtc?.stale);
+
+    // Nim = 10 KIRT * 2 USD/KIRT = 20 USD (chained Nim->KIRT->USD).
+    expect(bySymbol.Nim.price).toBeCloseTo(20, 6);
+    expect(bySymbol.Nim.quote).toBe('USD');
+
+    // XOF has no path to USD → no price.
+    expect(bySymbol.XOF.price).toBeNull();
+    expect(bySymbol.XOF.quote).toBeNull();
+
+    // Base row untouched. Identify it by its stable `base` source, and assert
+    // the symbol only after normalizing — ledger prints the held base holding
+    // as `$` on 3.4.x but `USD` on older apt builds, so a literal `$` would be
+    // build-specific.
+    const baseRow = rows.find((row) => row.source === 'base');
+    expect(baseRow).toBeDefined();
+    expect(normalizeCommoditySymbol(baseRow!.symbol)).toBe('USD');
+    expect(baseRow?.price).toBe(1);
+    expect(baseRow?.quote).toBe('USD');
+  });
+
+  it('values a dollar-denominated holding via the injected $=USD bridge', async () => {
+    // The common journal convention prices in `$`, which ledger will not bridge
+    // to a `USD` base on its own. The probe's injected `$` = 1 USD directive
+    // must let the value resolve instead of reporting "no price".
+    await seedUser(
+      ctx,
+      'u-dollar',
+      [
+        'P 2026-07-01 BTC $40000',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:A   1 BTC',
+        '  Equity    -1 BTC',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+
+    const rows = await service.listKnownPricesInBase('u-dollar');
+    const btc = rows.find((row) => row.symbol === 'BTC');
+    expect(btc?.price).toBeCloseTo(40000, 6);
+    expect(btc?.quote).toBe('USD');
+  });
+
+  it('values a digit-bearing ticker that ledger surfaces quoted', async () => {
+    // A digit-bearing commodity like `1INCH` is only legal double-quoted in a
+    // journal, and `ledger commodities` prints it back with the quotes intact
+    // (`"1INCH"`). The probe must strip the surrounding pair and re-quote the
+    // bare name, otherwise the holding is silently reported as having no price
+    // even though it converts cleanly to the base.
+    await seedUser(
+      ctx,
+      'u-digit',
+      [
+        'P 2026-07-01 "1INCH" 3 USD',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:A   1 "1INCH"',
+        '  Equity    -1 "1INCH"',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+
+    const rows = await service.listKnownPricesInBase('u-digit');
+    // `ledger commodities` keeps the surrounding quotes, so the row identity is
+    // the quoted form.
+    const inch = rows.find((row) => row.symbol === '"1INCH"');
+    expect(inch?.price).toBeCloseTo(3, 6);
+    expect(inch?.quote).toBe('USD');
   });
 });

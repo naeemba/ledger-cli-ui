@@ -9,6 +9,15 @@ import { normalizeCommoditySymbol } from './symbols';
 export const PRICES_FORMAT =
   "%(format_date(date,'%Y-%m-%d'))|%(quantity(scrub(display_amount)))|%(commodity(scrub(display_amount)))\n";
 
+/**
+ * Machine-parseable balance format for base-currency valuation: one
+ * `account|quantity|commodity` line per probe holding. `quantity` is the
+ * full-precision value, `commodity` is the currency it resolved to (the base
+ * when a conversion path existed, otherwise the holding's own commodity).
+ */
+export const BALANCE_BASE_FORMAT =
+  '%(account)|%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))\n';
+
 export const STALE_THRESHOLD_DAYS = 7;
 
 export type PricePoint = { date: string; price: number; quote: string };
@@ -112,3 +121,29 @@ export const deriveSource = (args: {
 
 /** Re-exported so the service normalizes symbols the same way. */
 export { normalizeCommoditySymbol };
+
+/**
+ * Parse `ledger balance ^Probe:cN --flat -X <base> --empty` output into a
+ * map of probe index → valued amount. Probe accounts are named `Probe:c<index>`
+ * so the account label carries no commodity-specific characters; the index maps
+ * back to the held commodity by position. Offset accounts and malformed lines
+ * are ignored. A row whose `commodity` differs from the requested base was not
+ * convertible into the base.
+ */
+export const parseBaseBalance = (
+  stdout: string
+): Map<number, { price: number; commodity: string }> => {
+  const result = new Map<number, { price: number; commodity: string }>();
+  for (const line of stdout.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const [account, quantity, commodity] = trimmed.split('|');
+    if (!account || !quantity || !commodity) continue;
+    const match = /^Probe:c(\d+)$/.exec(account);
+    if (!match) continue;
+    const price = Number(quantity.replace(/,/g, ''));
+    if (!Number.isFinite(price)) continue;
+    result.set(Number(match[1]), { price, commodity });
+  }
+  return result;
+};
