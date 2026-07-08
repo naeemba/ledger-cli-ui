@@ -53,8 +53,12 @@ import {
   PRICE_DB_NAME,
   getJournalCacheTag,
 } from '@/lib/journal/layout';
+import { resolveIncludes } from '@/lib/journal/loader';
 import { withUserLock } from '@/lib/journal/mutex';
-import type { JournalRepository } from '@/lib/journal/repository';
+import type {
+  JournalLayout,
+  JournalRepository,
+} from '@/lib/journal/repository';
 import { verifyJournalParseable } from '@/lib/journal/verify';
 import { createLogger } from '@/lib/log';
 import { pull, push } from '@/lib/storage';
@@ -128,7 +132,7 @@ export class PriceService {
     // canonicalize at render, not at insert, so the base-currency quote stays
     // intact for listForQuote's filter above and cron-fetched rows are covered
     // too. See parseAliasMap and lib/journal/verify.ts.
-    const aliasMap = await this.readCommodityAliasMap(layout.dir);
+    const aliasMap = await this.readCommodityAliasMap(layout);
     const canonical = (symbol: string): string =>
       aliasMap.get(symbol) ?? symbol;
 
@@ -168,19 +172,44 @@ export class PriceService {
   }
 
   /**
-   * Alias→canonical-commodity map declared in the user's `definitions.ledger`
-   * (empty when there is none). This is where the relocation puts recovered
-   * `commodity`/`alias` declarations, so it is the authoritative source for
-   * canonicalizing generated prices. Aliases declared elsewhere in the journal
-   * are not consulted; move them into definitions.ledger if they must apply.
+   * Alias→canonical-commodity map for the whole journal (empty when it declares
+   * none). ledger honors `commodity`/`alias` blocks wherever they appear — a
+   * common layout declares `commodity $` / `alias USD` directly in the main
+   * journal, never in `definitions.ledger` — so consulting only the relocated
+   * definitions file would miss them and let a generated `P … USD` collide with
+   * the journal's `alias USD` (the pool.cc assertion this canonicalization
+   * exists to prevent). We therefore parse every file reachable from the main
+   * journal via its `include` directives, the same set ledger loads.
+   *
+   * `definitions.ledger` is read explicitly as well so the map still resolves if
+   * include-resolution fails (an include cycle or a missing include, which would
+   * make ledger itself fail to parse anyway). Later files win on a duplicate
+   * alias, but a genuine duplicate `alias` would abort ledger regardless.
    */
   private async readCommodityAliasMap(
-    dir: string
+    layout: JournalLayout
   ): Promise<Map<string, string>> {
-    const text = await this.deps.journalRepo
-      .readFile(path.join(dir, DEFINITIONS_NAME))
-      .catch(() => '');
-    return parseAliasMap(text);
+    const defsPath = path.join(layout.dir, DEFINITIONS_NAME);
+    const files = [defsPath];
+    try {
+      for (const file of await resolveIncludes(layout.mainPath)) {
+        // definitions.ledger is already first in the list; skip the duplicate.
+        if (path.resolve(file) !== path.resolve(defsPath)) files.push(file);
+      }
+    } catch {
+      // Include cycle or missing include — ledger would fail to parse too. Fall
+      // back to the definitions.ledger declarations collected above.
+    }
+
+    const map = new Map<string, string>();
+    for (const file of files) {
+      const text = await this.deps.journalRepo.readFile(file).catch(() => '');
+      if (!text) continue;
+      for (const [alias, commodity] of parseAliasMap(text)) {
+        map.set(alias, commodity);
+      }
+    }
+    return map;
   }
 
   /**
