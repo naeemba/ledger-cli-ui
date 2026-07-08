@@ -12,7 +12,10 @@ const PricesPage = async ({
   searchParams: Promise<SearchParams>;
 }) => {
   const { base } = await searchParams;
-  const baseMode = base === 'usd';
+  // `base=base` is a mode flag ("value into the resolved base currency"), not
+  // the currency code — so the toggle keeps working the day
+  // resolveBaseCurrency returns something other than USD.
+  const baseMode = base === 'base';
   const user = await requireUser();
   const [known, prices, commodities, baseCurrency] = await Promise.all([
     baseMode

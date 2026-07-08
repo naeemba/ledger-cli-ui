@@ -3,6 +3,11 @@ import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
 import 'server-only';
+import {
+  getBridgeViability,
+  recordBridgeAborts,
+  recordBridgeViable,
+} from './bridgeViability';
 import { classifyCommodity } from './classify';
 import { getCoinSymbolMap } from './coingecko/coinCache';
 import { renderPriceDb, hasGeneratedBanner } from './formatter';
@@ -568,13 +573,18 @@ export class PriceService {
     // ("Assertion failed … source != price.commodity()") and abort the whole
     // parse — but they also already value `$` into `USD` natively, so the
     // bridge is redundant there. Try with the bridge, then retry without it on
-    // failure to stay correct across both build behaviours.
-    const bridge = base === 'USD' ? 'P 2000-01-01 $ 1 USD\n\n' : '';
+    // failure to stay correct across both build behaviours — and remember which
+    // build this binary is, so a canonicalizing build skips the known-fatal
+    // bridge attempt (and its guaranteed retry) on every later render.
+    const bridge = 'P 2000-01-01 $ 1 USD\n\n';
+    const wantsBridge = base === 'USD' && getBridgeViability() !== 'aborts';
     let stdout: string | null = null;
     try {
-      stdout = await runProbe(buildJournal(bridge));
+      stdout = await runProbe(buildJournal(wantsBridge ? bridge : ''));
+      if (wantsBridge) recordBridgeViable();
     } catch {
-      if (bridge) {
+      if (wantsBridge) {
+        recordBridgeAborts();
         stdout = await runProbe(buildJournal('')).catch(() => null);
       }
     }
