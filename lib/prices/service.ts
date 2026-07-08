@@ -481,7 +481,13 @@ export class PriceService {
     userId: string,
     targetCurrency?: string
   ): Promise<KnownPrice[]> {
-    const base = targetCurrency ?? (await this.resolveBaseCurrency(userId));
+    // Normalize the target the same way held symbols are normalized (uppercased,
+    // `$`→USD). getBaseCurrency can hand back a currency in any case (e.g.
+    // `Kirt`), and every downstream `=== base` check compares against a
+    // normalized symbol — and `-X` must target the same canonical form ledger
+    // valued into — so an un-normalized base would null every row.
+    const rawBase = targetCurrency ?? (await this.resolveBaseCurrency(userId));
+    const base = normalizeCommoditySymbol(rawBase) ?? rawBase;
     const raw = await this.listKnownPrices(userId);
 
     // The base row is the target currency valued in itself, so represent it as

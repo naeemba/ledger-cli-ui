@@ -914,4 +914,37 @@ describe('PriceService.listKnownPricesInBase', () => {
     expect(btc?.price).toBeCloseTo(40000 / 1.1, 1);
     expect(btc?.quote).toBe('EUR');
   });
+
+  it('normalizes a mixed-case target so it does not null every row', async () => {
+    // getBaseCurrency can return a currency in any case (e.g. `Kirt`). Held
+    // symbols and ledger output are normalized (uppercased), so the target must
+    // be too — otherwise `=== base` never matches and every row is "no price".
+    // ADA priced in USD, KIRT priced in USD → ADA = 0.169753 / 0.00568182 KIRT.
+    await seedUser(
+      ctx,
+      'u-kirt',
+      [
+        'P 2026-07-06 ADA 0.169753 USD',
+        'P 2026-07-07 KIRT 0.00568182 USD',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:A   1 ADA',
+        '  Equity    -1 ADA',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:K   1 KIRT',
+        '  Equity    -1 KIRT',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+
+    const rows = await service.listKnownPricesInBase('u-kirt', 'Kirt');
+    const ada = rows.find((row) => row.symbol === 'ADA');
+    expect(ada?.price).toBeCloseTo(0.169753 / 0.00568182, 2);
+    expect(ada?.quote).toBe('KIRT');
+    // The target itself is the base row: valued in itself at 1.
+    const kirt = rows.find((row) => row.symbol === 'KIRT');
+    expect(kirt?.price).toBe(1);
+  });
 });
