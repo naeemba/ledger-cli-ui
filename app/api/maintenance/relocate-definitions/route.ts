@@ -1,6 +1,9 @@
 import { requireUser } from '@/lib/auth/require-user';
+import { createLogger } from '@/lib/log';
 import { priceService } from '@/lib/prices';
 import { NextResponse } from 'next/server';
+
+const log = createLogger('relocate-definitions');
 
 /**
  * One-shot repair: relocate commodity/account declarations that an early price
@@ -19,8 +22,10 @@ export async function POST(): Promise<NextResponse> {
     const result = await priceService.relocateLegacyDefinitions(user.id);
     return NextResponse.json({ result });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'definitions relocation failed';
-    return NextResponse.json({ result: 'failed', message }, { status: 500 });
+    log.error({ err: error }, 'definitions relocation failed');
+    return NextResponse.json(
+      { result: 'failed', message: 'Could not repair your journal' },
+      { status: 500 }
+    );
   }
 }
