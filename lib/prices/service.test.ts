@@ -830,4 +830,32 @@ describe('PriceService.listKnownPricesInBase', () => {
     expect(btc?.price).toBeCloseTo(40000, 6);
     expect(btc?.quote).toBe('USD');
   });
+
+  it('values a digit-bearing ticker that ledger surfaces quoted', async () => {
+    // A digit-bearing commodity like `1INCH` is only legal double-quoted in a
+    // journal, and `ledger commodities` prints it back with the quotes intact
+    // (`"1INCH"`). The probe must strip the surrounding pair and re-quote the
+    // bare name, otherwise the holding is silently reported as having no price
+    // even though it converts cleanly to the base.
+    await seedUser(
+      ctx,
+      'u-digit',
+      [
+        'P 2026-07-01 "1INCH" 3 USD',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:A   1 "1INCH"',
+        '  Equity    -1 "1INCH"',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+
+    const rows = await service.listKnownPricesInBase('u-digit');
+    // `ledger commodities` keeps the surrounding quotes, so the row identity is
+    // the quoted form.
+    const inch = rows.find((row) => row.symbol === '"1INCH"');
+    expect(inch?.price).toBeCloseTo(3, 6);
+    expect(inch?.quote).toBe('USD');
+  });
 });
