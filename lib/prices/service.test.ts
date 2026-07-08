@@ -785,6 +785,12 @@ describe('PriceService.listKnownPricesInBase', () => {
     // Provenance / recency carried over from the raw row (keep-raw).
     expect(bySymbol.BTC.source).toBe('journal');
     expect(bySymbol.BTC.date).toBe('2026-07-01');
+    // ageDays / stale must match the original-quote view exactly. Comparing
+    // against listKnownPrices keeps the guard independent of the run date.
+    const rawRows = await service.listKnownPrices('u-base');
+    const rawBtc = rawRows.find((row) => row.symbol === 'BTC');
+    expect(bySymbol.BTC.ageDays).toBe(rawBtc?.ageDays);
+    expect(bySymbol.BTC.stale).toBe(rawBtc?.stale);
 
     // Nim = 10 KIRT * 2 USD/KIRT = 20 USD (chained Nim->KIRT->USD).
     expect(bySymbol.Nim.price).toBeCloseTo(20, 6);
