@@ -887,4 +887,31 @@ describe('PriceService.listKnownPricesInBase', () => {
     expect(btc?.price).toBeCloseTo(40000 / 1.1, 1);
     expect(btc?.quote).toBe('EUR');
   });
+
+  it('values a dollar-denominated holding into a non-USD target via the bridge', async () => {
+    // The exact interaction the removed `base === 'USD'` gate unlocks: a `$`
+    // -priced holding reaching a non-USD target. BTC is priced in `$` (not the
+    // `USD` literal), so it only reaches the `USD` pricing base through the
+    // injected `$` = 1 USD bridge; EUR is then priced in USD, so `-X EUR`
+    // inverts that leg. 1 BTC = 40000 $ -> 40000 USD / 1.10 USD-per-EUR.
+    await seedUser(
+      ctx,
+      'u-dollar-eur',
+      [
+        'P 2026-07-01 BTC $40000',
+        'P 2026-07-01 EUR 1.10 USD',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:A   1 BTC',
+        '  Equity    -1 BTC',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+
+    const rows = await service.listKnownPricesInBase('u-dollar-eur', 'EUR');
+    const btc = rows.find((row) => row.symbol === 'BTC');
+    expect(btc?.price).toBeCloseTo(40000 / 1.1, 1);
+    expect(btc?.quote).toBe('EUR');
+  });
 });
