@@ -863,4 +863,28 @@ describe('PriceService.listKnownPricesInBase', () => {
     expect(inch?.price).toBeCloseTo(3, 6);
     expect(inch?.quote).toBe('USD');
   });
+
+  it('values into a non-USD target currency (respects the selector)', async () => {
+    // BTC is priced in USD and EUR itself is priced in USD; `-X EUR` inverts the
+    // EUR/USD leg to reach the target. 1 BTC = 40000 USD / 1.10 USD-per-EUR.
+    await seedUser(
+      ctx,
+      'u-eur',
+      [
+        'P 2026-07-01 BTC 40000 USD',
+        'P 2026-07-01 EUR 1.10 USD',
+        '',
+        '2026-07-02 * hold',
+        '  Assets:A   1 BTC',
+        '  Equity    -1 BTC',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+
+    const rows = await service.listKnownPricesInBase('u-eur', 'EUR');
+    const btc = rows.find((row) => row.symbol === 'BTC');
+    expect(btc?.price).toBeCloseTo(40000 / 1.1, 1);
+    expect(btc?.quote).toBe('EUR');
+  });
 });

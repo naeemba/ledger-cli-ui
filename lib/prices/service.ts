@@ -467,14 +467,21 @@ export class PriceService {
   }
 
   /**
-   * Latest known price for every held commodity, valued into the base currency.
+   * Latest known price for every held commodity, valued into a target currency.
    * Reuses the raw rows from `listKnownPrices` for provenance and staleness,
-   * then re-values each non-base holding through ledger's full price graph in a
-   * single `balance -X <base>` call driven by a throwaway probe journal. A
-   * holding with no conversion path to the base yields `price: null`.
+   * then re-values each non-target holding through ledger's full price graph in
+   * a single `balance -X <target>` call driven by a throwaway probe journal. A
+   * holding with no conversion path to the target yields `price: null`.
+   *
+   * `targetCurrency` is the user-facing display currency (their selector) — NOT
+   * the USD pricing base that `resolveBaseCurrency` returns for storage. It
+   * defaults to that pricing base only so existing callers stay valid.
    */
-  async listKnownPricesInBase(userId: string): Promise<KnownPrice[]> {
-    const base = await this.resolveBaseCurrency(userId);
+  async listKnownPricesInBase(
+    userId: string,
+    targetCurrency?: string
+  ): Promise<KnownPrice[]> {
+    const base = targetCurrency ?? (await this.resolveBaseCurrency(userId));
     const raw = await this.listKnownPrices(userId);
 
     // The base row keeps whatever symbol ledger prints for it (e.g. `$`), so
@@ -576,8 +583,12 @@ export class PriceService {
     // failure to stay correct across both build behaviours — and remember which
     // build this binary is, so a canonicalizing build skips the known-fatal
     // bridge attempt (and its guaranteed retry) on every later render.
+    // The bridge states `$` = 1 USD, a universal identity (the pricing base is
+    // always USD), so it is valid for any target: a dollar-priced holding
+    // reaches a non-USD target as `$`->USD->target. Only the ledger-build
+    // viability gates it, not the target currency.
     const bridge = 'P 2000-01-01 $ 1 USD\n\n';
-    const wantsBridge = base === 'USD' && getBridgeViability() !== 'aborts';
+    const wantsBridge = getBridgeViability() !== 'aborts';
     let stdout: string | null = null;
     try {
       stdout = await runProbe(buildJournal(wantsBridge ? bridge : ''));
