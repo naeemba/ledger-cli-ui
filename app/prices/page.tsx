@@ -4,10 +4,20 @@ import { priceService } from '@/lib/prices';
 
 export const dynamic = 'force-dynamic';
 
-const PricesPage = async () => {
+type SearchParams = { base?: string };
+
+const PricesPage = async ({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) => {
+  const { base } = await searchParams;
+  const baseMode = base === 'usd';
   const user = await requireUser();
   const [known, prices, commodities, baseCurrency] = await Promise.all([
-    priceService.listKnownPrices(user.id),
+    baseMode
+      ? priceService.listKnownPricesInBase(user.id)
+      : priceService.listKnownPrices(user.id),
     priceService.listManualPrices(user.id),
     priceService.listNormalizedSymbolsForUser(user.id),
     priceService.resolveBaseCurrency(user.id),
@@ -19,6 +29,7 @@ const PricesPage = async () => {
       prices={prices}
       commodities={commodities}
       baseCurrency={baseCurrency}
+      baseMode={baseMode}
     />
   );
 };
