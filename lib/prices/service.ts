@@ -10,7 +10,11 @@ import {
 } from './bridgeViability';
 import { classifyCommodity } from './classify';
 import { getCoinSymbolMap } from './coingecko/coinCache';
-import { extractDefinitions, hasDefinitions } from './definitions';
+import {
+  extractDefinitions,
+  hasDefinitions,
+  parseAliasMap,
+} from './definitions';
 import {
   renderPriceDb,
   hasGeneratedBanner,
@@ -115,10 +119,25 @@ export class PriceService {
     const layout = await this.deps.journalRepo.ensureLayout(userId);
     const base = await this.resolveBaseCurrency(userId);
     const all = await this.deps.commodityRepo.listForQuote(base);
+
+    // Canonicalize every price symbol/quote through the aliases the journal
+    // declares. ledger auto-creates a commodity from a `P` line's symbol/quote,
+    // so a price that names an alias — quote `USD` when the journal declares
+    // `commodity $ / alias USD`, or symbol `BTC` aliased to `BITCOIN` — collides
+    // with the `alias` directive and aborts every read (pool.cc assertion). We
+    // canonicalize at render, not at insert, so the base-currency quote stays
+    // intact for listForQuote's filter above and cron-fetched rows are covered
+    // too. See parseAliasMap and lib/journal/verify.ts.
+    const aliasMap = await this.readCommodityAliasMap(layout.dir);
+    const canonical = (symbol: string): string =>
+      aliasMap.get(symbol) ?? symbol;
+
     const userSymbols = new Set(
       await this.listNormalizedSymbolsForUser(userId)
     );
-    const fetched = all.filter((r) => userSymbols.has(r.symbol));
+    // Match on the canonical symbol: a stored alias-symbol row still belongs to
+    // a journal that only ever names the canonical commodity.
+    const fetched = all.filter((r) => userSymbols.has(canonical(r.symbol)));
     const manual = await this.deps.manualRepo.listForUser(userId);
     const manualRows: CommodityPriceRow[] = manual.map((m) => ({
       symbol: m.symbol,
@@ -132,7 +151,12 @@ export class PriceService {
     const merged = [...fetched, ...manualRows].sort(
       (a, b) => a.fetchedAt.getTime() - b.fetchedAt.getTime()
     );
-    const body = renderPriceDb(merged);
+    const canonicalized = merged.map((r) => ({
+      ...r,
+      symbol: canonical(r.symbol),
+      quote: canonical(r.quote),
+    }));
+    const body = renderPriceDb(canonicalized);
     const target = path.join(layout.dir, GENERATED_PRICE_DB_NAME);
     await this.deps.journalRepo.writeFileAtomic(target, body);
     try {
@@ -141,6 +165,58 @@ export class PriceService {
       // revalidateTag throws outside a Next.js request context (cron, tests).
       // Acceptable — the cache invalidates on the next request.
     }
+  }
+
+  /**
+   * Alias→canonical-commodity map declared in the user's `definitions.ledger`
+   * (empty when there is none). This is where the relocation puts recovered
+   * `commodity`/`alias` declarations, so it is the authoritative source for
+   * canonicalizing generated prices. Aliases declared elsewhere in the journal
+   * are not consulted; move them into definitions.ledger if they must apply.
+   */
+  private async readCommodityAliasMap(
+    dir: string
+  ): Promise<Map<string, string>> {
+    const text = await this.deps.journalRepo
+      .readFile(path.join(dir, DEFINITIONS_NAME))
+      .catch(() => '');
+    return parseAliasMap(text);
+  }
+
+  /**
+   * Regenerate the user's price DB from the database and push it to canonical.
+   * Repairs a price DB written before render-time canonicalization existed —
+   * e.g. one that quoted an alias (`USD` for a journal declaring `alias USD`)
+   * and aborted every read with a pool.cc assertion. Idempotent; safe to call
+   * repeatedly.
+   *
+   * Takes the per-user lock, pulls fresh under it, regenerates, verifies the new
+   * layout parses WITH the price DB (the collision only surfaces when both are
+   * loaded), and pushes only on success. Runs in request context so an
+   * encryption-enabled user's DEK is available for the push; a locked or
+   * undecryptable journal bails before writing (`skipped`) so plaintext never
+   * overwrites ciphertext.
+   */
+  async repairUserPriceDb(
+    userId: string
+  ): Promise<'repaired' | 'skipped' | 'failed'> {
+    return withUserLock(userId, async () => {
+      try {
+        await pull(userId);
+      } catch {
+        return 'skipped';
+      }
+      const layout = await this.deps.journalRepo.ensureLayout(userId);
+      await this.regenerateUserPriceDb(userId);
+      const verify = await verifyJournalParseable(
+        layout.mainPath,
+        path.join(layout.dir, GENERATED_PRICE_DB_NAME)
+      );
+      // Never push a price DB that still can't be parsed alongside the journal.
+      if (!verify.ok) return 'failed';
+      await push(userId);
+      return 'repaired';
+    });
   }
 
   async addManualPrices(
@@ -288,7 +364,10 @@ export class PriceService {
       stdout = await runLedgerForUser(
         userId,
         ['commodities'],
-        this.deps.journalRepo
+        this.deps.journalRepo,
+        {
+          includePriceDb: false,
+        }
       );
     } catch {
       return [];
@@ -346,7 +425,10 @@ export class PriceService {
       stdout = await runLedgerForUser(
         userId,
         ['commodities'],
-        this.deps.journalRepo
+        this.deps.journalRepo,
+        {
+          includePriceDb: false,
+        }
       );
     } catch {
       return [];
@@ -719,6 +801,10 @@ export class PriceService {
         .catch(() => null);
 
       // Preserve any prices the legacy file still carried (idempotent upsert).
+      // Rows are stored verbatim; the alias→commodity canonicalization that keeps
+      // the generated price DB parseable happens at render time in
+      // regenerateUserPriceDb (so it also covers rows the cron fetcher adds, and
+      // so the base-currency quote stays intact for listForQuote's filter).
       const rows = parseLegacyPriceDb(source);
       if (rows.length > 0) await this.deps.commodityRepo.insert(rows);
 
@@ -730,6 +816,7 @@ export class PriceService {
         existingDefs !== null && existingDefs.trim()
           ? `${existingDefs.replace(/\n+$/, '')}\n\n${relocated}\n`
           : `${DEFINITIONS_BANNER}\n${relocated}\n`;
+
       await this.deps.journalRepo.writeFileAtomic(defsPath, body);
       await this.prependInclude(layout.mainPath, defsPath);
 
@@ -738,8 +825,13 @@ export class PriceService {
       await this.regenerateUserPriceDb(userId);
 
       // Verify the NEW layout parses BEFORE deleting the legacy files, so a
-      // failure is fully reversible.
-      const verify = await verifyJournalParseable(layout.mainPath);
+      // failure is fully reversible. Load the generated price DB too, mirroring
+      // the real read path: a commodity/alias collision between definitions and
+      // the price DB only surfaces when both are parsed together.
+      const verify = await verifyJournalParseable(
+        layout.mainPath,
+        path.join(layout.dir, GENERATED_PRICE_DB_NAME)
+      );
       if (!verify.ok) {
         if (existingDefs === null) {
           await fs.rm(defsPath, { force: true });

@@ -245,6 +245,119 @@ describe('PriceService.relocateLegacyDefinitions', () => {
     expect(defs).toContain('alias Kirt');
   });
 
+  it('canonicalizes a legacy price that quotes an alias so the price DB parses', async () => {
+    // Regression: the legacy price DB priced BITCOIN under its alias `BTC`.
+    // Relocating `commodity BITCOIN / alias BTC` while regenerating a price DB
+    // that still says `P ... BTC ... USD` makes ledger auto-create a commodity
+    // `BTC` from the price line, colliding with the `alias BTC` directive and
+    // aborting every read (pool.cc assertion) — but only when the price DB is
+    // loaded, which the dashboard does and the old verify did not. Canonicalizing
+    // the price to the real commodity is what keeps the new layout parseable.
+    await ctx.insertUser('gina', 'gina', 'gina@example.com');
+    await new UserSettingRepository(ctx.db).upsertBaseCurrency('gina', 'USD');
+    await new JournalRepository(ctx.db).setMainFile('gina', 'ledger.ledger');
+    const dir = getJournalDir('gina');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(
+      path.join(dir, 'ledger.ledger'),
+      'include ./2025.ledger\n',
+      'utf-8'
+    );
+    await fs.writeFile(
+      path.join(dir, '2025.ledger'),
+      '2025/01/01 x\n  Assets:Wallet  1 BITCOIN\n  Income\n',
+      'utf-8'
+    );
+    await fs.writeFile(
+      path.join(dir, 'price-db_old.ledger'),
+      [
+        'commodity BITCOIN',
+        '\talias BTC',
+        '\tnomarket',
+        'P 2024/06/30 12:00:00 BTC 50000 USD',
+        '',
+      ].join('\n'),
+      'utf-8'
+    );
+    await fs.writeFile(
+      path.join(dir, 'price-db.ledger'),
+      GENERATED_PRICE_DB,
+      'utf-8'
+    );
+    await push('gina');
+
+    // Relocation must SUCCEED (not roll back): the canonicalized price DB and
+    // the definitions no longer collide, so the verify-with-price-db passes.
+    expect(await service.relocateLegacyDefinitions('gina')).toBe('relocated');
+
+    const generated = await fs.readFile(
+      path.join(dir, 'generated-prices.ledger'),
+      'utf-8'
+    );
+    // The regenerated price references the canonical commodity, never the alias.
+    expect(generated).toMatch(/^P .* BITCOIN 50000 USD$/m);
+    expect(generated).not.toMatch(/\bBTC\b/);
+  });
+
+  it('repairs a price DB that quotes an aliased base currency', async () => {
+    // The real prod break: the journal declares `commodity $ / alias USD`, and
+    // the price DB quoted the base as `USD`. Loading `--price-db` auto-creates a
+    // commodity `USD`, then `alias USD` in the journal collides → pool.cc
+    // assertion on every read. repairUserPriceDb must regenerate the price DB
+    // quoting the canonical `$`, so it parses.
+    await ctx.insertUser('hank', 'hank', 'hank@example.com');
+    await new UserSettingRepository(ctx.db).upsertBaseCurrency('hank', 'USD');
+    await new JournalRepository(ctx.db).setMainFile('hank', 'ledger.ledger');
+    const dir = getJournalDir('hank');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(
+      path.join(dir, 'ledger.ledger'),
+      'include ./definitions.ledger\ninclude ./2025.ledger\n',
+      'utf-8'
+    );
+    await fs.writeFile(
+      path.join(dir, 'definitions.ledger'),
+      [
+        'commodity KIRT',
+        '\talias Kirt',
+        '\tnomarket',
+        'commodity $',
+        '\tnote US Dollar',
+        '\talias USD',
+        '\tnomarket',
+        '',
+      ].join('\n'),
+      'utf-8'
+    );
+    await fs.writeFile(
+      path.join(dir, '2025.ledger'),
+      '2025/01/01 x\n  Assets:Cash  1000 KIRT\n  Income\n',
+      'utf-8'
+    );
+    // A fetched price, stored quoting the base as the DB always does.
+    await new CommodityPriceRepository(ctx.db).insert([
+      {
+        symbol: 'KIRT',
+        quote: 'USD',
+        price: 0.0056818184,
+        fetchedAt: new Date('2026-07-07T23:59:59Z'),
+        fetchedDate: '2026-07-07',
+      },
+    ]);
+    await push('hank');
+
+    expect(await service.repairUserPriceDb('hank')).toBe('repaired');
+
+    const generated = await fs.readFile(
+      path.join(dir, 'generated-prices.ledger'),
+      'utf-8'
+    );
+    // Quotes the canonical commodity, never the alias — otherwise it would not
+    // have parsed and repair would have returned 'failed'.
+    expect(generated).toMatch(/^P .* KIRT 0\.0056818184 \$$/m);
+    expect(generated).not.toMatch(/\bUSD\b/);
+  });
+
   it('skips a user with no dropped definitions', async () => {
     await ctx.insertUser('carol', 'carol', 'carol@example.com');
     await new UserSettingRepository(ctx.db).upsertBaseCurrency('carol', 'USD');
