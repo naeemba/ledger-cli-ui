@@ -129,6 +129,85 @@ describe('PriceService.relocateLegacyDefinitions', () => {
     expect(await service.relocateLegacyDefinitions('bob')).toBe('skipped');
   });
 
+  it('rolls back cleanly when the new layout fails to parse', async () => {
+    // The user noticed the mispricing and manually re-added the declarations to
+    // their main journal. Relocating the same `alias Kirt` on top of that yields
+    // a duplicate alias, which ledger aborts on — so verify must fail and the
+    // whole operation must be a no-op, leaving the legacy source untouched.
+    await seedDroppedDefinitions(ctx, 'dave');
+    const dir = getJournalDir('dave');
+    const mainOriginal = [
+      'commodity KIRT',
+      '\talias Kirt',
+      'include ./2025.ledger',
+      '',
+    ].join('\n');
+    await fs.writeFile(path.join(dir, 'ledger.ledger'), mainOriginal, 'utf-8');
+    await push('dave'); // seed canonical so the relocation's pull is non-destructive
+
+    await expect(service.relocateLegacyDefinitions('dave')).rejects.toThrow(
+      /unparseable/
+    );
+
+    // definitions.ledger never existed here, so rollback removes the one we wrote.
+    await expect(
+      fs.access(path.join(dir, 'definitions.ledger'))
+    ).rejects.toThrow();
+    // main.ledger is restored: the prepended include is gone.
+    expect(await fs.readFile(path.join(dir, 'ledger.ledger'), 'utf-8')).toBe(
+      mainOriginal
+    );
+    // Both legacy files survive as the untouched source of truth.
+    await fs.access(path.join(dir, 'price-db.ledger'));
+    await fs.access(path.join(dir, 'price-db_old.ledger'));
+
+    // Nothing was pushed: canonical still has no definitions file and the
+    // original main, so a wipe-and-repull reproduces the pre-relocation state.
+    await fs.rm(dir, { recursive: true, force: true });
+    await pull('dave');
+    await expect(
+      fs.access(path.join(dir, 'definitions.ledger'))
+    ).rejects.toThrow();
+    expect(await fs.readFile(path.join(dir, 'ledger.ledger'), 'utf-8')).toBe(
+      mainOriginal
+    );
+  });
+
+  it('appends to a hand-authored definitions.ledger instead of overwriting it', async () => {
+    await seedDroppedDefinitions(ctx, 'erin');
+    const dir = getJournalDir('erin');
+    // A hand-authored split (no banner) that the main journal already includes.
+    const handAuthored = ['commodity BTC', '\tnomarket', ''].join('\n');
+    await fs.writeFile(
+      path.join(dir, 'definitions.ledger'),
+      handAuthored,
+      'utf-8'
+    );
+    await fs.writeFile(
+      path.join(dir, 'ledger.ledger'),
+      'include ./definitions.ledger\ninclude ./2025.ledger\n',
+      'utf-8'
+    );
+    await push('erin');
+
+    expect(await service.relocateLegacyDefinitions('erin')).toBe('relocated');
+
+    const defs = await fs.readFile(
+      path.join(dir, 'definitions.ledger'),
+      'utf-8'
+    );
+    // The user's own declaration survives, and the recovered ones are appended
+    // after it (not overwritten, and without stamping our generated banner).
+    expect(defs).toContain('commodity BTC');
+    expect(defs).toContain('alias Kirt');
+    expect(defs).toContain('account Expenses:Coffee');
+    expect(defs).not.toContain('AUTO-GENERATED');
+    expect(defs.indexOf('commodity BTC')).toBeLessThan(defs.indexOf('KIRT'));
+
+    // A second call is a no-op: the legacy source is gone.
+    expect(await service.relocateLegacyDefinitions('erin')).toBe('skipped');
+  });
+
   it('skips a user with no dropped definitions', async () => {
     await ctx.insertUser('carol', 'carol', 'carol@example.com');
     await new UserSettingRepository(ctx.db).upsertBaseCurrency('carol', 'USD');
