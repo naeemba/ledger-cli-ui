@@ -1,4 +1,3 @@
-import PageContainer from '@/components/PageContainer';
 import { ActivityList } from '@/features/activity';
 import {
   ACTIVITY_PAGE_SIZE,
@@ -36,14 +35,12 @@ const ActivityPage = async ({
     hasMore && page.length > 0 ? encodeCursor(page[page.length - 1]) : null;
 
   return (
-    <PageContainer>
-      <ActivityList
-        rows={page}
-        type={type}
-        result={result}
-        nextCursor={nextCursor}
-      />
-    </PageContainer>
+    <ActivityList
+      rows={page}
+      type={type}
+      result={result}
+      nextCursor={nextCursor}
+    />
   );
 };
 

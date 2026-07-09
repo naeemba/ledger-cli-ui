@@ -1,5 +1,6 @@
 import ActivityRow from './ActivityRow';
 import { buildActivityQuery } from './params';
+import PageContainer from '@/components/PageContainer';
 import { buttonVariants } from '@/components/ui/button';
 import type { AuditLog } from '@/db/schema/auditLog';
 import type { ActivityType, ResultFilter } from '@/lib/audit';
@@ -54,7 +55,7 @@ const ActivityList = ({
   result: ResultFilter;
   nextCursor: string | null;
 }) => (
-  <div className="flex flex-col gap-6">
+  <PageContainer>
     <h1 className="text-2xl font-semibold">Activity</h1>
 
     <div className="flex flex-col gap-3">
@@ -94,7 +95,7 @@ const ActivityList = ({
         Load older
       </Link>
     )}
-  </div>
+  </PageContainer>
 );
 
 export default ActivityList;
