@@ -2,7 +2,12 @@ import type { Posting } from '@/lib/transactions/posting';
 
 export type ExtraItem = { account: string; amount: string; currency: string };
 
-/** Format a computed numeric amount to a compact string (trailing zeros trimmed, no -0, no scientific notation). */
+/**
+ * Format a computed numeric amount to a compact string: trailing zeros trimmed,
+ * no `-0`. Uses `toFixed(10)`, which stays in plain decimal notation for every
+ * realistic currency magnitude (`toFixed` only switches to exponential form at
+ * `|n| >= 1e21`, far beyond any sum reachable here).
+ */
 export const formatAmount = (n: number): string => {
   if (!Number.isFinite(n)) return '0';
   if (n === 0) return '0';
