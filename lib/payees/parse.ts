@@ -1,11 +1,6 @@
-export type PayeeRow = { payee: string; total: number };
+import { parseAmount } from '@/lib/ledger/parseAmount';
 
-const parseAmount = (raw: string): number => {
-  if (!raw) return 0;
-  const parts = raw.trim().split(/\s+/);
-  const numericPart = parts.length > 1 ? parts[1] : parts[0];
-  return Number(numericPart.replaceAll(',', '')) || 0;
-};
+export type PayeeRow = { payee: string; total: number };
 
 /**
  * Parse `ledger reg ^Expenses ... --format 'NNN%P|%t\n'` output: each

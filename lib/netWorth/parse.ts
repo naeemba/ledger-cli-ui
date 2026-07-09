@@ -1,10 +1,6 @@
-export type NetWorthRow = { date: string; value: number };
+import { parseAmount } from '@/lib/ledger/parseAmount';
 
-const parseAmount = (raw: string): number => {
-  const parts = raw.trim().split(/\s+/);
-  const numericPart = parts.length > 1 ? parts[1] : parts[0];
-  return Number(numericPart.replaceAll(',', ''));
-};
+export type NetWorthRow = { date: string; value: number };
 
 /**
  * Parse `ledger reg ^Assets ^Liabilities --monthly --format 'NNN%D|%T\n'`
