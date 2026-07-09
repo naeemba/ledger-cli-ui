@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react';
 import AmountInput from '../../AmountInput';
 import { headerOf } from '../types/adapter';
 import { incomeAdapter, type IncomeFields } from '../types/income';
+import { ExtraItemsField } from './ExtraItemsField';
 import { HeaderFieldsEditor } from './HeaderFields';
 import { Field, SectionLabel, AccountField, CurrencyCombobox } from './fields';
 import type { TypeFormProps } from './props';
@@ -71,6 +72,14 @@ export function IncomeForm({
           accounts={accounts}
           value={fields.from}
           onChange={(from) => update({ ...fields, from })}
+        />
+
+        <ExtraItemsField
+          items={fields.extraItems}
+          accounts={accounts}
+          defaultCurrency={fields.currency || defaultCurrency}
+          baseCount={2}
+          onChange={(extraItems) => update({ ...fields, extraItems })}
         />
       </section>
     </div>

@@ -34,6 +34,32 @@ describe('ExpenseForm', () => {
     expect(out).toContain('42.5');
   });
 
+  it('renders the extra-items section and seeds a fee from a 3-posting draft', () => {
+    const draft = initDraft(
+      {
+        date: '2026-06-29',
+        payee: 'Diner',
+        postings: [
+          { account: 'Expenses:Dining', amount: '100', currency: 'USD' },
+          { account: 'Expenses:Tips', amount: '20', currency: 'USD' },
+          { account: 'Assets:Checking', amount: '-120', currency: 'USD' },
+        ],
+      },
+      'USD'
+    );
+    const out = html(
+      <ExpenseForm
+        draft={draft}
+        dispatch={() => {}}
+        accounts={['Assets:Checking', 'Expenses:Dining', 'Expenses:Tips']}
+        payees={['Diner']}
+        defaultCurrency="USD"
+      />
+    );
+    expect(out).toContain('Extra items');
+    expect(out).toContain('Expenses:Tips');
+  });
+
   it('renders empty fields for a fresh draft without crashing', () => {
     const out = html(
       <ExpenseForm
