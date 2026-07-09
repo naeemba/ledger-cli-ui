@@ -35,8 +35,7 @@ const unrecognizedDraft = () =>
       date: '2026-07-05',
       payee: 'Split',
       postings: [
-        { account: 'Expenses:Food', amount: '5', currency: 'USD' },
-        { account: 'Expenses:Fun', amount: '5', currency: 'USD' },
+        { account: 'Equity:Opening Balances', amount: '10', currency: 'USD' },
         { account: 'Assets:Checking', amount: '-10', currency: 'USD' },
       ],
     },
