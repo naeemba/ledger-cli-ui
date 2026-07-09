@@ -3,6 +3,7 @@ import DangerZone from './DangerZone';
 import EntryTabOrderForm from './EntryTabOrderForm';
 import SecuritySection from './SecuritySection';
 import { clearSessionBaseCurrencyAction } from './actions';
+import PageContainer from '@/components/PageContainer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +35,7 @@ const Settings = ({
     (savedDefault === null && base !== envFallback);
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <h1 className="text-2xl font-semibold">Settings</h1>
 
       <Card>
@@ -82,7 +83,7 @@ const Settings = ({
       <ActivityCard rows={recentActivity} />
 
       <DangerZone />
-    </div>
+    </PageContainer>
   );
 };
 

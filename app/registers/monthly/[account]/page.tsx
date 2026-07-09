@@ -1,4 +1,5 @@
 import Chart from '@/components/Chart';
+import PageContainer from '@/components/PageContainer';
 import { Card, CardContent } from '@/components/ui/card';
 import { TableScroll } from '@/components/ui/table';
 import RegisterHeader from '@/features/registers/monthly/RegisterHeader';
@@ -41,7 +42,7 @@ const Monthly = async ({
   ]);
   const results = stdout.split('NNN').filter(Boolean);
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <RegisterHeader
         account={account}
         balance={balance}
@@ -115,7 +116,7 @@ const Monthly = async ({
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

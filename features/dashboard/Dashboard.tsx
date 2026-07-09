@@ -7,6 +7,7 @@ import EmptyJournal from './EmptyJournal';
 import SavedViewsCard from './SavedViewsCard';
 import Card from '@/components/Card';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { buttonVariants } from '@/components/ui/button';
 import { Card as ShadcnCard } from '@/components/ui/card';
 import { TableScroll } from '@/components/ui/table';
@@ -107,7 +108,7 @@ const Dashboard = async () => {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <PageContainer>
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
@@ -256,7 +257,7 @@ const Dashboard = async () => {
           <Stat label="Days since last" value={stats.daysSinceLast} />
         </ShadcnCard>
       </section>
-    </div>
+    </PageContainer>
   );
 };
 

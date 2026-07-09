@@ -9,6 +9,7 @@ import {
 } from './parsePortfolio';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TableScroll } from '@/components/ui/table';
@@ -78,7 +79,7 @@ const Portfolio = async () => {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -152,7 +153,7 @@ const Portfolio = async () => {
           </table>
         </TableScroll>
       </Card>
-    </div>
+    </PageContainer>
   );
 };
 

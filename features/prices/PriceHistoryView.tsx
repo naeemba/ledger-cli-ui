@@ -10,6 +10,7 @@ import {
   YAxis,
 } from 'recharts';
 import { priceFormatter } from './format.util';
+import PageContainer from '@/components/PageContainer';
 import { TableScroll } from '@/components/ui/table';
 import type { PricePoint } from '@/lib/prices';
 import { normalizeCommoditySymbol } from '@/lib/prices/symbols';
@@ -26,7 +27,7 @@ export const PriceHistoryView = ({ symbol, points }: Props) => {
   const quote = displayQuote(points.at(-1)?.quote ?? '');
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 p-4">
+    <PageContainer>
       <header className="space-y-1">
         <Link
           href="/prices"
@@ -108,6 +109,6 @@ export const PriceHistoryView = ({ symbol, points }: Props) => {
           </div>
         </>
       )}
-    </div>
+    </PageContainer>
   );
 };

@@ -1,6 +1,7 @@
 import { parseReconcileRows } from './Reconcile.utils';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { getBaseCurrency } from '@/lib/settings';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
@@ -21,7 +22,7 @@ const Reconcile = async () => {
   const stale = rows.filter((r) => r.days > STALE_DAYS).length;
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -96,7 +97,7 @@ const Reconcile = async () => {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

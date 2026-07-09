@@ -2,6 +2,7 @@ import { getCashFlow } from './MonthlyComparison.utils';
 import Chart from '@/components/Chart';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { Card, CardContent } from '@/components/ui/card';
 import { TableScroll } from '@/components/ui/table';
 import { getBaseCurrency } from '@/lib/settings';
@@ -18,7 +19,7 @@ const MonthlyComparison = async () => {
   const rows = await getCashFlow(currency);
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Cash Flow</h1>
@@ -121,7 +122,7 @@ const MonthlyComparison = async () => {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 };
 
