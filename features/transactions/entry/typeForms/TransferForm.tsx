@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react';
 import AmountInput from '../../AmountInput';
 import { headerOf } from '../types/adapter';
 import { transferAdapter, type TransferFields } from '../types/transfer';
+import { ExtraItemsField } from './ExtraItemsField';
 import { HeaderFieldsEditor } from './HeaderFields';
 import { Field, SectionLabel, AccountField, CurrencyCombobox } from './fields';
 import type { TypeFormProps } from './props';
@@ -71,6 +72,14 @@ export function TransferForm({
           accounts={accounts}
           value={fields.to}
           onChange={(to) => update({ ...fields, to })}
+        />
+
+        <ExtraItemsField
+          items={fields.extraItems}
+          accounts={accounts}
+          defaultCurrency={fields.currency || defaultCurrency}
+          baseCount={2}
+          onChange={(extraItems) => update({ ...fields, extraItems })}
         />
       </section>
     </div>

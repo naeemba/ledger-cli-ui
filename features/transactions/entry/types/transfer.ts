@@ -7,6 +7,14 @@ import {
   headerOf,
 } from './adapter';
 import { absAmount, negateAmount } from './amount';
+import {
+  type ExtraItem,
+  balancingPostings,
+  extraItemPostings,
+  singleAccount,
+  toExtraItems,
+} from './extraItems';
+import { computeBalance } from '@/lib/transactions/balance';
 import { Transaction } from '@/lib/transactions/model';
 
 export type TransferFields = HeaderFields & {
@@ -14,6 +22,7 @@ export type TransferFields = HeaderFields & {
   currency: string;
   from: string;
   to: string;
+  extraItems: ExtraItem[];
 };
 
 export const transferAdapter: TransactionTypeAdapter<TransferFields> = {
@@ -29,43 +38,69 @@ export const transferAdapter: TransactionTypeAdapter<TransferFields> = {
     currency: ctx.defaultCurrency,
     from: '',
     to: '',
+    extraItems: [],
   }),
-  compile: (f, _ctx): DraftState =>
-    Transaction.fromHeader(
-      {
-        date: f.date,
-        payee: f.payee,
-        status: f.status,
-        note: f.note,
-        uid: f.uid,
-      },
-      [
-        { account: f.to, amount: f.amount, currency: f.currency },
+  compile: (f, _ctx): DraftState => {
+    const header = {
+      date: f.date,
+      payee: f.payee,
+      status: f.status,
+      note: f.note,
+      uid: f.uid,
+    };
+    const to = { account: f.to, amount: f.amount, currency: f.currency };
+    const extras = extraItemPostings(f.extraItems);
+    if (extras.length === 0) {
+      return Transaction.fromHeader(header, [
+        to,
         {
           account: f.from,
           amount: negateAmount(f.amount),
           currency: f.currency,
         },
-      ]
-    ),
+      ]);
+    }
+    const items = [to, ...extras];
+    return Transaction.fromHeader(header, [
+      ...items,
+      ...balancingPostings(f.from, items),
+    ]);
+  },
   detect: (draft): TransferFields | null => {
-    if (draft.postings.length !== 2) return null;
-    if (draft.postings.some((p) => p.cost || p.assertion)) return null;
-    if (draft.postings.some((p) => classifyAccount(p.account) !== 'asset'))
+    const postings = draft.postings;
+    if (postings.length < 2) return null;
+    if (postings.some((p) => p.cost || p.assertion)) return null;
+    const assetOrLiabilityPostings = postings.filter((p) => {
+      const role = classifyAccount(p.account);
+      return role === 'asset' || role === 'liability';
+    });
+    const expensePostings = postings.filter(
+      (p) => classifyAccount(p.account) === 'expense'
+    );
+    if (
+      assetOrLiabilityPostings.length + expensePostings.length !==
+      postings.length
+    )
       return null;
-    const [a, b] = draft.postings;
-    if (a.amount === '' || b.amount === '') return null;
-    if (a.currency !== b.currency) return null;
-    if (Math.abs(Number(a.amount) + Number(b.amount)) > 1e-9) return null;
-    const to = Number(a.amount) > 0 ? a : b;
-    const from = Number(a.amount) > 0 ? b : a;
-    if (!(Number(to.amount) > 0)) return null;
+    if (assetOrLiabilityPostings.length < 2) return null;
+    if (computeBalance(postings).kind !== 'balanced') return null;
+    const positives = assetOrLiabilityPostings.filter(
+      (p) => Number(p.amount) > 0
+    );
+    const negatives = assetOrLiabilityPostings.filter(
+      (p) => Number(p.amount) < 0
+    );
+    if (positives.length !== 1) return null;
+    const to = positives[0];
+    const from = singleAccount(negatives);
+    if (!from || from === to.account) return null;
     return {
       ...headerOf(draft),
       amount: absAmount(to.amount),
       currency: to.currency,
-      from: from.account,
+      from,
       to: to.account,
+      extraItems: toExtraItems(expensePostings),
     };
   },
 };

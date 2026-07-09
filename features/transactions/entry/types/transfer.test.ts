@@ -11,7 +11,7 @@ const header = {
 };
 
 describe('transferAdapter.compile', () => {
-  it('builds a +to / -from asset pair', () => {
+  it('builds a to/from pair with no extras', () => {
     const draft = transferAdapter.compile(
       {
         ...header,
@@ -19,6 +19,7 @@ describe('transferAdapter.compile', () => {
         currency: 'USD',
         from: 'Assets:Checking',
         to: 'Assets:Savings',
+        extraItems: [],
       },
       ctx
     );
@@ -27,17 +28,35 @@ describe('transferAdapter.compile', () => {
       { account: 'Assets:Checking', amount: '-500', currency: 'USD' },
     ]);
   });
-  it('emptyFields defaults the payee to Transfer', () => {
-    expect(transferAdapter.emptyFields(ctx).payee).toBe('Transfer');
+
+  it('adds a transfer fee to the source outflow', () => {
+    const draft = transferAdapter.compile(
+      {
+        ...header,
+        amount: '500',
+        currency: 'USD',
+        from: 'Assets:Checking',
+        to: 'Assets:Savings',
+        extraItems: [
+          { account: 'Expenses:WireFee', amount: '15', currency: 'USD' },
+        ],
+      },
+      ctx
+    );
+    expect(draft.postings).toEqual([
+      { account: 'Assets:Savings', amount: '500', currency: 'USD' },
+      { account: 'Expenses:WireFee', amount: '15', currency: 'USD' },
+      { account: 'Assets:Checking', amount: '-515', currency: 'USD' },
+    ]);
   });
 });
 
 describe('transferAdapter.detect', () => {
-  const draft = Transaction.of('2026-06-29', 'Transfer', 'none', '', [
-    { account: 'Assets:Savings', amount: '500', currency: 'USD' },
-    { account: 'Assets:Checking', amount: '-500', currency: 'USD' },
-  ]);
-  it('recognizes a clean asset->asset move', () => {
+  it('recognizes a clean transfer with empty extras', () => {
+    const draft = Transaction.of('2026-06-29', 'Transfer', 'none', '', [
+      { account: 'Assets:Savings', amount: '500', currency: 'USD' },
+      { account: 'Assets:Checking', amount: '-500', currency: 'USD' },
+    ]);
     expect(transferAdapter.detect(draft)).toEqual({
       date: '2026-06-29',
       payee: 'Transfer',
@@ -48,27 +67,34 @@ describe('transferAdapter.detect', () => {
       currency: 'USD',
       from: 'Assets:Checking',
       to: 'Assets:Savings',
+      extraItems: [],
     });
   });
-  it('round-trips compile -> detect', () => {
+
+  it('round-trips compile -> detect with a fee', () => {
     const fields: TransferFields = {
       ...header,
       uid: undefined,
-      amount: '20',
+      amount: '500',
       currency: 'USD',
-      from: 'Assets:Cash',
-      to: 'Assets:Wallet',
+      from: 'Assets:Checking',
+      to: 'Assets:Savings',
+      extraItems: [
+        { account: 'Expenses:WireFee', amount: '15', currency: 'USD' },
+      ],
     };
     expect(
       transferAdapter.detect(transferAdapter.compile(fields, ctx))
     ).toEqual(fields);
   });
-  it('rejects an expense pair (one side is an expense)', () => {
+
+  it('rejects two positive destinations', () => {
     expect(
       transferAdapter.detect(
-        Transaction.of(draft.date, draft.payee, draft.status, draft.note, [
-          { account: 'Expenses:Groceries', amount: '42.50', currency: 'USD' },
-          { account: 'Assets:Checking', amount: '-42.50', currency: 'USD' },
+        Transaction.of('2026-06-29', 'x', 'none', '', [
+          { account: 'Assets:Savings', amount: '300', currency: 'USD' },
+          { account: 'Assets:Brokerage', amount: '200', currency: 'USD' },
+          { account: 'Assets:Checking', amount: '-500', currency: 'USD' },
         ])
       )
     ).toBeNull();

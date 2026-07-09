@@ -22,6 +22,7 @@ describe('exchangeAdapter.compile', () => {
         gotAmount: '92',
         gotCurrency: 'EUR',
         gotInto: 'Assets:EUR-Wallet',
+        extraItems: [],
       },
       ctx
     );
@@ -33,6 +34,33 @@ describe('exchangeAdapter.compile', () => {
         cost: { amount: '100', currency: 'USD' },
       },
       { account: 'Assets:Checking', amount: '-100', currency: 'USD' },
+    ]);
+  });
+  it('routes a broker fee through the paying account', () => {
+    const draft = exchangeAdapter.compile(
+      {
+        ...header,
+        gaveAmount: '100',
+        gaveCurrency: 'USD',
+        gaveFrom: 'Assets:Bank',
+        gotAmount: '1',
+        gotCurrency: 'BTC',
+        gotInto: 'Assets:BTC',
+        extraItems: [
+          { account: 'Expenses:BrokerFee', amount: '2', currency: 'USD' },
+        ],
+      },
+      ctx
+    );
+    expect(draft.postings).toEqual([
+      {
+        account: 'Assets:BTC',
+        amount: '1',
+        currency: 'BTC',
+        cost: { amount: '100', currency: 'USD' },
+      },
+      { account: 'Expenses:BrokerFee', amount: '2', currency: 'USD' },
+      { account: 'Assets:Bank', amount: '-102', currency: 'USD' },
     ]);
   });
 });
@@ -60,6 +88,7 @@ describe('exchangeAdapter.detect', () => {
       gotAmount: '92',
       gotCurrency: 'EUR',
       gotInto: 'Assets:EUR-Wallet',
+      extraItems: [],
     });
   });
   it('round-trips compile -> detect', () => {
@@ -72,6 +101,7 @@ describe('exchangeAdapter.detect', () => {
       gotAmount: '46',
       gotCurrency: 'EUR',
       gotInto: 'Assets:EUR',
+      extraItems: [],
     };
     expect(
       exchangeAdapter.detect(exchangeAdapter.compile(fields, ctx))
@@ -86,5 +116,23 @@ describe('exchangeAdapter.detect', () => {
         ])
       )
     ).toBeNull();
+  });
+  it('round-trips compile -> detect with a broker fee', () => {
+    const fields: ExchangeFields = {
+      ...header,
+      uid: undefined,
+      gaveAmount: '100',
+      gaveCurrency: 'USD',
+      gaveFrom: 'Assets:Bank',
+      gotAmount: '1',
+      gotCurrency: 'BTC',
+      gotInto: 'Assets:BTC',
+      extraItems: [
+        { account: 'Expenses:BrokerFee', amount: '2', currency: 'USD' },
+      ],
+    };
+    expect(
+      exchangeAdapter.detect(exchangeAdapter.compile(fields, ctx))
+    ).toEqual(fields);
   });
 });

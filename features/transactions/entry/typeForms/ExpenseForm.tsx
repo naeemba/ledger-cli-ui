@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react';
 import AmountInput from '../../AmountInput';
 import { headerOf } from '../types/adapter';
 import { expenseAdapter, type ExpenseFields } from '../types/expense';
+import { ExtraItemsField } from './ExtraItemsField';
 import { HeaderFieldsEditor } from './HeaderFields';
 import { Field, SectionLabel, AccountField, CurrencyCombobox } from './fields';
 import type { TypeFormProps } from './props';
@@ -71,6 +72,14 @@ export function ExpenseForm({
           accounts={accounts}
           value={fields.spentOn}
           onChange={(spentOn) => update({ ...fields, spentOn })}
+        />
+
+        <ExtraItemsField
+          items={fields.extraItems}
+          accounts={accounts}
+          defaultCurrency={fields.currency || defaultCurrency}
+          baseCount={2}
+          onChange={(extraItems) => update({ ...fields, extraItems })}
         />
       </section>
     </div>

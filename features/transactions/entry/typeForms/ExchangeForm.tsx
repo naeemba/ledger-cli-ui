@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import AmountInput from '../../AmountInput';
 import { headerOf } from '../types/adapter';
 import { exchangeAdapter, type ExchangeFields } from '../types/exchange';
+import { ExtraItemsField } from './ExtraItemsField';
 import { HeaderFieldsEditor } from './HeaderFields';
 import { Field, SectionLabel, AccountField, CurrencyCombobox } from './fields';
 import type { TypeFormProps } from './props';
@@ -89,6 +90,14 @@ export function ExchangeForm({
           accounts={accounts}
           value={fields.gotInto}
           onChange={(gotInto) => update({ ...fields, gotInto })}
+        />
+
+        <ExtraItemsField
+          items={fields.extraItems}
+          accounts={accounts}
+          defaultCurrency={fields.gaveCurrency || defaultCurrency}
+          baseCount={2}
+          onChange={(extraItems) => update({ ...fields, extraItems })}
         />
       </section>
     </div>

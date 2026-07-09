@@ -134,8 +134,11 @@ describe('TransactionEntry', () => {
           status: 'none',
           note: '',
           postings: [
-            { account: 'Expenses:Food', amount: '5', currency: 'USD' },
-            { account: 'Expenses:Fun', amount: '5', currency: 'USD' },
+            {
+              account: 'Equity:Opening Balances',
+              amount: '10',
+              currency: 'USD',
+            },
             { account: 'Assets:Checking', amount: '-10', currency: 'USD' },
           ],
         }}
