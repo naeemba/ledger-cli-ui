@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { KnownPricesView } from './KnownPricesView';
+import { PriceCurrencyToggle } from './PriceCurrencyToggle';
 import { PricesView } from './PricesView';
 import type { ManualPrice } from '@/db/schema';
 import { TabBar } from '@/features/transactions/entry/TabBar';
@@ -31,16 +32,18 @@ export const PricesTabs = ({
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-4">
-      <header>
+      <header className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Prices</h1>
+        {active === 'known' && (
+          <PriceCurrencyToggle
+            baseMode={baseMode}
+            baseCurrency={baseCurrency}
+          />
+        )}
       </header>
       <TabBar tabs={TABS} active={active} onSelect={setActive} />
       {active === 'known' ? (
-        <KnownPricesView
-          rows={known}
-          baseMode={baseMode}
-          baseCurrency={baseCurrency}
-        />
+        <KnownPricesView rows={known} />
       ) : (
         <>
           <p className="text-muted-foreground text-sm">
