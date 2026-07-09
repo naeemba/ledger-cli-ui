@@ -167,6 +167,46 @@ describe('latestGenuinePrice', () => {
       quote: '$',
     });
   });
+
+  it('prefers the freshest quote run over a stale one that sorts last', () => {
+    // Shape mirrors `ledger prices BTC`: a fresh `$` fetch series followed by a
+    // stale `DAI` cost-annotation run (which sorts last as a commodity). The
+    // final row is the stale DAI one, but the current price is the fresh `$`.
+    const points = [
+      { date: '2026-07-06', price: 64174, quote: '$' },
+      { date: '2026-07-09', price: 62513, quote: '$' },
+      { date: '2025-01-20', price: 107424, quote: 'DAI' },
+    ];
+    expect(latestGenuinePrice(points, 'USD')).toEqual({
+      date: '2026-07-09',
+      price: 62513,
+      quote: '$',
+    });
+  });
+
+  it('breaks an equal-newest-date tie in favour of the base quote', () => {
+    const points = [
+      { date: '2026-07-09', price: 100, quote: 'DAI' },
+      { date: '2026-07-09', price: 62513, quote: '$' },
+    ];
+    expect(latestGenuinePrice(points, 'USD')).toEqual({
+      date: '2026-07-09',
+      price: 62513,
+      quote: '$',
+    });
+  });
+
+  it('still returns a non-base quote when it is genuinely the freshest', () => {
+    const points = [
+      { date: '2026-07-01', price: 62000, quote: '$' },
+      { date: '2026-07-09', price: 100, quote: 'DAI' },
+    ];
+    expect(latestGenuinePrice(points, 'USD')).toEqual({
+      date: '2026-07-09',
+      price: 100,
+      quote: 'DAI',
+    });
+  });
 });
 
 describe('parseBaseBalance', () => {

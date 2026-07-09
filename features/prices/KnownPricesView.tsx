@@ -40,17 +40,17 @@ export const KnownPricesView = ({ rows, baseMode, baseCurrency }: Props) => (
       >
         <Link
           href="/prices"
-          aria-current={!baseMode ? 'page' : undefined}
-          className={segmentClass(!baseMode)}
-        >
-          Original quote
-        </Link>
-        <Link
-          href="/prices?base=base"
           aria-current={baseMode ? 'page' : undefined}
-          className={`${segmentClass(baseMode)} border-l border-border`}
+          className={segmentClass(baseMode)}
         >
           In {baseCurrency}
+        </Link>
+        <Link
+          href="/prices?quote=original"
+          aria-current={!baseMode ? 'page' : undefined}
+          className={`${segmentClass(!baseMode)} border-l border-border`}
+        >
+          Original quote
         </Link>
       </div>
     </div>

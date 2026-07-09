@@ -703,6 +703,34 @@ describe('PriceService.listKnownPrices', () => {
     expect(widget?.source).toBe('none');
   });
 
+  it('surfaces the fresh base-quote price over a stale cross-quote cost', async () => {
+    // Mirrors real data: BTC carries fresh `$` fetch prices plus a lone,
+    // stale `@@ DAI` cost annotation from an old posting. `ledger prices BTC`
+    // lists the DAI run last (DAI sorts after `$`), but the current price is
+    // the fresh dollar one — it must not be shadowed by the stale DAI figure.
+    await seedUser(
+      ctx,
+      'u-multiquote',
+      [
+        'P 2026-07-06 BTC $64174',
+        'P 2026-07-09 BTC $62513',
+        '2025-01-20 old buy',
+        '    Assets:Crypto   0.05 BTC @@ 5371.20 DAI',
+        '    Assets:Cash',
+        '2026-07-10 hold',
+        '    Assets:Crypto   1 BTC',
+        '    Equity        -1 BTC',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const rows = await service.listKnownPrices('u-multiquote');
+    const btc = rows.find((row) => row.symbol === 'BTC');
+    expect(btc?.price).toBe(62513);
+    expect(normalizeCommoditySymbol(btc?.quote ?? '')).toBe('USD');
+    expect(btc?.date).toBe('2026-07-09');
+  });
+
   it('dates staleness from when the price was set, not a later posting', async () => {
     await seedUser(
       ctx,
@@ -837,6 +865,36 @@ describe('PriceService.listKnownPricesInBase', () => {
     const btc = rows.find((row) => row.symbol === 'BTC');
     expect(btc?.price).toBeCloseTo(40000, 6);
     expect(btc?.quote).toBe('USD');
+  });
+
+  it('reports the fresh base valuation, dated from the raw base-quote row', async () => {
+    // Mirrors prod: BTC carries a fresh `$` fetch price plus a stale `@@ DAI`
+    // cost annotation. The base valuation reports the fresh price; its date and
+    // recency ride along from the raw base-quote row (freshest `$` run), so the
+    // row reads fresh — not stale from the 2025 cost. (Ledger exposes no date
+    // for the price it selected, so the date is sourced from `ledger prices`.)
+    await seedUser(
+      ctx,
+      'u-valuedate',
+      [
+        'P 2026-07-06 BTC $64174',
+        'P 2026-07-09 BTC $62513',
+        '2025-01-20 old buy',
+        '    Assets:Crypto   0.05 BTC @@ 5371.20 DAI',
+        '    Assets:Cash',
+        '2026-07-10 hold',
+        '    Assets:Crypto   1 BTC',
+        '    Equity        -1 BTC',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    const rows = await service.listKnownPricesInBase('u-valuedate', 'USD');
+    const btc = rows.find((row) => row.symbol === 'BTC');
+    expect(btc?.price).toBe(62513);
+    expect(btc?.quote).toBe('USD');
+    // Date is the freshest base-quote price date, not the stale 2025 DAI cost.
+    expect(btc?.date).toBe('2026-07-09');
   });
 
   it('values a digit-bearing ticker that ledger surfaces quoted', async () => {

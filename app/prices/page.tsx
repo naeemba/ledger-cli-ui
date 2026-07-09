@@ -5,17 +5,20 @@ import { getBaseCurrency } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
-type SearchParams = { base?: string };
+type SearchParams = { quote?: string };
 
 const PricesPage = async ({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) => {
-  const { base } = await searchParams;
-  // `base=base` is a mode flag ("value into the display currency"), not the
-  // currency code itself — the label and target both come from getBaseCurrency.
-  const baseMode = base === 'base';
+  const { quote } = await searchParams;
+  // Default view values every holding into the display currency through
+  // ledger's own price graph (`-X`), so the price shown is ledger's — freshest,
+  // bridged, identical to every balance report. `?quote=original` opts into the
+  // raw per-commodity journal quote instead. The label and valuation target
+  // both come from getBaseCurrency.
+  const baseMode = quote !== 'original';
   const user = await requireUser();
   // The display currency the user picked (session cookie → saved setting →
   // default), the same resolver every report page uses. Distinct from the USD
