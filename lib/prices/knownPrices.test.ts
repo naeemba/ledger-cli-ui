@@ -196,6 +196,36 @@ describe('latestGenuinePrice', () => {
     });
   });
 
+  it('breaks a no-base tie on the more recently set price, not commodity order', () => {
+    // A commodity priced only in cross-quotes (no base run). ledger
+    // forward-carries every active quote onto the same last posting date, so
+    // both runs tie on `last.date`; the winner must be the one whose price was
+    // set most recently (`changeDate`), regardless of Map insertion order.
+    const staleThenFresh = [
+      { date: '2026-01-01', price: 100, quote: 'DAI' },
+      { date: '2026-07-09', price: 100, quote: 'DAI' },
+      { date: '2026-07-05', price: 90, quote: 'EUR' },
+      { date: '2026-07-09', price: 90, quote: 'EUR' },
+    ];
+    expect(latestGenuinePrice(staleThenFresh, 'USD')).toEqual({
+      date: '2026-07-05',
+      price: 90,
+      quote: 'EUR',
+    });
+    // Same points, quotes swapped in order — the pick stays the fresher EUR run.
+    const freshThenStale = [
+      { date: '2026-07-05', price: 90, quote: 'EUR' },
+      { date: '2026-07-09', price: 90, quote: 'EUR' },
+      { date: '2026-01-01', price: 100, quote: 'DAI' },
+      { date: '2026-07-09', price: 100, quote: 'DAI' },
+    ];
+    expect(latestGenuinePrice(freshThenStale, 'USD')).toEqual({
+      date: '2026-07-05',
+      price: 90,
+      quote: 'EUR',
+    });
+  });
+
   it('still returns a non-base quote when it is genuinely the freshest', () => {
     const points = [
       { date: '2026-07-01', price: 62000, quote: '$' },

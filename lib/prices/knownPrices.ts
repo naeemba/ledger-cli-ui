@@ -85,7 +85,9 @@ export const ageInDays = (dateIso: string, todayIso: string): number => {
  * last element therefore surfaced a stale cross-quote price over a fresh base
  * one. Instead: collapse each quote to its current price, then pick the freshest
  * run. On an equal newest date the base-quote run wins, so the canonical pricing
- * currency is preferred over an incidental cross-rate.
+ * currency is preferred over an incidental cross-rate; between two non-base
+ * cross-quotes the more recently set price wins, so the tie stays deterministic
+ * rather than following ledger's commodity-sort order.
  *
  * Each run's date is the start of its final constant-price stretch: `ledger`
  * forward-carries the prevailing price onto every later posting date, so a price
@@ -110,8 +112,12 @@ export const latestGenuinePrice = (
 
   const normalizedBase = base ? (normalizeCommoditySymbol(base) ?? base) : null;
 
-  let best: { current: PricePoint; lastDate: string; isBase: boolean } | null =
-    null;
+  let best: {
+    current: PricePoint;
+    lastDate: string;
+    changeDate: string;
+    isBase: boolean;
+  } | null = null;
   for (const run of runsByQuote.values()) {
     const last = run[run.length - 1];
     let changeDate = run[0].date;
@@ -123,14 +129,21 @@ export const latestGenuinePrice = (
     const isBase =
       normalizedBase !== null &&
       (normalizeCommoditySymbol(last.quote) ?? last.quote) === normalizedBase;
+    // Runs are ranked by their forward-carried last date first (freshest run
+    // wins). On an equal last date the base quote is preferred; when neither is
+    // the base — a commodity priced only in cross-quotes — the tie falls to the
+    // more recently *set* price (`changeDate`), keeping the pick deterministic
+    // instead of dependent on ledger's commodity-sort insertion order.
     if (
       !best ||
       last.date > best.lastDate ||
-      (last.date === best.lastDate && isBase && !best.isBase)
+      (last.date === best.lastDate &&
+        (isBase !== best.isBase ? isBase : changeDate > best.changeDate))
     ) {
       best = {
         current: { date: changeDate, price: last.price, quote: last.quote },
         lastDate: last.date,
+        changeDate,
         isBase,
       };
     }
