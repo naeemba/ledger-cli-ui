@@ -1,4 +1,4 @@
-import { parseAmount } from '@/lib/ledger/parseAmount';
+import parseAmountColumn from '@/utils/parseAmountColumn';
 
 export type NetWorthRow = { date: string; value: number };
 
@@ -12,7 +12,7 @@ export const parseNetWorthRows = (stdout: string): NetWorthRow[] => {
   for (const line of stdout.split('NNN')) {
     const [date, amount] = line.split('|').map((s) => s?.trim() ?? '');
     if (!date || !amount) continue;
-    rows.push({ date, value: parseAmount(amount) });
+    rows.push({ date, value: parseAmountColumn(amount) });
   }
   return rows;
 };

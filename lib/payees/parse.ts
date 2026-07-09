@@ -1,4 +1,4 @@
-import { parseAmount } from '@/lib/ledger/parseAmount';
+import parseAmountColumn from '@/utils/parseAmountColumn';
 
 export type PayeeRow = { payee: string; total: number };
 
@@ -13,7 +13,7 @@ export const parsePayeeRows = (stdout: string): PayeeRow[] => {
   for (const line of stdout.split('NNN')) {
     const [payee, amount] = line.split('|').map((s) => s.trim());
     if (!payee || !amount) continue;
-    totals.set(payee, (totals.get(payee) ?? 0) + parseAmount(amount));
+    totals.set(payee, (totals.get(payee) ?? 0) + parseAmountColumn(amount));
   }
   return Array.from(totals.entries())
     .map(([payee, total]) => ({ payee, total }))

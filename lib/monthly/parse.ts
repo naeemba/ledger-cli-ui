@@ -1,4 +1,4 @@
-import { parseAmount } from '@/lib/ledger/parseAmount';
+import parseAmountColumn from '@/utils/parseAmountColumn';
 
 export type CashFlowRow = {
   date: Date;
@@ -24,7 +24,7 @@ export const parseMonthlyTotals = (stdout: string): Map<string, number> => {
     const [date, account, amount] = line.split('|').map((s) => s?.trim() ?? '');
     if (!date || !amount) continue;
     if (account.startsWith('<')) continue;
-    map.set(date, (map.get(date) ?? 0) + parseAmount(amount));
+    map.set(date, (map.get(date) ?? 0) + parseAmountColumn(amount));
   }
   return map;
 };
