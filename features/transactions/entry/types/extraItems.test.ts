@@ -15,6 +15,11 @@ describe('formatAmount', () => {
     expect(formatAmount(0.1 + 0.2)).toBe('0.3');
     expect(formatAmount(-0)).toBe('0');
   });
+
+  it('never emits scientific notation for small magnitudes', () => {
+    expect(formatAmount(5e-7)).toBe('0.0000005');
+    expect(formatAmount(-1e-7)).toBe('-0.0000001');
+  });
 });
 
 describe('residualByCurrency', () => {

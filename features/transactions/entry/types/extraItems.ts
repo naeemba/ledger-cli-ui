@@ -2,11 +2,12 @@ import type { Posting } from '@/lib/transactions/posting';
 
 export type ExtraItem = { account: string; amount: string; currency: string };
 
-/** Format a computed numeric amount to a compact string (trailing zeros trimmed, no -0). */
+/** Format a computed numeric amount to a compact string (trailing zeros trimmed, no -0, no scientific notation). */
 export const formatAmount = (n: number): string => {
   if (!Number.isFinite(n)) return '0';
-  const fixed = Number(n.toFixed(10));
-  return (Object.is(fixed, -0) ? 0 : fixed).toString();
+  if (n === 0) return '0';
+  const trimmed = n.toFixed(10).replace(/\.?0+$/, '');
+  return trimmed === '-0' ? '0' : trimmed;
 };
 
 /**

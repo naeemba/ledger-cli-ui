@@ -3,7 +3,7 @@
 import React from 'react';
 import AmountInput from '../../AmountInput';
 import type { ExtraItem } from '../types/extraItems';
-import { CurrencyCombobox, SectionLabel } from './fields';
+import { CurrencyCombobox, optionsForRoles, SectionLabel } from './fields';
 import Combobox from '@/components/Combobox';
 import { Button } from '@/components/ui/button';
 
@@ -23,6 +23,7 @@ export function ExtraItemsField({
   onChange: (items: ExtraItem[]) => void;
 }): React.JSX.Element {
   const atCap = baseCount + items.length >= MAX_POSTINGS;
+  const expenseAccounts = optionsForRoles(accounts, 'expense');
 
   const setItem = (index: number, patch: Partial<ExtraItem>) =>
     onChange(
@@ -49,7 +50,7 @@ export function ExtraItemsField({
           <Combobox
             value={item.account}
             onChange={(account) => setItem(index, { account })}
-            options={accounts}
+            options={expenseAccounts}
             placeholder="Account, e.g. Expenses:Fees"
           />
           <AmountInput
