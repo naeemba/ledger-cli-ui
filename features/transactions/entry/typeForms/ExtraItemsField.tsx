@@ -26,15 +26,19 @@ export function ExtraItemsField({
 
   const setItem = (index: number, patch: Partial<ExtraItem>) =>
     onChange(
-      items.map((item, i) => (i === index ? { ...item, ...patch } : item))
+      items.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...patch } : item
+      )
     );
-  const addItem = () =>
+  const addItem = () => {
+    if (atCap) return;
     onChange([
       ...items,
       { account: '', amount: '', currency: defaultCurrency },
     ]);
+  };
   const removeItem = (index: number) =>
-    onChange(items.filter((_, i) => i !== index));
+    onChange(items.filter((_, itemIndex) => itemIndex !== index));
 
   return (
     <section className="flex flex-col gap-3">
