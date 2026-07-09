@@ -22,8 +22,32 @@ export function ExtraItemsField({
   baseCount: number;
   onChange: (items: ExtraItem[]) => void;
 }): React.JSX.Element {
-  const atCap = baseCount + items.length >= MAX_POSTINGS;
+  // `compile` emits one balancing posting per distinct residual currency, so the
+  // compiled transaction can exceed the row count when extras span several
+  // currencies. Bound the worst case: the fixed non-balancing base postings
+  // (`baseCount - 1`), one posting per row, and one balancing posting per
+  // distinct currency in play (the base residual currency plus each row's).
+  const residualCurrencies = new Set([
+    defaultCurrency,
+    ...items.map((item) => item.currency),
+  ]).size;
+  const atCap =
+    baseCount - 1 + items.length + residualCurrencies >= MAX_POSTINGS;
   const expenseAccounts = optionsForRoles(accounts, 'expense');
+
+  // `Combobox` keeps uncontrolled internal state (open/search) that is not
+  // derived from `value`, so keying rows by array index would misassociate that
+  // state when a middle row is removed and the rows below shift up. Track a
+  // stable per-row id instead, kept in lockstep with `items` on add/remove and
+  // regenerated when the array is replaced from outside (type switch / detect).
+  const [rowIds, setRowIds] = React.useState<string[]>(() =>
+    items.map(() => crypto.randomUUID())
+  );
+  let ids = rowIds;
+  if (ids.length !== items.length) {
+    ids = items.map(() => crypto.randomUUID());
+    setRowIds(ids);
+  }
 
   const setItem = (index: number, patch: Partial<ExtraItem>) =>
     onChange(
@@ -33,20 +57,25 @@ export function ExtraItemsField({
     );
   const addItem = () => {
     if (atCap) return;
+    setRowIds((current) => [...current, crypto.randomUUID()]);
     onChange([
       ...items,
       { account: '', amount: '', currency: defaultCurrency },
     ]);
   };
-  const removeItem = (index: number) =>
+  const removeItem = (index: number) => {
+    setRowIds((current) =>
+      current.filter((_, itemIndex) => itemIndex !== index)
+    );
     onChange(items.filter((_, itemIndex) => itemIndex !== index));
+  };
 
   return (
     <section className="flex flex-col gap-3">
       <SectionLabel>Extra items (fees, tips…)</SectionLabel>
 
       {items.map((item, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <div key={ids[index]} className="flex items-center gap-2">
           <Combobox
             value={item.account}
             onChange={(account) => setItem(index, { account })}
