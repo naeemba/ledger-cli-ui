@@ -1,6 +1,7 @@
 // features/transactions/entry/types/registry.test.ts
 import { describe, it, expect } from 'vitest';
 import { TYPE_ADAPTERS, detectType } from './registry';
+import { Transaction } from '@/lib/transactions/model';
 
 const draft = (postings: object[]) =>
   ({
@@ -64,7 +65,7 @@ describe('detectType', () => {
       )?.id
     ).toBe('fix-balance');
   });
-  it('returns null for a 3-posting split (falls back to Form)', () => {
+  it('classifies a multi-expense-line draft with a single payer as expense', () => {
     expect(
       detectType(
         draft([
@@ -72,8 +73,8 @@ describe('detectType', () => {
           { account: 'Expenses:B', amount: '10', currency: 'USD' },
           { account: 'Assets:Checking', amount: '-20', currency: 'USD' },
         ])
-      )
-    ).toBeNull();
+      )?.id
+    ).toBe('expense');
   });
   it('returns null for a non-standard-root journal', () => {
     expect(
@@ -84,5 +85,54 @@ describe('detectType', () => {
         ])
       )
     ).toBeNull();
+  });
+});
+
+describe('detectType with extra items', () => {
+  it('classifies an expense with a tip as expense', () => {
+    const transaction = Transaction.of('2026-06-29', 'Diner', 'none', '', [
+      { account: 'Expenses:Dining', amount: '100', currency: 'USD' },
+      { account: 'Expenses:Tips', amount: '20', currency: 'USD' },
+      { account: 'Assets:Checking', amount: '-120', currency: 'USD' },
+    ]);
+    expect(detectType(transaction)?.id).toBe('expense');
+  });
+
+  it('classifies a transfer with a wire fee as transfer, not expense', () => {
+    const transaction = Transaction.of('2026-06-29', 'Transfer', 'none', '', [
+      { account: 'Assets:Savings', amount: '500', currency: 'USD' },
+      { account: 'Expenses:WireFee', amount: '15', currency: 'USD' },
+      { account: 'Assets:Checking', amount: '-515', currency: 'USD' },
+    ]);
+    expect(detectType(transaction)?.id).toBe('transfer');
+  });
+
+  it('classifies income with a processor fee as income, not expense', () => {
+    const transaction = Transaction.of('2026-06-29', 'Employer', 'none', '', [
+      { account: 'Assets:Checking', amount: '970', currency: 'USD' },
+      { account: 'Income:Salary', amount: '-1000', currency: 'USD' },
+      { account: 'Expenses:Fees', amount: '30', currency: 'USD' },
+    ]);
+    expect(detectType(transaction)?.id).toBe('income');
+  });
+
+  it('classifies an exchange with a broker fee as exchange', () => {
+    const transaction = Transaction.of(
+      '2026-06-29',
+      'Currency exchange',
+      'none',
+      '',
+      [
+        {
+          account: 'Assets:BTC',
+          amount: '1',
+          currency: 'BTC',
+          cost: { amount: '100', currency: 'USD' },
+        },
+        { account: 'Expenses:BrokerFee', amount: '2', currency: 'USD' },
+        { account: 'Assets:Bank', amount: '-102', currency: 'USD' },
+      ]
+    );
+    expect(detectType(transaction)?.id).toBe('exchange');
   });
 });
