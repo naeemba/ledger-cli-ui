@@ -90,6 +90,11 @@ const TransactionEntry = ({
     mode === 'edit' && !detectType(draft) ? 'form' : orderedTabs[0]
   );
   const [rawError, setRawError] = useState<string | null>(null);
+  // Bumped by resetForm to remount the active lens. Each lens seeds local
+  // useState from the draft only at mount (RawLens text, TypeLens picked, the
+  // type forms' field state), so a plain draft replace leaves that state stale
+  // after "Save & add another". Remounting re-seeds it all from the fresh draft.
+  const [resetKey, setResetKey] = useState(0);
 
   const formRef = useRef<HTMLFormElement>(null);
   // Set by the "Save & add another" button so the success effect resets the
@@ -101,6 +106,8 @@ const TransactionEntry = ({
       type: 'replaceAll',
       state: initDraft({ date: todayISO() }, defaultCurrency),
     });
+    setRawError(null);
+    setResetKey((k) => k + 1);
   }, [defaultCurrency]);
 
   useEffect(() => {
@@ -177,6 +184,7 @@ const TransactionEntry = ({
 
           {active === 'types' && (
             <TypeLens
+              key={resetKey}
               draft={draft}
               dispatch={dispatch}
               accounts={accounts}
@@ -201,6 +209,7 @@ const TransactionEntry = ({
 
           {active === 'raw' && (
             <RawLens
+              key={resetKey}
               draft={draft}
               dispatch={dispatch}
               onError={setRawError}
