@@ -5,15 +5,7 @@ import { TableScroll } from '@/components/ui/table';
 import type { KnownPrice } from '@/lib/prices';
 import Link from 'next/link';
 
-type Props = { rows: KnownPrice[]; baseMode: boolean; baseCurrency: string };
-
-const segmentClass = (active: boolean): string =>
-  [
-    'px-3 py-1.5 font-medium transition-opacity',
-    active
-      ? 'bg-accent text-accent-foreground'
-      : 'opacity-60 hover:opacity-100',
-  ].join(' ');
+type Props = { rows: KnownPrice[] };
 
 const sourceLabel: Record<KnownPrice['source'], string> = {
   fetched: 'Fetched',
@@ -30,30 +22,8 @@ const ageLabel = (row: KnownPrice): string => {
   return `${row.ageDays} days ago`;
 };
 
-export const KnownPricesView = ({ rows, baseMode, baseCurrency }: Props) => (
+export const KnownPricesView = ({ rows }: Props) => (
   <div className="space-y-3">
-    <div className="flex justify-end">
-      <div
-        role="group"
-        aria-label="Price currency"
-        className="inline-flex overflow-hidden rounded-md border border-border text-sm"
-      >
-        <Link
-          href="/prices"
-          aria-current={!baseMode ? 'page' : undefined}
-          className={segmentClass(!baseMode)}
-        >
-          Original quote
-        </Link>
-        <Link
-          href="/prices?base=base"
-          aria-current={baseMode ? 'page' : undefined}
-          className={`${segmentClass(baseMode)} border-l border-border`}
-        >
-          In {baseCurrency}
-        </Link>
-      </div>
-    </div>
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <TableScroll bleed={false}>
         <table>

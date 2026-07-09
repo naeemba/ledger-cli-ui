@@ -560,7 +560,7 @@ export class PriceService {
         }
 
         const history = await this.listPriceHistory(userId, symbol);
-        const latest = latestGenuinePrice(history);
+        const latest = latestGenuinePrice(history, base);
 
         if (!latest) {
           return {
@@ -755,7 +755,9 @@ export class PriceService {
       const hit = index !== undefined ? valued.get(index) : undefined;
       // Ledger emits `$` for dollar-denominated legs even when `base` is the
       // string `USD`, so normalize before comparing — otherwise a genuinely
-      // convertible holding would be reported as having no price.
+      // convertible holding would be reported as having no price. Only the price
+      // is re-valued; date, staleness and provenance ride along from the raw
+      // base-quote row (ledger has no accessor for the selected price's date).
       return hit && normalizeCommoditySymbol(hit.commodity) === base
         ? { ...row, price: hit.price, quote: base }
         : { ...row, price: null, quote: null };

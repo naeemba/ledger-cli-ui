@@ -14,6 +14,11 @@ export const PRICES_FORMAT =
  * `account|quantity|commodity` line per probe holding. `quantity` is the
  * full-precision value, `commodity` is the currency it resolved to (the base
  * when a conversion path existed, otherwise the holding's own commodity).
+ *
+ * Note: ledger has no accessor for the date of the price it selected —
+ * `value_date` is the valuation "as of" date (today / `--now`), not when the
+ * price was set — so recency for a valued holding is dated separately, from the
+ * dated price directives `ledger prices` reports (see latestGenuinePrice).
  */
 export const BALANCE_BASE_FORMAT =
   '%(account)|%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))\n';
@@ -70,23 +75,81 @@ export const ageInDays = (dateIso: string, todayIso: string): number => {
 };
 
 /**
- * The current price and the date it last changed. `ledger prices` forward-
- * carries the prevailing price onto every posting date, so the final row's
- * date can be a transaction date rather than when the price was actually set.
- * Returns the last point's price/quote paired with the date the price value
- * last changed (the start of the final constant-price run), so staleness
- * reflects how long the current price has stood. Returns null for empty input.
+ * The current price and the date it last changed.
+ *
+ * `ledger prices <symbol>` emits one ascending-by-date run per quote commodity,
+ * concatenated commodity-by-commodity — so a holding priced in several quotes
+ * (e.g. a fresh `$` fetch series plus stray `@@ DAI` cost annotations from
+ * postings) yields multiple runs back to back, and the final row belongs to
+ * whichever quote sorts last, not to the most recent price. Taking `points`'
+ * last element therefore surfaced a stale cross-quote price over a fresh base
+ * one. Instead: collapse each quote to its current price, then pick the freshest
+ * run. On an equal newest date the base-quote run wins, so the canonical pricing
+ * currency is preferred over an incidental cross-rate; between two non-base
+ * cross-quotes the more recently set price wins, so the tie stays deterministic
+ * rather than following ledger's commodity-sort order.
+ *
+ * Each run's date is the start of its final constant-price stretch: `ledger`
+ * forward-carries the prevailing price onto every later posting date, so a price
+ * is dated from when its value last changed, not from a subsequent transaction —
+ * staleness then reflects how long the current price has actually stood.
+ *
+ * Returns null for empty input. `base` is optional so history-only callers that
+ * do not care about the tie-break can omit it.
  */
-export const latestGenuinePrice = (points: PricePoint[]): PricePoint | null => {
+export const latestGenuinePrice = (
+  points: PricePoint[],
+  base?: string
+): PricePoint | null => {
   if (points.length === 0) return null;
-  const last = points[points.length - 1];
-  let changeDate = points[0].date;
-  for (let index = 1; index < points.length; index += 1) {
-    if (points[index].price !== points[index - 1].price) {
-      changeDate = points[index].date;
+
+  const runsByQuote = new Map<string, PricePoint[]>();
+  for (const point of points) {
+    const run = runsByQuote.get(point.quote);
+    if (run) run.push(point);
+    else runsByQuote.set(point.quote, [point]);
+  }
+
+  const normalizedBase = base ? (normalizeCommoditySymbol(base) ?? base) : null;
+
+  let best: {
+    current: PricePoint;
+    lastDate: string;
+    changeDate: string;
+    isBase: boolean;
+  } | null = null;
+  for (const run of runsByQuote.values()) {
+    const last = run[run.length - 1];
+    let changeDate = run[0].date;
+    for (let index = 1; index < run.length; index += 1) {
+      if (run[index].price !== run[index - 1].price) {
+        changeDate = run[index].date;
+      }
+    }
+    const isBase =
+      normalizedBase !== null &&
+      (normalizeCommoditySymbol(last.quote) ?? last.quote) === normalizedBase;
+    // Runs are ranked by their forward-carried last date first (freshest run
+    // wins). On an equal last date the base quote is preferred; when neither is
+    // the base — a commodity priced only in cross-quotes — the tie falls to the
+    // more recently *set* price (`changeDate`), keeping the pick deterministic
+    // instead of dependent on ledger's commodity-sort insertion order.
+    if (
+      !best ||
+      last.date > best.lastDate ||
+      (last.date === best.lastDate &&
+        (isBase !== best.isBase ? isBase : changeDate > best.changeDate))
+    ) {
+      best = {
+        current: { date: changeDate, price: last.price, quote: last.quote },
+        lastDate: last.date,
+        changeDate,
+        isBase,
+      };
     }
   }
-  return { date: changeDate, price: last.price, quote: last.quote };
+
+  return best ? best.current : null;
 };
 
 /**
