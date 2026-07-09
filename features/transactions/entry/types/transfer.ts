@@ -70,19 +70,26 @@ export const transferAdapter: TransactionTypeAdapter<TransferFields> = {
     const postings = draft.postings;
     if (postings.length < 2) return null;
     if (postings.some((p) => p.cost || p.assertion)) return null;
-    const assetPostings = postings.filter((p) => {
+    const assetOrLiabilityPostings = postings.filter((p) => {
       const role = classifyAccount(p.account);
       return role === 'asset' || role === 'liability';
     });
     const expensePostings = postings.filter(
       (p) => classifyAccount(p.account) === 'expense'
     );
-    if (assetPostings.length + expensePostings.length !== postings.length)
+    if (
+      assetOrLiabilityPostings.length + expensePostings.length !==
+      postings.length
+    )
       return null;
-    if (assetPostings.length < 2) return null;
+    if (assetOrLiabilityPostings.length < 2) return null;
     if (computeBalance(postings).kind !== 'balanced') return null;
-    const positives = assetPostings.filter((p) => Number(p.amount) > 0);
-    const negatives = assetPostings.filter((p) => Number(p.amount) < 0);
+    const positives = assetOrLiabilityPostings.filter(
+      (p) => Number(p.amount) > 0
+    );
+    const negatives = assetOrLiabilityPostings.filter(
+      (p) => Number(p.amount) < 0
+    );
     if (positives.length !== 1) return null;
     const to = positives[0];
     const from = singleAccount(negatives);
