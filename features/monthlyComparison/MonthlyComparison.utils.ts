@@ -14,13 +14,17 @@ const fetchMonthly = async (
   currency: string
 ): Promise<Map<string, number>> => {
   const stdout = await runLedger(
-    ['reg', query, '--monthly', '-X', currency, '--format', 'NNN%D|%t\n'],
+    ['reg', query, '--monthly', '-X', currency, '--format', 'NNN%D|%A|%t\n'],
     { sortByDate: false }
   );
   const map = new Map<string, number>();
   for (const line of stdout.split('NNN')) {
-    const [date, amount] = line.split('|').map((s) => s.trim());
-    if (date && amount) map.set(date, parseAmount(amount));
+    const [date, account, amount] = line.split('|').map((s) => s.trim());
+    if (!date || !amount) continue;
+    // `-X` injects `<Adjustment>` / `<Revalued>` postings that inherit a real
+    // payee; they must not be summed into the month's total.
+    if (account.startsWith('<')) continue;
+    map.set(date, (map.get(date) ?? 0) + parseAmount(amount));
   }
   return map;
 };
