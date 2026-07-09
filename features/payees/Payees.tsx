@@ -2,6 +2,7 @@ import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { Card, CardContent } from '@/components/ui/card';
 import { TableScroll } from '@/components/ui/table';
 import SaveViewButton from '@/features/savedViews/SaveViewButton';
@@ -50,7 +51,7 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
   const grandTotal = sorted.reduce((acc, r) => acc + r.total, 0);
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -151,7 +152,7 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

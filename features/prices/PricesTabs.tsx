@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { KnownPricesView } from './KnownPricesView';
 import { PriceCurrencyToggle } from './PriceCurrencyToggle';
 import { PricesView } from './PricesView';
+import PageContainer from '@/components/PageContainer';
 import type { ManualPrice } from '@/db/schema';
 import { TabBar } from '@/features/transactions/entry/TabBar';
 import type { KnownPrice } from '@/lib/prices';
@@ -31,7 +32,7 @@ export const PricesTabs = ({
   const [active, setActive] = useState('known');
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 p-4">
+    <PageContainer>
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Prices</h1>
         {active === 'known' && (
@@ -58,6 +59,6 @@ export const PricesTabs = ({
           />
         </>
       )}
-    </div>
+    </PageContainer>
   );
 };

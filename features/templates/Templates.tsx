@@ -1,6 +1,7 @@
 import 'server-only';
 import TemplatesList from './TemplatesList';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { buttonVariants } from '@/components/ui/button';
 import { requireUser } from '@/lib/auth/require-user';
 import { templateRepository } from '@/lib/templates';
@@ -12,7 +13,7 @@ const Templates = async () => {
   const templates = await templateRepository.list(user.id);
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <header className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold">Templates</h1>
@@ -29,7 +30,7 @@ const Templates = async () => {
         </Link>
       </header>
       <TemplatesList templates={templates} />
-    </div>
+    </PageContainer>
   );
 };
 

@@ -2,6 +2,7 @@ import { createTransactionAction } from './actions';
 import TransactionEntry from './entry/TransactionEntry';
 import { getAccountBalance } from './entry/actions/getAccountBalance';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import TemplatePicker from '@/features/templates/TemplatePicker';
 import { requireUser } from '@/lib/auth/require-user';
 import { getAvailableCurrencies, getEntryTabOrder } from '@/lib/settings';
@@ -44,7 +45,7 @@ const NewTransaction = async ({ templateId }: Props) => {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -75,7 +76,7 @@ const NewTransaction = async ({ templateId }: Props) => {
         initialDraft={initialDraft}
         templateMissing={templateMissing}
       />
-    </div>
+    </PageContainer>
   );
 };
 

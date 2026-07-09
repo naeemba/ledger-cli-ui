@@ -2,6 +2,7 @@ import Chart from '@/components/Chart';
 import DateFilter from '@/components/DateFilter';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { Card, CardContent } from '@/components/ui/card';
 import SaveViewButton from '@/features/savedViews/SaveViewButton';
 import { requireUser } from '@/lib/auth/require-user';
@@ -50,7 +51,7 @@ const PeriodBalance = async ({
       ?.split('|')[2] ?? '';
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -166,7 +167,7 @@ const PeriodBalance = async ({
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

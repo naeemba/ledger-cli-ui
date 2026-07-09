@@ -1,3 +1,4 @@
+import PageContainer from '@/components/PageContainer';
 import { TableScroll } from '@/components/ui/table';
 import AccountHeader from '@/features/accounts/AccountHeader';
 import { requireUser } from '@/lib/auth/require-user';
@@ -34,7 +35,7 @@ const Account = async ({
     .reverse()
     .map((result) => result.split('|').map((each) => each.trim()));
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <AccountHeader
         account={account}
         balance={balance}
@@ -131,7 +132,7 @@ const Account = async ({
           </table>
         </TableScroll>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

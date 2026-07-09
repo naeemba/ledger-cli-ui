@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,7 +80,7 @@ export default function ImportPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -161,6 +162,6 @@ export default function ImportPage() {
           </li>
         </ul>
       </div>
-    </div>
+    </PageContainer>
   );
 }

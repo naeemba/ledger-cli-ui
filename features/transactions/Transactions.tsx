@@ -6,6 +6,7 @@ import { type TransactionFilters } from './applyTransactionFilters';
 import { loadJournalTransactions } from './loadJournalTransactions';
 import { PAGE_SIZE, pageTransactions } from './pageTransactions';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { requireUser } from '@/lib/auth/require-user';
 import { savedViewService } from '@/lib/savedViews';
 
@@ -27,7 +28,7 @@ const Transactions = async ({
   ].sort();
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <header className="flex items-center gap-2">
         <h1 className="text-2xl font-semibold">Transactions</h1>
         <Help label="About transactions">
@@ -48,7 +49,7 @@ const Transactions = async ({
         initialNextOffset={firstPage.nextOffset}
         filters={params}
       />
-    </div>
+    </PageContainer>
   );
 };
 

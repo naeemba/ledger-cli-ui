@@ -1,5 +1,6 @@
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { Card } from '@/components/ui/card';
 import { TableScroll } from '@/components/ui/table';
 import { parseBalanceRows } from '@/lib/balance/parse';
@@ -25,7 +26,7 @@ const Balance = async () => {
     .filter((r) => r.account !== 'Total')
     .map((r) => `${r.account}|${r.amount}`);
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -98,7 +99,7 @@ const Balance = async () => {
           </table>
         </TableScroll>
       </Card>
-    </div>
+    </PageContainer>
   );
 };
 

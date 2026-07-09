@@ -2,6 +2,7 @@ import AccountsView from './AccountsView';
 import { buildAccountTree, countLeaves } from './accountTree';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import PageContainer from '@/components/PageContainer';
 import { parseBalanceRows, type BalanceRow } from '@/lib/balance/parse';
 import { getBaseCurrency } from '@/lib/settings';
 import runLedger from '@/utils/runLedger';
@@ -31,7 +32,7 @@ const Accounts = async () => {
   const leafCount = countLeaves(buildAccountTree(rows));
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
@@ -50,7 +51,7 @@ const Accounts = async () => {
         </p>
       </div>
       <AccountsView rows={rows} />
-    </div>
+    </PageContainer>
   );
 };
 

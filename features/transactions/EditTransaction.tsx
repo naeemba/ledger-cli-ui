@@ -2,6 +2,7 @@ import 'server-only';
 import { updateTransactionAction } from './actions';
 import TransactionEntry from './entry/TransactionEntry';
 import { getAccountBalance } from './entry/actions/getAccountBalance';
+import PageContainer from '@/components/PageContainer';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { getAvailableCurrencies, getEntryTabOrder } from '@/lib/settings';
@@ -32,7 +33,7 @@ const EditTransaction = async ({ uid }: { uid: string }) => {
   ]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <PageContainer>
       <h1 className="text-2xl font-semibold">Edit transaction</h1>
       <TransactionEntry
         mode="edit"
@@ -47,7 +48,7 @@ const EditTransaction = async ({ uid }: { uid: string }) => {
         tabOrder={tabOrder}
         getAccountBalance={getAccountBalance}
       />
-    </div>
+    </PageContainer>
   );
 };
 

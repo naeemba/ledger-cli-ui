@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import CommodityCombobox from '@/components/CommodityCombobox/CommodityCombobox';
+import PageContainer from '@/components/PageContainer';
 import { TableScroll } from '@/components/ui/table';
 import {
   upsertMappingAction,
@@ -73,7 +74,7 @@ export default function CurrenciesView({ rows: initial }: Props) {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <PageContainer>
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Currencies</h1>
         <p className="text-muted-foreground text-sm">
@@ -170,6 +171,6 @@ export default function CurrenciesView({ rows: initial }: Props) {
           </tbody>
         </table>
       </TableScroll>
-    </div>
+    </PageContainer>
   );
 }
