@@ -72,11 +72,13 @@ describe('balancingPostings', () => {
 });
 
 describe('extraItemPostings', () => {
-  it('maps rows to postings and drops fully-blank rows', () => {
+  it('maps rows to postings and drops rows missing an account or amount', () => {
     expect(
       extraItemPostings([
         { account: 'Expenses:Tips', amount: '20', currency: 'USD' },
         { account: '', amount: '', currency: 'USD' },
+        { account: 'Expenses:Fees', amount: '', currency: 'USD' },
+        { account: '', amount: '5', currency: 'USD' },
       ])
     ).toEqual([{ account: 'Expenses:Tips', amount: '20', currency: 'USD' }]);
   });

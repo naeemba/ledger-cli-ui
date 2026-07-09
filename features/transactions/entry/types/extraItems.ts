@@ -52,10 +52,15 @@ export const balancingPostings = (
   return out;
 };
 
-/** Map extra-item rows to postings, dropping fully-blank rows. */
+/**
+ * Map extra-item rows to postings, dropping rows that lack an account or an
+ * amount. A row with only one field filled is a partially-entered fee line, not
+ * a posting: emitting it (e.g. a blank amount) would silently fold into
+ * auto-balance rather than the intended fee, so both fields are required.
+ */
 export const extraItemPostings = (items: readonly ExtraItem[]): Posting[] =>
   items
-    .filter((item) => item.account.trim() !== '' || item.amount.trim() !== '')
+    .filter((item) => item.account.trim() !== '' && item.amount.trim() !== '')
     .map((item) => ({
       account: item.account,
       amount: item.amount,
