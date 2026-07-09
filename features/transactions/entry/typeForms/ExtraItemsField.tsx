@@ -75,33 +75,38 @@ export function ExtraItemsField({
       <SectionLabel>Extra items (fees, tips…)</SectionLabel>
 
       {items.map((item, index) => (
-        <div key={ids[index]} className="flex items-center gap-2">
+        <div
+          key={ids[index]}
+          className="grid grid-cols-1 items-center gap-2 rounded-lg border border-border p-2 sm:grid-cols-[1fr_140px_90px_auto] sm:rounded-none sm:border-0 sm:p-0"
+        >
           <Combobox
             value={item.account}
             onChange={(account) => setItem(index, { account })}
             options={expenseAccounts}
             placeholder="Account, e.g. Expenses:Fees"
           />
-          <AmountInput
-            value={item.amount}
-            onChange={(amount) => setItem(index, { amount })}
-            placeholder="Amount"
-            className="w-28 text-right tabular-nums"
-          />
-          <CurrencyCombobox
-            value={item.currency}
-            onChange={(currency) => setItem(index, { currency })}
-            className="w-24"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Remove item"
-            onClick={() => removeItem(index)}
-          >
-            ×
-          </Button>
+          <div className="flex items-center gap-2 sm:contents">
+            <AmountInput
+              value={item.amount}
+              onChange={(amount) => setItem(index, { amount })}
+              placeholder="Amount"
+              className="flex-1 text-right tabular-nums sm:flex-none"
+            />
+            <CurrencyCombobox
+              value={item.currency}
+              onChange={(currency) => setItem(index, { currency })}
+              className="w-24 sm:w-auto"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Remove item"
+              onClick={() => removeItem(index)}
+            >
+              ×
+            </Button>
+          </div>
         </div>
       ))}
 
