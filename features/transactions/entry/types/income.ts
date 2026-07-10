@@ -88,7 +88,9 @@ export const incomeAdapter: TransactionTypeAdapter<IncomeFields> = {
     if (incomePostings.length !== 1 || assetPostings.length < 1) return null;
     const receivedInto = singleAccount(assetPostings);
     if (!receivedInto) return null;
-    if (computeBalance(postings).kind !== 'balanced') return null;
+    const balanceKind = computeBalance(postings).kind;
+    if (balanceKind !== 'balanced' && balanceKind !== 'auto-balance')
+      return null;
     const base = incomePostings[0];
     if (base.amount === '' || !(Number(base.amount) < 0)) return null;
     return {

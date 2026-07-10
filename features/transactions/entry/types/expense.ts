@@ -82,7 +82,9 @@ export const expenseAdapter: TransactionTypeAdapter<ExpenseFields> = {
     if (expensePostings.length < 1 || payingPostings.length < 1) return null;
     const paidFrom = singleAccount(payingPostings);
     if (!paidFrom) return null;
-    if (computeBalance(postings).kind !== 'balanced') return null;
+    const balanceKind = computeBalance(postings).kind;
+    if (balanceKind !== 'balanced' && balanceKind !== 'auto-balance')
+      return null;
     const base = expensePostings[0];
     if (base.amount === '' || !(Number(base.amount) > 0)) return null;
     return {

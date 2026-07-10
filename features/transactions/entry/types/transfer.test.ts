@@ -46,7 +46,8 @@ describe('transferAdapter.compile', () => {
     expect(draft.postings).toEqual([
       { account: 'Assets:Savings', amount: '500', currency: 'USD' },
       { account: 'Expenses:WireFee', amount: '15', currency: 'USD' },
-      { account: 'Assets:Checking', amount: '-515', currency: 'USD' },
+      // Amount-less: ledger fills the outflow (500 + 15 = 515) on save.
+      { account: 'Assets:Checking', amount: '', currency: '' },
     ]);
   });
 });

@@ -99,7 +99,9 @@ export const exchangeAdapter: TransactionTypeAdapter<ExchangeFields> = {
     const gaveFrom = singleAccount(gavePostings);
     if (!gaveFrom) return null;
     if (got.amount === '' || !(Number(got.amount) > 0)) return null;
-    if (computeBalance(postings).kind !== 'balanced') return null;
+    const balanceKind = computeBalance(postings).kind;
+    if (balanceKind !== 'balanced' && balanceKind !== 'auto-balance')
+      return null;
     return {
       ...headerOf(draft),
       gaveAmount: cost.amount,

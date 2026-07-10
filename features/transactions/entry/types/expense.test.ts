@@ -49,8 +49,8 @@ describe('expenseAdapter.compile', () => {
       { account: 'Expenses:Dining', amount: '100', currency: 'USD' },
       { account: 'Expenses:Tips', amount: '20', currency: 'USD' },
       { account: 'Expenses:Fees', amount: '2', currency: 'EUR' },
-      { account: 'Assets:Checking', amount: '-120', currency: 'USD' },
-      { account: 'Assets:Checking', amount: '-2', currency: 'EUR' },
+      // Amount-less: ledger fills the multi-currency residual on save.
+      { account: 'Assets:Checking', amount: '', currency: '' },
     ]);
   });
 });
