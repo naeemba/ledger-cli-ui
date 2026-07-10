@@ -39,7 +39,7 @@ import type { ManualPriceRepository } from './manualRepository';
 import { buildPricedAt, type ManualPriceDraft } from './manualSchema';
 import type { CommodityMappingRepository } from './mappingRepository';
 import { parseLegacyPriceDb } from './migration';
-import { fetchPricesUsd, type FetchPlan } from './provider';
+import { fetchPricesUsd, PIVOT_SYMBOL, type FetchPlan } from './provider';
 import {
   type CommodityPriceRepository,
   type PriceFetchRunRepository,
@@ -77,6 +77,11 @@ const PRICE_DB_OLD_NAME = 'price-db_old.ledger';
 // fan-out so a user holding many commodities cannot spawn an unbounded number of
 // subprocesses at once.
 const PRICE_HISTORY_CONCURRENCY = 8;
+
+// Decimal places for rendered Tether pivot legs. Ledger inherits an input
+// price's decimal count when it inverts the leg to value a fiat, so padding to
+// this many places keeps the derived `fiat → USD` rate accurate.
+const PIVOT_PRICE_DECIMALS = 12;
 
 export type RefreshResult =
   | { status: 'success'; fetched: number }
@@ -145,10 +150,41 @@ export class PriceService {
     // (listNormalizedSymbolsForUser), while canonical() preserves the journal's
     // raw case, so a lower/mixed-case declaration (`commodity Bitcoin` / `alias
     // BTC`) would otherwise never match and drop the row silently.
+    const canonicalSymbolOf = (symbol: string): string | null =>
+      normalizeCommoditySymbol(canonical(symbol));
     const fetched = all.filter((r) => {
-      const canonicalSymbol = normalizeCommoditySymbol(canonical(r.symbol));
+      const canonicalSymbol = canonicalSymbolOf(r.symbol);
       return canonicalSymbol !== null && userSymbols.has(canonicalSymbol);
     });
+
+    // Fiat has no direct `<fiat> → USD` row; it is priced by the Tether pivot.
+    // Include the `USDT → USD` anchor plus a `USDT → <fiat>` leg for every held
+    // fiat so ledger can bridge `<fiat> → USDT → USD`. These rows are kept
+    // regardless of whether USDT itself is a held commodity (it usually is not),
+    // so the userSymbols filter above cannot be reused here.
+    const normalizedBase = normalizeCommoditySymbol(base) ?? base;
+    const pivotAll = await this.deps.commodityRepo.listBySymbol(PIVOT_SYMBOL);
+    const isBaseQuote = (quote: string): boolean =>
+      canonicalSymbolOf(quote) === normalizedBase;
+    const heldFiatLegs = pivotAll.filter((r) => {
+      if (isBaseQuote(r.quote)) return false;
+      const canonicalQuote = canonicalSymbolOf(r.quote);
+      return canonicalQuote !== null && userSymbols.has(canonicalQuote);
+    });
+    // Render pivot legs with padded precision so ledger's inversion of the
+    // `USDT → <fiat>` leg keeps enough decimals (see CommodityPriceRow.priceText).
+    const withPrecision = (r: CommodityPriceRow): CommodityPriceRow => ({
+      ...r,
+      priceText: r.price.toFixed(PIVOT_PRICE_DECIMALS),
+    });
+    const pivotRows =
+      heldFiatLegs.length > 0
+        ? [
+            ...pivotAll.filter((r) => isBaseQuote(r.quote)),
+            ...heldFiatLegs,
+          ].map(withPrecision)
+        : [];
+
     const manual = await this.deps.manualRepo.listForUser(userId);
     const manualRows: CommodityPriceRow[] = manual.map((m) => ({
       symbol: m.symbol,
@@ -157,9 +193,19 @@ export class PriceService {
       fetchedAt: m.pricedAt,
       fetchedDate: utcDate(m.pricedAt),
     }));
-    // Concatenate fetched-first, then stable-sort by instant: equal timestamps
-    // keep fetched before manual, so manual ends up later in the file and wins.
-    const merged = [...fetched, ...manualRows].sort(
+    // Concatenate fetched+pivot first, then stable-sort by instant: equal
+    // timestamps keep fetched before manual, so a manual override ends up later
+    // in the file and wins. Dedupe by (symbol|quote|fetchedDate) so a held-USDT
+    // anchor row is not emitted twice (once via `fetched`, once via `pivotRows`).
+    const deduped = [
+      ...new Map(
+        [...fetched, ...pivotRows].map((r) => [
+          `${r.symbol}|${r.quote}|${r.fetchedDate}`,
+          r,
+        ])
+      ).values(),
+    ];
+    const merged = [...deduped, ...manualRows].sort(
       (a, b) => a.fetchedAt.getTime() - b.fetchedAt.getTime()
     );
     const canonicalized = merged.map((r) => ({

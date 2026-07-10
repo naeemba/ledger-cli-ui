@@ -949,6 +949,48 @@ describe('PriceService.listKnownPricesInBase', () => {
     expect(btc?.quote).toBe('EUR');
   });
 
+  it('values a held fiat via the USDT pivot rows (no stored fiat→USD price)', async () => {
+    // The fiat has NO direct `EUR → USD` row anywhere; only the raw Tether legs
+    // are stored. regenerateUserPriceDb must emit the pivot into the price DB so
+    // ledger bridges `EUR → USDT → USD` — proving no fiat→USD math is done in JS.
+    await seedUser(
+      ctx,
+      'u-fiat',
+      [
+        '2026-07-02 * hold',
+        '  Assets:A   100 EUR',
+        '  Equity    -100 EUR',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    await new CommodityPriceRepository(ctx.db).insert([
+      {
+        symbol: 'USDT',
+        quote: 'USD',
+        price: 1.0,
+        fetchedAt: new Date('2026-07-02T00:00:00Z'),
+        fetchedDate: '2026-07-02',
+      },
+      {
+        symbol: 'USDT',
+        quote: 'EUR',
+        price: 0.9,
+        fetchedAt: new Date('2026-07-02T00:00:00Z'),
+        fetchedDate: '2026-07-02',
+      },
+    ]);
+    await service.regenerateUserPriceDb('u-fiat');
+
+    const rows = await service.listKnownPricesInBase('u-fiat');
+    const eur = rows.find(
+      (row) => normalizeCommoditySymbol(row.symbol) === 'EUR'
+    );
+    // 1 EUR = 1 USDT / 0.9 EUR-per-USDT * 1 USD-per-USDT = 1.111… USD.
+    expect(eur?.price).toBeCloseTo(1 / 0.9, 4);
+    expect(eur?.quote).toBe('USD');
+  });
+
   it('values a dollar-denominated holding into a non-USD target via the bridge', async () => {
     // The exact interaction the removed `base === 'USD'` gate unlocks: a `$`
     // -priced holding reaching a non-USD target. BTC is priced in `$` (not the

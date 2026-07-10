@@ -6,10 +6,20 @@ export type FetchPlan = { crypto: CryptoTarget[]; fiat: FiatTarget[] };
 
 export type PriceQuote = {
   symbol: string;
-  quote: 'USD';
+  /** The commodity `price` is denominated in. USD for crypto; for fiat we
+   *  store raw Tether pivot rows, so this is `USD` or the fiat's own symbol. */
+  quote: string;
   price: number;
   fetchedAt: Date;
 };
+
+/**
+ * Synthetic pivot commodity. Fiat has no direct CoinGecko USD quote, so we
+ * store the two raw legs CoinGecko *does* give — `USDT` in USD and `USDT` in
+ * the fiat — and let ledger's price graph bridge `<fiat> → USDT → USD` at
+ * valuation time. No fiat→USD arithmetic happens in JS.
+ */
+export const PIVOT_SYMBOL = 'USDT';
 export type ProviderResult = {
   quotes: PriceQuote[];
   failed: { symbol: string }[];
@@ -25,11 +35,13 @@ const sleep = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 /**
- * Fetch every commodity price in USD from CoinGecko's `/simple/price`. Crypto
- * ids resolve directly; fiat commodities resolve via the tether pivot
- * (1 unit F in USD = tether.usd / tether.<f>). One request per URL-length
- * chunk; one retry on 429/5xx. `fetchedAt` is a single instant per call so the
- * caller can dedupe upserts by it.
+ * Fetch every commodity price from CoinGecko's `/simple/price`. Crypto ids
+ * resolve directly to a USD quote. Fiat has no direct USD quote, so we emit the
+ * two raw Tether legs CoinGecko returns — one shared `USDT → USD` anchor plus a
+ * `USDT → <fiat>` leg per fiat — and let ledger bridge `<fiat> → USDT → USD`
+ * downstream (no fiat→USD division in JS). One request per URL-length chunk;
+ * one retry on 429/5xx. `fetchedAt` is a single instant per call so the caller
+ * can dedupe upserts by it.
  */
 export const fetchPricesUsd = async (
   plan: FetchPlan,
@@ -71,19 +83,33 @@ export const fetchPricesUsd = async (
   }
 
   const tetherUsd = merged[TETHER_ID]?.usd;
+  const tetherUsdValid =
+    typeof tetherUsd === 'number' && Number.isFinite(tetherUsd);
+  // Emit the shared `USDT → USD` anchor exactly once, the first time any fiat
+  // resolves. Each fiat then contributes its own `USDT → <fiat>` leg; ledger
+  // bridges `<fiat> → USDT → USD` from the two. No division here.
+  let anchorEmitted = false;
   for (const fiat of plan.fiat) {
     const perFiat = merged[TETHER_ID]?.[fiat.code.toLowerCase()];
     if (
-      typeof tetherUsd === 'number' &&
+      tetherUsdValid &&
       typeof perFiat === 'number' &&
-      Number.isFinite(tetherUsd) &&
       Number.isFinite(perFiat) &&
       perFiat > 0
     ) {
+      if (!anchorEmitted) {
+        quotes.push({
+          symbol: PIVOT_SYMBOL,
+          quote: 'USD',
+          price: tetherUsd,
+          fetchedAt,
+        });
+        anchorEmitted = true;
+      }
       quotes.push({
-        symbol: fiat.symbol,
-        quote: 'USD',
-        price: tetherUsd / perFiat,
+        symbol: PIVOT_SYMBOL,
+        quote: fiat.symbol,
+        price: perFiat,
         fetchedAt,
       });
     } else {

@@ -58,6 +58,18 @@ export class CommodityPriceRepository {
       .orderBy(commodityPrice.fetchedAt);
   }
 
+  /**
+   * Every stored row for one symbol, across all quotes (e.g. all `USDT → *`
+   * pivot legs). Used to assemble the fiat-bridging rows for a price DB.
+   */
+  async listBySymbol(symbol: string): Promise<CommodityPrice[]> {
+    return this.db
+      .select()
+      .from(commodityPrice)
+      .where(eq(commodityPrice.symbol, symbol))
+      .orderBy(commodityPrice.fetchedAt);
+  }
+
   /** Distinct symbols already fetched against the given quote. */
   async knownSymbolsForQuote(quote: string): Promise<string[]> {
     const rows = await this.db
