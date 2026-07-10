@@ -26,8 +26,11 @@ import formatDate, { Format } from '@/utils/formatDate';
 import runLedger from '@/utils/runLedger';
 import Link from 'next/link';
 
-const lastNonEmptyLine = (stdout: string): string =>
-  stdout.split('\n').filter(Boolean).slice(-1)[0] ?? '';
+const firstNonEmptyLine = (stdout: string): string =>
+  stdout
+    .split('\n')
+    .find((line) => line.trim() !== '')
+    ?.trim() ?? '';
 
 const RECENT_LIMIT = 10;
 
@@ -55,25 +58,29 @@ const Dashboard = async () => {
     stats,
     savedViews,
   ] = await Promise.all([
+    // `bal --collapse` folds the whole period into one rollup row, so the
+    // total comes straight from ledger's `%T` instead of guessing which line
+    // of a periodic register is the grand total (fragile once a `<Revalued>`
+    // row or the default `--sort -date` reorders the output). See #6.
     runLedger([
-      'reg',
+      'bal',
       '^Expenses',
       '--period',
       'this month',
-      '--monthly',
       '-X',
       currency,
+      '--collapse',
       '--format',
       '%T\n',
     ]),
     runLedger([
-      'reg',
+      'bal',
       '^Expenses',
       '--period',
       'this year',
-      '--yearly',
       '-X',
       currency,
+      '--collapse',
       '--format',
       '%T\n',
     ]),
@@ -93,8 +100,8 @@ const Dashboard = async () => {
     savedViewService.list(user.id),
   ]);
 
-  const currentMonthBalance = lastNonEmptyLine(currentMonthBalanceRaw);
-  const currentYearBalance = lastNonEmptyLine(currentYearBalanceRaw);
+  const currentMonthBalance = firstNonEmptyLine(currentMonthBalanceRaw);
+  const currentYearBalance = firstNonEmptyLine(currentYearBalanceRaw);
   const highestExpenseThisMonth = getHighestExpense(expensesMonthly);
   const [highestAccount, highestAmount] = highestExpenseThisMonth
     ? highestExpenseThisMonth.split('|')
