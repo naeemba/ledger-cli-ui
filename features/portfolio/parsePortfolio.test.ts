@@ -3,6 +3,7 @@ import {
   extractTotal,
   mergePortfolio,
   parseNativeRows,
+  parseNativeSplit,
 } from './parsePortfolio';
 
 describe('parseNativeRows', () => {
@@ -29,6 +30,24 @@ describe('parseNativeRows', () => {
   it('trims surrounding whitespace from columns', () => {
     expect(parseNativeRows('  Assets:Foo  |  1 USD  ')).toEqual([
       { account: 'Assets:Foo', raw: '1 USD' },
+    ]);
+  });
+});
+
+describe('parseNativeSplit', () => {
+  it('returns account, quantity and commodity per row', () => {
+    const stdout =
+      'Assets:Broker|10|AAPL\nAssets:Crypto|0.09|BTC\nAssets:Cash|2335|$\n';
+    expect(parseNativeSplit(stdout)).toEqual([
+      { account: 'Assets:Broker', quantity: '10', commodity: 'AAPL' },
+      { account: 'Assets:Crypto', quantity: '0.09', commodity: 'BTC' },
+      { account: 'Assets:Cash', quantity: '2335', commodity: '$' },
+    ]);
+  });
+
+  it('skips lines missing any of the three columns', () => {
+    expect(parseNativeSplit('Assets:Broker|10\nA|1|USD\n')).toEqual([
+      { account: 'A', quantity: '1', commodity: 'USD' },
     ]);
   });
 });

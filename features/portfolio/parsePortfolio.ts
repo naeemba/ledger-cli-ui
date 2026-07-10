@@ -32,6 +32,33 @@ export const parseNativeRows = (stdout: string): NativeRow[] => {
   return rows;
 };
 
+export type NativeSplitRow = {
+  account: string;
+  quantity: string;
+  commodity: string;
+};
+
+/**
+ * Parse `balance <prefix> --flat --no-total --format
+ * '%A|%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))\n'`.
+ * Ledger itself decomposes each holding into a bare quantity and its
+ * commodity, so the CSV export never re-splits a rendered amount. `--no-total`
+ * is required: the multi-commodity rollup row would make `quantity()` throw.
+ */
+export const parseNativeSplit = (stdout: string): NativeSplitRow[] => {
+  const rows: NativeSplitRow[] = [];
+  for (const line of splitRows(stdout)) {
+    const [account, quantity, commodity] = line.split('|');
+    if (!account || !quantity || !commodity) continue;
+    rows.push({
+      account: account.trim(),
+      quantity: quantity.trim(),
+      commodity: commodity.trim(),
+    });
+  }
+  return rows;
+};
+
 /**
  * Combine a native-balance ledger dump with a converted-balance one. The
  * converted output is grouped by the same accounts; rows are joined on the

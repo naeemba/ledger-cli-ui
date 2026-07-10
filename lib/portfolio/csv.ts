@@ -1,4 +1,3 @@
-import type { PortfolioRow } from '@/features/portfolio/parsePortfolio';
 import { formatRow } from '@/lib/csv';
 
 const COLUMNS = [
@@ -10,44 +9,27 @@ const COLUMNS = [
 ] as const;
 
 /**
- * Split a native amount string into (quantity, commodity). Handles both
- * "<qty> <commodity>" (`10 AAPL`) and "<symbol><qty>" (`$1234.50`).
+ * One portfolio holding, already decomposed by ledger. `quantity` and
+ * `commodity` come from `%(quantity(...))` / `%(commodity(...))` so we never
+ * re-parse a rendered amount string (the old regex mis-split commodity-prefix
+ * renderings like `BTC 0.09` into commodity `B`, quantity `TC 0.09`).
  */
-const splitNative = (
-  native: string
-): { quantity: string; commodity: string } => {
-  const trimmed = native.trim();
-  // Symbol-prefix: leading non-digit non-minus non-space char.
-  const symbolMatch = /^([^\d\s.\-])(.+)$/.exec(trimmed);
-  if (symbolMatch) {
-    return { commodity: symbolMatch[1], quantity: symbolMatch[2].trim() };
-  }
-  // Space-separated: <qty> <commodity-or-rest>.
-  const idx = trimmed.search(/\s/);
-  if (idx === -1) return { quantity: trimmed, commodity: '' };
-  return {
-    quantity: trimmed.slice(0, idx).trim(),
-    commodity: trimmed.slice(idx).trim(),
-  };
+export type PortfolioCsvRow = {
+  account: string;
+  commodity: string;
+  quantity: string;
+  /** Converted value in the base currency, as ledger rendered it. */
+  value: string;
 };
 
-const valueOf = (converted: string): string => converted.trim();
-
 export const portfolioRowsToCsv = (
-  rows: PortfolioRow[],
+  rows: PortfolioCsvRow[],
   currency: string
 ): string => {
   const lines = [COLUMNS.join(',')];
   for (const r of rows) {
-    const { quantity, commodity } = splitNative(r.native);
     lines.push(
-      formatRow([
-        r.account,
-        commodity,
-        quantity,
-        valueOf(r.converted),
-        currency,
-      ])
+      formatRow([r.account, r.commodity, r.quantity, r.value.trim(), currency])
     );
   }
   return lines.join('\n') + '\n';

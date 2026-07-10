@@ -1,4 +1,7 @@
-import { mergePortfolio } from '@/features/portfolio/parsePortfolio';
+import {
+  parseNativeRows,
+  parseNativeSplit,
+} from '@/features/portfolio/parsePortfolio';
 import { requireUser } from '@/lib/auth/require-user';
 import { csvDownload } from '@/lib/csv';
 import { env } from '@/lib/env';
@@ -18,8 +21,17 @@ export async function GET(): Promise<Response> {
 
   try {
     const base = await getBaseCurrency();
-    const [nativeStdout, convertedStdout] = await Promise.all([
-      runLedger(['balance', prefix, '--flat', '--format', '%A|%T\n']),
+    const [nativeSplitStdout, convertedStdout] = await Promise.all([
+      // Let ledger split each holding into quantity + commodity; `--no-total`
+      // drops the multi-commodity rollup row that would break `quantity()`.
+      runLedger([
+        'balance',
+        prefix,
+        '--flat',
+        '--no-total',
+        '--format',
+        '%A|%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))\n',
+      ]),
       runLedger([
         'balance',
         prefix,
@@ -30,7 +42,15 @@ export async function GET(): Promise<Response> {
         '%A|%T\n',
       ]),
     ]);
-    const rows = mergePortfolio(nativeStdout, convertedStdout);
+    const converted = new Map(
+      parseNativeRows(convertedStdout).map((r) => [r.account, r.raw])
+    );
+    const rows = parseNativeSplit(nativeSplitStdout).map((r) => ({
+      account: r.account,
+      commodity: r.commodity,
+      quantity: r.quantity,
+      value: converted.get(r.account) ?? '',
+    }));
     return csvDownload(portfolioRowsToCsv(rows, base), 'portfolio');
   } catch (e) {
     log.error({ err: e }, 'portfolio export failed');

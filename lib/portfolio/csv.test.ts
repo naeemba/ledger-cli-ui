@@ -8,19 +8,23 @@ describe('portfolioRowsToCsv', () => {
     );
   });
 
-  it('splits "<qty> <commodity>" native strings into separate columns', () => {
+  it('emits ledger-split quantity and commodity columns verbatim', () => {
     expect(
       portfolioRowsToCsv(
         [
           {
             account: 'Assets:Brokerage',
-            native: '12.345 VTSAX',
-            converted: '3500.00',
+            commodity: 'VTSAX',
+            quantity: '12.345',
+            value: '3500.00',
           },
+          // Commodity-prefix rendering that the old regex mangled into
+          // commodity `B`, quantity `TC 0.09`.
           {
             account: 'Assets:Crypto',
-            native: '0.05 BTC',
-            converted: '4000.00',
+            commodity: 'BTC',
+            quantity: '0.09',
+            value: '4000.00',
           },
         ],
         'USD'
@@ -28,26 +32,21 @@ describe('portfolioRowsToCsv', () => {
     ).toBe(
       'account,commodity,quantity,value,currency\n' +
         'Assets:Brokerage,VTSAX,12.345,3500.00,USD\n' +
-        'Assets:Crypto,BTC,0.05,4000.00,USD\n'
-    );
-  });
-
-  it('handles symbol-prefix amounts like "$1234.50"', () => {
-    expect(
-      portfolioRowsToCsv(
-        [{ account: 'Assets:Cash', native: '$1234.50', converted: '1234.50' }],
-        'USD'
-      )
-    ).toBe(
-      'account,commodity,quantity,value,currency\n' +
-        'Assets:Cash,$,1234.50,1234.50,USD\n'
+        'Assets:Crypto,BTC,0.09,4000.00,USD\n'
     );
   });
 
   it('leaves value empty when converted is missing', () => {
     expect(
       portfolioRowsToCsv(
-        [{ account: 'Assets:Crypto', native: '0.05 BTC', converted: '' }],
+        [
+          {
+            account: 'Assets:Crypto',
+            commodity: 'BTC',
+            quantity: '0.05',
+            value: '',
+          },
+        ],
         'USD'
       )
     ).toBe(
