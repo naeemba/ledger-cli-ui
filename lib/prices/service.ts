@@ -177,10 +177,14 @@ export class PriceService {
       return canonicalQuote !== null && userSymbols.has(canonicalQuote);
     });
     // Render pivot legs with padded precision so ledger's inversion of the
-    // `USDT → <fiat>` leg keeps enough decimals (see CommodityPriceRow.priceText).
+    // `USDT → <fiat>` leg keeps enough decimals (see CommodityPriceRow.priceText),
+    // and date them at UTC midnight of their fetch day. The fiat-history probe
+    // dates its `1 <fiat>` postings at 00:00:00; a wall-clock time on the P
+    // directive would sort *after* the same-day posting and never apply.
     const withPrecision = (r: CommodityPriceRow): CommodityPriceRow => ({
       ...r,
       priceText: r.price.toFixed(PIVOT_PRICE_DECIMALS),
+      fetchedAt: new Date(`${r.fetchedDate}T00:00:00.000Z`),
     });
     const pivotRows =
       heldFiatLegs.length > 0
