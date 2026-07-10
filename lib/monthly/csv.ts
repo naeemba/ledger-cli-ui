@@ -19,7 +19,7 @@ export const cashFlowRowsToCsv = (
         monthKey(r.date),
         fmt(r.income),
         fmt(r.expenses),
-        fmt(r.income - r.expenses),
+        fmt(r.net),
         currency,
       ])
     );

@@ -2,11 +2,13 @@ import runLedger from '@/utils/runLedger';
 
 const MONTHS_BACK = 36;
 
+// Pull the signed magnitude out of a rendered ledger amount regardless of
+// commodity position (`$ 4,500.00`, `4500.00 USD`, `-30`). The old
+// split-on-whitespace guess silently returned 0 for the suffix-commodity
+// shape, dropping a month's figure without a trace.
 const parseAmount = (raw: string): number => {
-  if (!raw) return 0;
-  const parts = raw.trim().split(/\s+/);
-  const numericPart = parts.length > 1 ? parts[1] : parts[0];
-  return Number(numericPart.replaceAll(',', '')) || 0;
+  const match = raw.match(/-?\d[\d,]*(?:\.\d+)?/);
+  return match ? Number(match[0].replaceAll(',', '')) || 0 : 0;
 };
 
 const fetchMonthly = async (
@@ -29,6 +31,8 @@ export type CashFlowRow = {
   date: Date;
   income: number;
   expenses: number;
+  /** income − expenses, computed once here so every consumer agrees. */
+  net: number;
 };
 
 export const getCashFlow = async (currency: string): Promise<CashFlowRow[]> => {
@@ -38,11 +42,11 @@ export const getCashFlow = async (currency: string): Promise<CashFlowRow[]> => {
   ]);
   const allDates = new Set([...expensesMap.keys(), ...incomeMap.keys()]);
   return Array.from(allDates)
-    .map((date) => ({
-      date: new Date(date),
-      expenses: expensesMap.get(date) ?? 0,
-      income: -(incomeMap.get(date) ?? 0),
-    }))
+    .map((date) => {
+      const expenses = expensesMap.get(date) ?? 0;
+      const income = -(incomeMap.get(date) ?? 0);
+      return { date: new Date(date), expenses, income, net: income - expenses };
+    })
     .sort((a, b) => a.date.getTime() - b.date.getTime())
     .slice(-MONTHS_BACK);
 };
