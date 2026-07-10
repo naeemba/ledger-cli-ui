@@ -5,6 +5,14 @@ export type CommodityPriceRow = {
   symbol: string;
   quote: string;
   price: number;
+  /**
+   * Optional pre-formatted price string. When set, it is rendered verbatim in
+   * place of `price`. Used for the Tether pivot legs, which must carry extra
+   * decimal places: ledger inherits an input price's decimal count when it
+   * inverts it, so a short quote like `0.9` would truncate the derived
+   * `fiat → USD` rate (0.9 → 1.1 instead of 1.111…).
+   */
+  priceText?: string;
   fetchedAt: Date;
   fetchedDate: string;
 };
@@ -32,7 +40,7 @@ export const renderPriceDb = (rows: CommodityPriceRow[]): string => {
   const generatedAt = `; Last regenerated: ${new Date().toISOString()}`;
   const lines = rows.map(
     (r) =>
-      `P ${formatLedgerDateTime(r.fetchedAt)} ${renderCommodity(r.symbol)} ${r.price} ${renderCommodity(r.quote)}`
+      `P ${formatLedgerDateTime(r.fetchedAt)} ${renderCommodity(r.symbol)} ${r.priceText ?? r.price} ${renderCommodity(r.quote)}`
   );
   return [BANNER, generatedAt, '', ...lines, ''].join('\n');
 };

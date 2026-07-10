@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { fetchPricesUsd } from './provider';
+import { fetchPricesUsd, PIVOT_SYMBOL } from './provider';
 
 const ok = (body: unknown, status = 200): Response =>
   ({
@@ -44,7 +44,7 @@ describe('fetchPricesUsd', () => {
     expect(result.failed).toEqual([]);
   });
 
-  it('prices a fiat commodity via the tether pivot', async () => {
+  it('emits raw Tether pivot legs for a fiat (no JS division)', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       ok({ tether: { usd: 0.999108, eur: 0.873613 } })
     );
@@ -52,10 +52,40 @@ describe('fetchPricesUsd', () => {
       crypto: [],
       fiat: [{ symbol: 'EUR', code: 'EUR' }],
     });
-    // 1 EUR in USD = tether.usd / tether.eur
-    expect(result.quotes[0].symbol).toBe('EUR');
-    expect(result.quotes[0].quote).toBe('USD');
-    expect(result.quotes[0].price).toBeCloseTo(0.999108 / 0.873613, 6);
+    // Store the two raw legs verbatim; ledger derives EUR→USD.
+    expect(result.quotes).toEqual([
+      {
+        symbol: PIVOT_SYMBOL,
+        quote: 'USD',
+        price: 0.999108,
+        fetchedAt: expect.any(Date),
+      },
+      {
+        symbol: PIVOT_SYMBOL,
+        quote: 'EUR',
+        price: 0.873613,
+        fetchedAt: expect.any(Date),
+      },
+    ]);
+    expect(result.failed).toEqual([]);
+  });
+
+  it('emits the USDT→USD anchor once for multiple fiats', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      ok({ tether: { usd: 1.0, eur: 0.9, gbp: 0.8 } })
+    );
+    const result = await fetchPricesUsd({
+      crypto: [],
+      fiat: [
+        { symbol: 'EUR', code: 'EUR' },
+        { symbol: 'GBP', code: 'GBP' },
+      ],
+    });
+    expect(result.quotes).toEqual([
+      { symbol: 'USDT', quote: 'USD', price: 1.0, fetchedAt: expect.any(Date) },
+      { symbol: 'USDT', quote: 'EUR', price: 0.9, fetchedAt: expect.any(Date) },
+      { symbol: 'USDT', quote: 'GBP', price: 0.8, fetchedAt: expect.any(Date) },
+    ]);
     expect(result.failed).toEqual([]);
   });
 

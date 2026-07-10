@@ -30,20 +30,16 @@ ledger replacements verified against ledger 3.4.1 on synthetic journals)·
 ⏸️ deferred (needs a design decision or carries risk out of proportion to
 payoff — left for a deliberate follow-up).
 
-**Fixed (8):** #4 portfolio total · #5 payees · #6 dashboard month/year ·
-#7 cash-flow net · #8 portfolio CSV split · #11 reconcile sort ·
-#12 cash-flow window/sign · #13 net-worth window.
+**Fixed (9):** #4 portfolio total · #5 payees · #6 dashboard month/year ·
+#7 cash-flow net · #8 portfolio CSV split · #9 fiat-USD pivot ·
+#11 reconcile sort · #12 cash-flow window/sign · #13 net-worth window.
 
-**Deferred (5), with reasons:**
+**Deferred (4), with reasons:**
 
 - **#1–#3 (the balancing trio, high).** The correct fix is a debounced
   *server-side* ledger check that becomes the authority for submit/save while
   the JS stays for instant per-keystroke feedback — a feature with its own
   UX/latency design, not a mechanical swap. Left intact pending that design.
-- **#9 fiat-USD pivot.** The audit itself calls the raw-two-`P`-directive
-  approach "a design decision, not a drop-in": it changes the prices UI and
-  the manual-price-precedence data model, for "low divergence risk in
-  practice". Not worth a unilateral product change; needs the owner's call.
 - **#10 transaction magnitudes.** The whole transactions list is JS-parsed
   (`parseJournalFile`) — ledger is not in that path at all. A register
   replacement means a new ledger run joined back on `(file, beg_line)`, with
@@ -84,7 +80,7 @@ check the authority for submit/save.
 | 6 ✅ | `features/dashboard/Dashboard.tsx:95` | Month/year expense totals = `lastNonEmptyLine` of a periodic register's `%T` column | `bal ^Expenses -p 'this month' -X <ccy> --collapse --format '%T\n'` (single-line output, verified; same for 'this year') | `%T` accumulates in processing order; `<Revalued>` rows plus the default `--sort -date` make last-row-position fragile |
 | 7 ✅ | `lib/monthly/csv.ts:22` `cashFlowRowsToCsv` + `features/monthlyComparison/MonthlyComparison.tsx:66` | `net = income − expenses` float subtraction over two separate ledger runs | A single register can emit per-month net, but it needs `--collapse` plus format-level negation — bare `--invert` emits per-account rows, and `--invert --collapse` double-counts on 3.4.1 | Cent-level float drift; a month whose amount fails to parse defaults to 0 silently; CSV and table code paths can diverge |
 | 8 ✅ | `lib/portfolio/csv.ts:16` `splitNative` | Regex re-decomposes a rendered amount string into (quantity, commodity) | `--format '%A\|%(quantity(scrub(display_total)))\|%(commodity(scrub(display_total)))\n'` (verified: emits `2335\|$`, `0.09\|BTC`, `5\|AAPL`) | The misparse reproduces on real production data — the price-db forces commodity-prefix rendering for BTC and KIRT |
-| 9 ⏸️ | `lib/prices/provider.ts:87` `fetchPricesUsd` | Fiat USD rate composed in JS via the tether pivot: `tetherUsd / perFiat` | Emit the raw quotes as two `P` directives (`P <date> USDT <tetherUsd> USD` and `P <date> USDT <perFiat> <FIAT>`) and let `-X USD` bridge (verified: identical valuation) | Low divergence risk in practice; but raw-quote storage changes the prices UI and manual-price-precedence data model — a design decision, not a drop-in |
+| 9 ✅ | `lib/prices/provider.ts:87` `fetchPricesUsd` | Fiat USD rate composed in JS via the tether pivot: `tetherUsd / perFiat` | Emit the raw quotes as two `P` directives (`P <date> USDT <tetherUsd> USD` and `P <date> USDT <perFiat> <FIAT>`) and let `-X USD` bridge (verified: identical valuation) | Low divergence risk in practice; but raw-quote storage changes the prices UI and manual-price-precedence data model — a design decision, not a drop-in |
 | 10 ⏸️ | `lib/transactions/model.ts:299` `magnitudesByCurrency` (rendered in `features/transactions/TransactionRowItem.tsx:38`) | Positive posting sums per currency, float addition + `toFixed(2)` | A register keyed on `xact.beg_line` reproduces the values (verified; the `tag("uid")` variant fails because `:uid:` is flag-tag syntax) | Display-only; skips elided-amount postings and `@@` costs, hardcodes 2 decimals |
 
 ### Low — order/perf only, values already come from ledger
