@@ -38,22 +38,25 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
   // `--sort '-display_amount'` ranks them descending by converted value. This
   // replaces JS-side summing/sorting and avoids the plain-register variant that
   // segfaults ledger 3.4.1 under `-X`. See LEDGER-AUDIT.md #5.
-  const stdout = await runLedger([
-    'reg',
-    '^Expenses',
-    '-b',
-    toISODate(from),
-    '-e',
-    toISODate(to),
-    '-X',
-    currency,
-    '--by-payee',
-    '--collapse',
-    '--sort',
-    '-display_amount',
-    '--format',
-    'NNN%P|%t\n',
-  ]);
+  const stdout = await runLedger(
+    [
+      'reg',
+      '^Expenses',
+      '-b',
+      toISODate(from),
+      '-e',
+      toISODate(to),
+      '-X',
+      currency,
+      '--by-payee',
+      '--collapse',
+      '--sort',
+      '-display_amount',
+      '--format',
+      'NNN%P|%t\n',
+    ],
+    { sortByDate: false }
+  );
 
   const sorted = parsePayeeRows(stdout).slice(0, TOP_N);
   const grandTotal = sorted.reduce((acc, r) => acc + r.total, 0);

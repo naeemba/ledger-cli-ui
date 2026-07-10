@@ -36,7 +36,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     ];
     if (start) args.push('-b', start);
     if (end) args.push('-e', end);
-    const stdout = await runLedger(args);
+    const stdout = await runLedger(args, { sortByDate: false });
     return csvDownload(payeeRowsToCsv(parsePayeeRows(stdout), base), 'payees');
   } catch (e) {
     if (e instanceof RangeError) {
