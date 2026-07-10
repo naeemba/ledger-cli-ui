@@ -1,11 +1,6 @@
-export type PayeeRow = { payee: string; total: number };
+import parseAmountColumn from '@/utils/parseAmountColumn';
 
-const parseAmount = (raw: string): number => {
-  if (!raw) return 0;
-  const parts = raw.trim().split(/\s+/);
-  const numericPart = parts.length > 1 ? parts[1] : parts[0];
-  return Number(numericPart.replaceAll(',', '')) || 0;
-};
+export type PayeeRow = { payee: string; total: number };
 
 /**
  * Parse `ledger reg ^Expenses ... --format 'NNN%P|%t\n'` output: each
@@ -18,7 +13,7 @@ export const parsePayeeRows = (stdout: string): PayeeRow[] => {
   for (const line of stdout.split('NNN')) {
     const [payee, amount] = line.split('|').map((s) => s.trim());
     if (!payee || !amount) continue;
-    totals.set(payee, (totals.get(payee) ?? 0) + parseAmount(amount));
+    totals.set(payee, (totals.get(payee) ?? 0) + parseAmountColumn(amount));
   }
   return Array.from(totals.entries())
     .map(([payee, total]) => ({ payee, total }))

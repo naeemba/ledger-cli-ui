@@ -1,5 +1,5 @@
-import type { CashFlowRow } from '@/features/monthlyComparison/MonthlyComparison.utils';
 import { formatRow } from '@/lib/csv';
+import type { CashFlowRow } from '@/lib/monthly/parse';
 
 const COLUMNS = ['month', 'income', 'expenses', 'net', 'currency'] as const;
 
