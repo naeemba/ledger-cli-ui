@@ -1,16 +1,8 @@
+import parseAmountColumn from '@/utils/parseAmountColumn';
 import runLedger from '@/utils/runLedger';
 
 const MONTHS_BACK = 36;
 const PERIOD = `last ${MONTHS_BACK} months`;
-
-// Pull the signed magnitude out of a rendered ledger amount regardless of
-// commodity position (`$ 4,500.00`, `4500.00 USD`, `-30`). The old
-// split-on-whitespace guess silently returned 0 for the suffix-commodity
-// shape, dropping a month's figure without a trace.
-const parseAmount = (raw: string): number => {
-  const match = raw.match(/-?\d[\d,]*(?:\.\d+)?/);
-  return match ? Number(match[0].replaceAll(',', '')) || 0 : 0;
-};
 
 const fetchMonthly = async (
   query: string,
@@ -27,7 +19,7 @@ const fetchMonthly = async (
   const map = new Map<string, number>();
   for (const line of stdout.split('NNN')) {
     const [date, amount] = line.split('|').map((s) => s.trim());
-    if (date && amount) map.set(date, parseAmount(amount));
+    if (date && amount) map.set(date, parseAmountColumn(amount));
   }
   return map;
 };
