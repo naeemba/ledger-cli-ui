@@ -45,7 +45,11 @@ import {
   type PriceFetchRunRepository,
 } from './repository';
 import { normalizeCommoditySymbol } from './symbols';
-import type { CommodityMapping, ManualPrice } from '@/db/schema';
+import type {
+  CommodityMapping,
+  CommodityPrice,
+  ManualPrice,
+} from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 import {
   DEFINITIONS_NAME,
@@ -107,6 +111,23 @@ const utcDate = (d: Date): string => {
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+};
+
+// `ledger commodities` surrounds any name that is not a bare alphanumeric run
+// with double quotes (e.g. it prints `"1INCH"` for the digit-bearing 1inch
+// ticker — such names are only legal quoted in a journal anyway). Recover the
+// bare commodity name by stripping one surrounding quote pair, then reject
+// anything that still carries a quote or newline, which would let a crafted
+// holding break out of a throwaway probe journal. Returns `null` for an unsafe
+// name so callers skip it rather than emit an unparseable journal.
+const probeName = (symbol: string): string | null => {
+  const stripped =
+    symbol.length >= 2 &&
+    ((symbol.startsWith('"') && symbol.endsWith('"')) ||
+      (symbol.startsWith("'") && symbol.endsWith("'")))
+      ? symbol.slice(1, -1)
+      : symbol;
+  return /["\n\r]/.test(stripped) ? null : stripped;
 };
 
 type Deps = {
@@ -479,7 +500,11 @@ export class PriceService {
    */
   async listPriceHistory(
     userId: string,
-    symbol: string
+    symbol: string,
+    // Optional: the caller (listKnownPrices) already fetched every USDT pivot
+    // leg once for its whole fan-out. Thread it in so each held pivot-priced
+    // fiat doesn't re-run the same full-table listBySymbol(PIVOT_SYMBOL) query.
+    pivotLegs?: CommodityPrice[]
   ): Promise<PricePoint[]> {
     if (!symbol.trim() || /[\n\r]/.test(symbol)) return [];
     let stdout: string;
@@ -513,7 +538,7 @@ export class PriceService {
     // reconstruct its history by valuing `1 <fiat>` at each pivot date (ledger
     // still does every conversion — see fiatPivotHistory).
     if (direct.length > 0) return direct;
-    return this.fiatPivotHistory(userId, symbol);
+    return this.fiatPivotHistory(userId, symbol, pivotLegs);
   }
 
   /**
@@ -525,12 +550,22 @@ export class PriceService {
    */
   private async fiatPivotHistory(
     userId: string,
-    symbol: string
+    symbol: string,
+    pivotLegs?: CommodityPrice[]
   ): Promise<PricePoint[]> {
-    const target = normalizeCommoditySymbol(symbol) ?? symbol;
-    const legs = (
-      await this.deps.commodityRepo.listBySymbol(PIVOT_SYMBOL)
-    ).filter((r) => (normalizeCommoditySymbol(r.quote) ?? r.quote) === target);
+    // Strip any surrounding quote pair `ledger commodities` adds and reject an
+    // unsafe name, exactly as the sibling probe builder in listKnownPricesInBase
+    // does — otherwise an already-quoted held symbol would emit `1 ""FOO""` and
+    // the probe journal would fail to parse (swallowed as an empty history).
+    const name = probeName(symbol);
+    if (name === null) return [];
+
+    const target = normalizeCommoditySymbol(name) ?? name;
+    const allLegs =
+      pivotLegs ?? (await this.deps.commodityRepo.listBySymbol(PIVOT_SYMBOL));
+    const legs = allLegs.filter(
+      (r) => (normalizeCommoditySymbol(r.quote) ?? r.quote) === target
+    );
     if (legs.length === 0) return [];
 
     const base = await this.resolveBaseCurrency(userId);
@@ -540,7 +575,7 @@ export class PriceService {
     const journal = dates
       .map(
         (date, index) =>
-          `${date} * probe\n  Probe:c${index}    1 "${symbol}"\n  Offset:c${index}   -1 "${symbol}"\n`
+          `${date} * probe\n  Probe:c${index}    1 "${name}"\n  Offset:c${index}   -1 "${name}"\n`
       )
       .join('\n');
 
@@ -698,7 +733,7 @@ export class PriceService {
           };
         }
 
-        const history = await this.listPriceHistory(userId, symbol);
+        const history = await this.listPriceHistory(userId, symbol, pivotLegs);
         const latest = latestGenuinePrice(history, base);
 
         if (!latest) {
@@ -774,22 +809,6 @@ export class PriceService {
       normalizeCommoditySymbol(row.symbol) === base
         ? { ...row, price: 1, quote: base }
         : { ...row, price: null, quote: null };
-
-    // `ledger commodities` surrounds any name that is not a bare alphanumeric
-    // run with double quotes (e.g. it prints `"1INCH"` for the digit-bearing
-    // 1inch ticker — such names are only legal quoted in a journal anyway).
-    // Recover the bare commodity name by stripping one surrounding quote pair,
-    // then reject anything that still carries a quote or newline, which would
-    // let a crafted holding break out of the throwaway journal.
-    const probeName = (symbol: string): string | null => {
-      const stripped =
-        symbol.length >= 2 &&
-        ((symbol.startsWith('"') && symbol.endsWith('"')) ||
-          (symbol.startsWith("'") && symbol.endsWith("'")))
-          ? symbol.slice(1, -1)
-          : symbol;
-      return /["\n\r]/.test(stripped) ? null : stripped;
-    };
 
     // Probe only non-base commodities with a journal-safe name. Keep the raw
     // symbol as the row identity so results match back exactly.
