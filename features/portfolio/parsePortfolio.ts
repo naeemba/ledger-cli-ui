@@ -58,15 +58,24 @@ export const mergePortfolio = (
 };
 
 /**
- * Extract the rollup total from `ledger bal` `-X CCY` output. ledger prints
- * the total as a final indented line; we grab the very last non-empty line
- * and strip the account column.
+ * Extract the base-currency grand total from a dedicated
+ * `balance <prefix> -X CCY --depth 1 --format '%A|%T\n'` run.
+ *
+ * `--depth 1` collapses the whole prefix subtree into a single account row
+ * whose `%T` is the rollup total. Ledger prints the report (base) commodity
+ * first, on the account-anchored line; any unconvertible commodities spill
+ * onto trailing continuation lines with no account column (and no `|`). We
+ * return the amount from the first account-anchored line, so an unpriced
+ * holding can never masquerade as the Total (the old "last non-empty line"
+ * heuristic returned e.g. `100 XYZ` instead of the converted sum).
  */
-export const extractTotal = (convertedStdout: string): string => {
-  const lines = splitRows(convertedStdout);
-  if (lines.length === 0) return '';
-  const last = lines[lines.length - 1];
-  const parts = last.split('|');
-  // Final total row in `--flat` mode has an empty account column.
-  return (parts[1] ?? parts[0] ?? '').trim();
+export const extractTotal = (depthOneStdout: string): string => {
+  for (const line of splitRows(depthOneStdout)) {
+    const pipe = line.indexOf('|');
+    if (pipe === -1) continue; // continuation line for an unpriced commodity
+    const account = line.slice(0, pipe).trim();
+    if (!account) continue;
+    return line.slice(pipe + 1).trim();
+  }
+  return '';
 };

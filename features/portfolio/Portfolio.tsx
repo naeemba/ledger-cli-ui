@@ -26,7 +26,7 @@ const Portfolio = async () => {
 
   // `--flat` keeps the rollup hierarchy from interleaving sub-account totals
   // with the leaf rows we want to display.
-  const [nativeStdout, convertedStdout] = await Promise.all([
+  const [nativeStdout, convertedStdout, totalStdout] = await Promise.all([
     runLedger(['balance', prefix, '--flat', '--format', '%A|%T\n']),
     runLedger([
       'balance',
@@ -37,10 +37,23 @@ const Portfolio = async () => {
       '--format',
       '%A|%T\n',
     ]),
+    // Separate `--depth 1` run: collapses the subtree to one row so the grand
+    // total is read from ledger's own rollup, not guessed from the last line
+    // of the per-account dump (which is an unpriced commodity when one exists).
+    runLedger([
+      'balance',
+      prefix,
+      '-X',
+      defaultCurrency,
+      '--depth',
+      '1',
+      '--format',
+      '%A|%T\n',
+    ]),
   ]);
 
   const rows: PortfolioRow[] = mergePortfolio(nativeStdout, convertedStdout);
-  const total = extractTotal(convertedStdout);
+  const total = extractTotal(totalStdout);
 
   if (rows.length === 0) {
     return (
