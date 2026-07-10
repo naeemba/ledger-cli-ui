@@ -44,7 +44,8 @@ describe('incomeAdapter.compile', () => {
       ctx
     );
     expect(draft.postings).toEqual([
-      { account: 'Assets:Checking', amount: '970', currency: 'USD' },
+      // Amount-less: ledger fills the net (1000 − 30 = 970) on save.
+      { account: 'Assets:Checking', amount: '', currency: '' },
       { account: 'Income:Salary', amount: '-1000', currency: 'USD' },
       { account: 'Expenses:Fees', amount: '30', currency: 'USD' },
     ]);

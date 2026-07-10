@@ -1,26 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-  formatAmount,
   residualByCurrency,
   balancingPostings,
   extraItemPostings,
   toExtraItems,
   singleAccount,
 } from './extraItems';
-
-describe('formatAmount', () => {
-  it('trims float noise and negative zero', () => {
-    expect(formatAmount(120)).toBe('120');
-    expect(formatAmount(-42.5)).toBe('-42.5');
-    expect(formatAmount(0.1 + 0.2)).toBe('0.3');
-    expect(formatAmount(-0)).toBe('0');
-  });
-
-  it('never emits scientific notation for small magnitudes', () => {
-    expect(formatAmount(5e-7)).toBe('0.0000005');
-    expect(formatAmount(-1e-7)).toBe('-0.0000001');
-  });
-});
 
 describe('residualByCurrency', () => {
   it('sums plain postings per currency in first-seen order', () => {
@@ -50,15 +35,15 @@ describe('residualByCurrency', () => {
 });
 
 describe('balancingPostings', () => {
-  it('emits one negated posting per nonzero currency', () => {
+  it('emits a single amount-less posting when there is a residual', () => {
+    // Ledger fills the exact amount(s) — even multi-currency — from the blank.
     const out = balancingPostings('Assets:Checking', [
       { account: 'Expenses:Dining', amount: '100', currency: 'USD' },
       { account: 'Expenses:Tips', amount: '20', currency: 'USD' },
       { account: 'Expenses:Fees', amount: '2', currency: 'EUR' },
     ]);
     expect(out).toEqual([
-      { account: 'Assets:Checking', amount: '-120', currency: 'USD' },
-      { account: 'Assets:Checking', amount: '-2', currency: 'EUR' },
+      { account: 'Assets:Checking', amount: '', currency: '' },
     ]);
   });
 

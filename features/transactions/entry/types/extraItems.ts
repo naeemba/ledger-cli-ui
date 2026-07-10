@@ -3,22 +3,11 @@ import type { Posting } from '@/lib/transactions/posting';
 export type ExtraItem = { account: string; amount: string; currency: string };
 
 /**
- * Format a computed numeric amount to a compact string: trailing zeros trimmed,
- * no `-0`. Uses `toFixed(10)`, which stays in plain decimal notation for every
- * realistic currency magnitude (`toFixed` only switches to exponential form at
- * `|n| >= 1e21`, far beyond any sum reachable here).
- */
-export const formatAmount = (n: number): string => {
-  if (!Number.isFinite(n)) return '0';
-  if (n === 0) return '0';
-  const trimmed = n.toFixed(10).replace(/\.?0+$/, '');
-  return trimmed === '-0' ? '0' : trimmed;
-};
-
-/**
  * Net amount per currency across postings, honoring `@@` cost annotations
  * (a cost-bearing posting contributes its signed cost to the cost currency,
  * exactly like {@link computeBalance}). Insertion order = first-seen currency.
+ * Used only to decide *whether* a balancing line is needed — never to write an
+ * amount into the journal.
  */
 export const residualByCurrency = (
   postings: readonly Posting[]
@@ -43,18 +32,23 @@ export const residualByCurrency = (
   return net;
 };
 
-/** Postings for `account` that zero the residual of `others`, one per nonzero currency. */
+/**
+ * A single amount-less posting on `account` when `others` leave a residual;
+ * ledger fills the exact balancing amount (multi-currency and cost aware) when
+ * it parses the saved transaction. Empty when `others` already balance.
+ *
+ * We deliberately do NOT compute the amount in JS: a float-derived figure can
+ * diverge from ledger's exact residual and get the transaction rejected on
+ * save. The residual sum here is only a predicate — is a balancing line needed?
+ */
 export const balancingPostings = (
   account: string,
   others: readonly Posting[]
 ): Posting[] => {
-  const net = residualByCurrency(others);
-  const out: Posting[] = [];
-  for (const [currency, total] of net) {
-    if (Math.abs(total) <= 1e-9) continue;
-    out.push({ account, amount: formatAmount(-total), currency });
-  }
-  return out;
+  const hasResidual = [...residualByCurrency(others).values()].some(
+    (total) => Math.abs(total) > 1e-9
+  );
+  return hasResidual ? [{ account, amount: '', currency: '' }] : [];
 };
 
 /**

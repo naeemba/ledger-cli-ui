@@ -60,7 +60,8 @@ describe('exchangeAdapter.compile', () => {
         cost: { amount: '100', currency: 'USD' },
       },
       { account: 'Expenses:BrokerFee', amount: '2', currency: 'USD' },
-      { account: 'Assets:Bank', amount: '-102', currency: 'USD' },
+      // Amount-less: ledger fills the outflow (100 + 2 = 102) on save.
+      { account: 'Assets:Bank', amount: '', currency: '' },
     ]);
   });
 });

@@ -83,16 +83,20 @@ export const transferAdapter: TransactionTypeAdapter<TransferFields> = {
     )
       return null;
     if (assetOrLiabilityPostings.length < 2) return null;
-    if (computeBalance(postings).kind !== 'balanced') return null;
+    const balanceKind = computeBalance(postings).kind;
+    if (balanceKind !== 'balanced' && balanceKind !== 'auto-balance')
+      return null;
     const positives = assetOrLiabilityPostings.filter(
       (p) => Number(p.amount) > 0
     );
-    const negatives = assetOrLiabilityPostings.filter(
-      (p) => Number(p.amount) < 0
-    );
     if (positives.length !== 1) return null;
     const to = positives[0];
-    const from = singleAccount(negatives);
+    // `from` is the other asset/liability account. Its amount may be blank —
+    // ledger auto-balances the outflow — so identify it by account, not by
+    // sign (a `< 0` filter would miss the amount-less balancing posting).
+    const from = singleAccount(
+      assetOrLiabilityPostings.filter((p) => p.account !== to.account)
+    );
     if (!from || from === to.account) return null;
     return {
       ...headerOf(draft),
