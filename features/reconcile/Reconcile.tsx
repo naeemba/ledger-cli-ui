@@ -12,8 +12,20 @@ const STALE_DAYS = 30;
 
 const Reconcile = async () => {
   const currency = await getBaseCurrency();
+  // `--sort date` makes ledger emit uncleared postings oldest-first; the JS
+  // re-sort is gone. `sortByDate: false` stops runLedger adding its own
+  // `--sort -date` (newest-first), which would fight this.
   const stdout = await runLedger(
-    ['reg', '--uncleared', '-X', currency, '--format', 'NNN%D|%P|%A|%t\n'],
+    [
+      'reg',
+      '--uncleared',
+      '-X',
+      currency,
+      '--sort',
+      'date',
+      '--format',
+      'NNN%D|%P|%A|%t\n',
+    ],
     { sortByDate: false }
   );
 
