@@ -83,6 +83,11 @@ const PRICE_HISTORY_CONCURRENCY = 8;
 // this many places keeps the derived `fiat → USD` rate accurate.
 const PIVOT_PRICE_DECIMALS = 12;
 
+// `date|account|quantity|commodity` per probe posting — used to reconstruct a
+// pivot-priced fiat's history by valuing `1 <fiat>` at each pivot date.
+const FIAT_HISTORY_FORMAT =
+  "%(format_date(date,'%Y-%m-%d'))|%(account)|%(quantity(scrub(display_amount)))|%(commodity(scrub(display_amount)))\n";
+
 export type RefreshResult =
   | { status: 'success'; fetched: number }
   | { status: 'partial'; fetched: number; failed: string[] }
@@ -498,7 +503,80 @@ export class PriceService {
     } catch {
       return [];
     }
-    return parsePriceHistory(stdout);
+    const direct = parsePriceHistory(stdout);
+    // `ledger prices` only reports direct `P <symbol> …` rows; it does not
+    // bridge. A fiat priced solely by the Tether pivot has no direct row, so
+    // reconstruct its history by valuing `1 <fiat>` at each pivot date (ledger
+    // still does every conversion — see fiatPivotHistory).
+    if (direct.length > 0) return direct;
+    return this.fiatPivotHistory(userId, symbol);
+  }
+
+  /**
+   * History for a fiat priced only through the `USDT → USD` / `USDT → <fiat>`
+   * pivot, where `ledger prices <fiat>` is empty. Values `1 <fiat>` at every
+   * pivot date via a throwaway probe journal and reads the bridged amount back
+   * — so the displayed rate is computed by ledger, never in JS. Returns `[]`
+   * when the symbol has no pivot legs (i.e. it simply has no price).
+   */
+  private async fiatPivotHistory(
+    userId: string,
+    symbol: string
+  ): Promise<PricePoint[]> {
+    const target = normalizeCommoditySymbol(symbol) ?? symbol;
+    const legs = (
+      await this.deps.commodityRepo.listBySymbol(PIVOT_SYMBOL)
+    ).filter((r) => (normalizeCommoditySymbol(r.quote) ?? r.quote) === target);
+    if (legs.length === 0) return [];
+
+    const base = await this.resolveBaseCurrency(userId);
+    const dates = [...new Set(legs.map((r) => r.fetchedDate))].sort();
+    // Distinct account per date so ledger reports one row per point; the bare
+    // `1 "<fiat>"` is always double-quoted (legal for every commodity name).
+    const journal = dates
+      .map(
+        (date, index) =>
+          `${date} * probe\n  Probe:c${index}    1 "${symbol}"\n  Offset:c${index}   -1 "${symbol}"\n`
+      )
+      .join('\n');
+
+    const probePath = path.join(
+      os.tmpdir(),
+      `ledger-fiat-${randomUUID()}.ledger`
+    );
+    try {
+      await fs.writeFile(probePath, journal, 'utf-8');
+      const stdout = await runLedgerForUser(
+        userId,
+        [
+          '--file',
+          probePath,
+          'reg',
+          '^Probe:c',
+          '--sort',
+          'date',
+          '-X',
+          base,
+          '--format',
+          FIAT_HISTORY_FORMAT,
+        ],
+        this.deps.journalRepo
+      );
+      const points: PricePoint[] = [];
+      for (const line of stdout.split('\n')) {
+        const [date, account, quantity, commodity] = line.split('|');
+        // Skip ledger's `<Revalued>` / `<Adjustment>` mark-to-market rows.
+        if (!account?.startsWith('Probe:c')) continue;
+        const price = Number((quantity ?? '').replace(/,/g, ''));
+        if (!date || !Number.isFinite(price)) continue;
+        points.push({ date, price, quote: commodity?.trim() || base });
+      }
+      return points;
+    } catch {
+      return [];
+    } finally {
+      await fs.rm(probePath, { force: true }).catch(() => {});
+    }
   }
 
   async listNormalizedSymbolsForUser(userId: string): Promise<string[]> {
@@ -570,10 +648,11 @@ export class PriceService {
   /** Latest known price for every held commodity, with provenance and staleness. */
   async listKnownPrices(userId: string): Promise<KnownPrice[]> {
     const base = await this.resolveBaseCurrency(userId);
-    const [held, manual, fetched] = await Promise.all([
+    const [held, manual, fetched, pivotLegs] = await Promise.all([
       this.listHeldCommodities(userId),
       this.deps.manualRepo.listForUser(userId),
       this.deps.commodityRepo.listForQuote(base),
+      this.deps.commodityRepo.listBySymbol(PIVOT_SYMBOL),
     ]);
 
     const manualKeys = new Set(
@@ -584,6 +663,16 @@ export class PriceService {
     const fetchedKeys = new Set(
       fetched.map((row) => priceKey(row.symbol, row.quote, row.fetchedDate))
     );
+    // A fiat priced by the Tether pivot has no `<fiat> → base` row of its own,
+    // but its price IS fetched. Register the derived key (fiat, base, legDate)
+    // so deriveSource labels it 'fetched' rather than falling through to
+    // 'journal'. The `USDT → USD` anchor itself is skipped.
+    const normalizedBase = normalizeCommoditySymbol(base) ?? base;
+    for (const leg of pivotLegs) {
+      const quote = normalizeCommoditySymbol(leg.quote) ?? leg.quote;
+      if (quote === normalizedBase) continue;
+      fetchedKeys.add(priceKey(quote, normalizedBase, leg.fetchedDate));
+    }
 
     const today = utcDate(new Date());
 

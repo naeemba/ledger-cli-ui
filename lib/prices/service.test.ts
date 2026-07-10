@@ -989,6 +989,60 @@ describe('PriceService.listKnownPricesInBase', () => {
     // 1 EUR = 1 USDT / 0.9 EUR-per-USDT * 1 USD-per-USDT = 1.111… USD.
     expect(eur?.price).toBeCloseTo(1 / 0.9, 4);
     expect(eur?.quote).toBe('USD');
+    // Provenance: the pivot is a fetched price, dated from the leg.
+    expect(eur?.source).toBe('fetched');
+    expect(eur?.date).toBe('2026-07-02');
+  });
+
+  it('reconstructs a pivot-priced fiat history through ledger', async () => {
+    await seedUser(
+      ctx,
+      'u-fiat-hist',
+      [
+        '2026-07-05 * hold',
+        '  Assets:A   1 EUR',
+        '  Equity    -1 EUR',
+        '',
+      ].join('\n'),
+      'USD'
+    );
+    await new CommodityPriceRepository(ctx.db).insert([
+      {
+        symbol: 'USDT',
+        quote: 'USD',
+        price: 1.0,
+        fetchedAt: new Date('2026-07-01T00:00:00Z'),
+        fetchedDate: '2026-07-01',
+      },
+      {
+        symbol: 'USDT',
+        quote: 'EUR',
+        price: 0.9,
+        fetchedAt: new Date('2026-07-01T00:00:00Z'),
+        fetchedDate: '2026-07-01',
+      },
+      {
+        symbol: 'USDT',
+        quote: 'USD',
+        price: 1.0,
+        fetchedAt: new Date('2026-07-05T00:00:00Z'),
+        fetchedDate: '2026-07-05',
+      },
+      {
+        symbol: 'USDT',
+        quote: 'EUR',
+        price: 0.95,
+        fetchedAt: new Date('2026-07-05T00:00:00Z'),
+        fetchedDate: '2026-07-05',
+      },
+    ]);
+    await service.regenerateUserPriceDb('u-fiat-hist');
+
+    const points = await service.listPriceHistory('u-fiat-hist', 'EUR');
+    expect(points.map((p) => p.date)).toEqual(['2026-07-01', '2026-07-05']);
+    expect(points[0].price).toBeCloseTo(1 / 0.9, 4);
+    expect(points[1].price).toBeCloseTo(1 / 0.95, 4);
+    expect(points.every((p) => p.quote === 'USD')).toBe(true);
   });
 
   it('values a dollar-denominated holding into a non-USD target via the bridge', async () => {
