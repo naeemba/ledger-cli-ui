@@ -18,10 +18,11 @@ describe('parseReconcileRows', () => {
     expect(rows[1].account).toBe('Expenses:Rent');
   });
 
-  it('sorts oldest first (largest days first)', () => {
+  it('preserves ledger order (which is oldest-first via --sort date)', () => {
+    // ledger emits oldest-first; the parser must not reorder.
     const stdout =
-      'NNN2026-05-15|recent|Expenses:Coffee|USD 5\n' +
-      'NNN2026-01-01|old|Expenses:Rent|USD 1500\n';
+      'NNN2026-01-01|old|Expenses:Rent|USD 1500\n' +
+      'NNN2026-05-15|recent|Expenses:Coffee|USD 5\n';
     const rows = parseReconcileRows(stdout, NOW);
     expect(rows[0].account).toBe('Expenses:Rent');
     expect(rows[1].account).toBe('Expenses:Coffee');

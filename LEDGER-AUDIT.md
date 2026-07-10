@@ -23,15 +23,47 @@ verification.
 
 ---
 
+## Remediation status — 2026-07-10
+
+Legend: ✅ fixed (one commit each, `pnpm type-check`/`lint`/`test` green;
+ledger replacements verified against ledger 3.4.1 on synthetic journals)·
+⏸️ deferred (needs a design decision or carries risk out of proportion to
+payoff — left for a deliberate follow-up).
+
+**Fixed (8):** #4 portfolio total · #5 payees · #6 dashboard month/year ·
+#7 cash-flow net · #8 portfolio CSV split · #11 reconcile sort ·
+#12 cash-flow window/sign · #13 net-worth window.
+
+**Deferred (5), with reasons:**
+
+- **#1–#3 (the balancing trio, high).** The correct fix is a debounced
+  *server-side* ledger check that becomes the authority for submit/save while
+  the JS stays for instant per-keystroke feedback — a feature with its own
+  UX/latency design, not a mechanical swap. Left intact pending that design.
+- **#9 fiat-USD pivot.** The audit itself calls the raw-two-`P`-directive
+  approach "a design decision, not a drop-in": it changes the prices UI and
+  the manual-price-precedence data model, for "low divergence risk in
+  practice". Not worth a unilateral product change; needs the owner's call.
+- **#10 transaction magnitudes.** The whole transactions list is JS-parsed
+  (`parseJournalFile`) — ledger is not in that path at all. A register
+  replacement means a new ledger run joined back on `(file, beg_line)`, with
+  real line-number-alignment risk (include files, `<Revalued>` rows) for a
+  purely cosmetic, display-only value. Not a safe unattended change.
+
+The 4 "unavoidable selection" items below are intentionally left as-is per the
+audit's own verification.
+
+---
+
 ## Confirmed reimplementation — act
 
 ### High — transaction write/validation path can accept/reject data differently than ledger
 
 | # | Location | What JS computes | Verified ledger replacement | Risk |
 |---|----------|------------------|-----------------------------|------|
-| 1 | `lib/transactions/balance.ts:15` `computeBalance` | Full balancing algorithm: per-currency float sums, `@@` cost bridging, assertion-posting exclusion, `1e-9` epsilon | `ledger -f - balance` on the formatted draft; stderr `Unbalanced remainder is:` is the authoritative verdict (verified on stdin) | Verified two-way divergence: JS excludes assertion-only postings (`= USD 500`) that ledger treats as balance assignments; JS fixed epsilon vs ledger's per-commodity display precision — each side accepts drafts the other rejects |
-| 2 | `lib/transactions/schema.ts:111` `transactionDraftSchema` superRefine | Copy-pasted duplicate of #1, gating **server-side saves** | Ledger-backed validation before write (`lib/journal/service.ts` already shells out at :144/:383) | Same divergences as #1, at the exact point where data gets persisted |
-| 3 | `features/transactions/entry/types/extraItems.ts:47` `balancingPostings` | Sums the residual per currency in floats and writes explicit balancing amounts into the journal | Emit a single amount-less posting and let ledger elide it (verified: absorbs multi-commodity residuals and cost annotations; `fixBalanceAdapter` already does this) | A float-computed amount written to the journal can differ from the exact residual; ledger then rejects the transaction or reports an imbalance |
+| 1 ⏸️ | `lib/transactions/balance.ts:15` `computeBalance` | Full balancing algorithm: per-currency float sums, `@@` cost bridging, assertion-posting exclusion, `1e-9` epsilon | `ledger -f - balance` on the formatted draft; stderr `Unbalanced remainder is:` is the authoritative verdict (verified on stdin) | Verified two-way divergence: JS excludes assertion-only postings (`= USD 500`) that ledger treats as balance assignments; JS fixed epsilon vs ledger's per-commodity display precision — each side accepts drafts the other rejects |
+| 2 ⏸️ | `lib/transactions/schema.ts:111` `transactionDraftSchema` superRefine | Copy-pasted duplicate of #1, gating **server-side saves** | Ledger-backed validation before write (`lib/journal/service.ts` already shells out at :144/:383) | Same divergences as #1, at the exact point where data gets persisted |
+| 3 ⏸️ | `features/transactions/entry/types/extraItems.ts:47` `balancingPostings` | Sums the residual per currency in floats and writes explicit balancing amounts into the journal | Emit a single amount-less posting and let ledger elide it (verified: absorbs multi-commodity residuals and cost annotations; `fixBalanceAdapter` already does this) | A float-computed amount written to the journal can differ from the exact residual; ledger then rejects the transaction or reports an imbalance |
 
 Downstream consumers of #1 (same root cause, fix together):
 `features/transactions/entry/TransactionEntry.tsx:144` canSubmit gate,
@@ -47,21 +79,21 @@ check the authority for submit/save.
 
 | # | Location | What JS computes | Verified ledger replacement | Risk |
 |---|----------|------------------|-----------------------------|------|
-| 4 | `features/portfolio/parsePortfolio.ts:65` `extractTotal` | Grand total = last non-empty output line | `balance <prefix> -X CCY --depth 1 --format '%A\|%T\n'`, take the prefix-anchored row | Reproduced live: one unpriced commodity makes the Portfolio header show `100 XYZ` as the Total (USD) figure |
-| 5 | `lib/payees/parse.ts:16` `parsePayeeRows` (+ `app/api/payees/export/route.ts:23`, `features/payees/Payees.tsx:50` grandTotal) | Per-payee sums via float Map, filter > 0, sort descending | `reg ^Expenses --by-payee --collapse -X <base> --sort '-display_amount'` — verified: one converted row per payee, correct descending order, no adjustment contamination. **Do not use `-P` without `--collapse`: it segfaults (see gotchas)** | Float drift; `parseAmount`'s token-guessing coerces unexpected shapes to 0. Bonus bug: the `Commodities revalued` pseudo-payee is rendered as a real payee on the page and in the CSV export |
-| 6 | `features/dashboard/Dashboard.tsx:95` | Month/year expense totals = `lastNonEmptyLine` of a periodic register's `%T` column | `bal ^Expenses -p 'this month' -X <ccy> --collapse --format '%T\n'` (single-line output, verified; same for 'this year') | `%T` accumulates in processing order; `<Revalued>` rows plus the default `--sort -date` make last-row-position fragile |
-| 7 | `lib/monthly/csv.ts:22` `cashFlowRowsToCsv` + `features/monthlyComparison/MonthlyComparison.tsx:66` | `net = income − expenses` float subtraction over two separate ledger runs | A single register can emit per-month net, but it needs `--collapse` plus format-level negation — bare `--invert` emits per-account rows, and `--invert --collapse` double-counts on 3.4.1 | Cent-level float drift; a month whose amount fails to parse defaults to 0 silently; CSV and table code paths can diverge |
-| 8 | `lib/portfolio/csv.ts:16` `splitNative` | Regex re-decomposes a rendered amount string into (quantity, commodity) | `--format '%A\|%(quantity(scrub(display_total)))\|%(commodity(scrub(display_total)))\n'` (verified: emits `2335\|$`, `0.09\|BTC`, `5\|AAPL`) | The misparse reproduces on real production data — the price-db forces commodity-prefix rendering for BTC and KIRT |
-| 9 | `lib/prices/provider.ts:87` `fetchPricesUsd` | Fiat USD rate composed in JS via the tether pivot: `tetherUsd / perFiat` | Emit the raw quotes as two `P` directives (`P <date> USDT <tetherUsd> USD` and `P <date> USDT <perFiat> <FIAT>`) and let `-X USD` bridge (verified: identical valuation) | Low divergence risk in practice; but raw-quote storage changes the prices UI and manual-price-precedence data model — a design decision, not a drop-in |
-| 10 | `lib/transactions/model.ts:299` `magnitudesByCurrency` (rendered in `features/transactions/TransactionRowItem.tsx:38`) | Positive posting sums per currency, float addition + `toFixed(2)` | A register keyed on `xact.beg_line` reproduces the values (verified; the `tag("uid")` variant fails because `:uid:` is flag-tag syntax) | Display-only; skips elided-amount postings and `@@` costs, hardcodes 2 decimals |
+| 4 ✅ | `features/portfolio/parsePortfolio.ts:65` `extractTotal` | Grand total = last non-empty output line | `balance <prefix> -X CCY --depth 1 --format '%A\|%T\n'`, take the prefix-anchored row | Reproduced live: one unpriced commodity makes the Portfolio header show `100 XYZ` as the Total (USD) figure |
+| 5 ✅ | `lib/payees/parse.ts:16` `parsePayeeRows` (+ `app/api/payees/export/route.ts:23`, `features/payees/Payees.tsx:50` grandTotal) | Per-payee sums via float Map, filter > 0, sort descending | `reg ^Expenses --by-payee --collapse -X <base> --sort '-display_amount'` — verified: one converted row per payee, correct descending order, no adjustment contamination. **Do not use `-P` without `--collapse`: it segfaults (see gotchas)** | Float drift; `parseAmount`'s token-guessing coerces unexpected shapes to 0. Bonus bug: the `Commodities revalued` pseudo-payee is rendered as a real payee on the page and in the CSV export |
+| 6 ✅ | `features/dashboard/Dashboard.tsx:95` | Month/year expense totals = `lastNonEmptyLine` of a periodic register's `%T` column | `bal ^Expenses -p 'this month' -X <ccy> --collapse --format '%T\n'` (single-line output, verified; same for 'this year') | `%T` accumulates in processing order; `<Revalued>` rows plus the default `--sort -date` make last-row-position fragile |
+| 7 ✅ | `lib/monthly/csv.ts:22` `cashFlowRowsToCsv` + `features/monthlyComparison/MonthlyComparison.tsx:66` | `net = income − expenses` float subtraction over two separate ledger runs | A single register can emit per-month net, but it needs `--collapse` plus format-level negation — bare `--invert` emits per-account rows, and `--invert --collapse` double-counts on 3.4.1 | Cent-level float drift; a month whose amount fails to parse defaults to 0 silently; CSV and table code paths can diverge |
+| 8 ✅ | `lib/portfolio/csv.ts:16` `splitNative` | Regex re-decomposes a rendered amount string into (quantity, commodity) | `--format '%A\|%(quantity(scrub(display_total)))\|%(commodity(scrub(display_total)))\n'` (verified: emits `2335\|$`, `0.09\|BTC`, `5\|AAPL`) | The misparse reproduces on real production data — the price-db forces commodity-prefix rendering for BTC and KIRT |
+| 9 ⏸️ | `lib/prices/provider.ts:87` `fetchPricesUsd` | Fiat USD rate composed in JS via the tether pivot: `tetherUsd / perFiat` | Emit the raw quotes as two `P` directives (`P <date> USDT <tetherUsd> USD` and `P <date> USDT <perFiat> <FIAT>`) and let `-X USD` bridge (verified: identical valuation) | Low divergence risk in practice; but raw-quote storage changes the prices UI and manual-price-precedence data model — a design decision, not a drop-in |
+| 10 ⏸️ | `lib/transactions/model.ts:299` `magnitudesByCurrency` (rendered in `features/transactions/TransactionRowItem.tsx:38`) | Positive posting sums per currency, float addition + `toFixed(2)` | A register keyed on `xact.beg_line` reproduces the values (verified; the `tag("uid")` variant fails because `:uid:` is flag-tag syntax) | Display-only; skips elided-amount postings and `@@` costs, hardcodes 2 decimals |
 
 ### Low — order/perf only, values already come from ledger
 
 | # | Location | Issue | Fix |
 |---|----------|-------|-----|
-| 11 | `features/reconcile/Reconcile.utils.ts:28` `parseReconcileRows` | `Reconcile.tsx` disables runLedger's sort (`sortByDate: false`) then re-sorts ascending in JS | Pass `--sort date` to the register call; delete the `.sort()` (keep the `days` computation — it needs wall-clock now) |
-| 12 | `features/monthlyComparison/MonthlyComparison.utils.ts:34` `getCashFlow` | JS income sign flip, fetch-all-history, `.slice(-36)` windowing | `--invert` on the income run + `-p 'last 36 months'`. Semantic note: `slice(-36)` keeps the last 36 months-with-data while `-p` is a calendar window — the calendar window is arguably the intended behavior |
-| 13 | `features/netWorth/NetWorth.tsx:29` | Fetch-all-history + `.slice(-36)` | `--display 'date>=[cutoff]'` — NOT `-b`: the `%T` running total must accumulate from journal start (verified identical values) |
+| 11 ✅ | `features/reconcile/Reconcile.utils.ts:28` `parseReconcileRows` | `Reconcile.tsx` disables runLedger's sort (`sortByDate: false`) then re-sorts ascending in JS | Pass `--sort date` to the register call; delete the `.sort()` (keep the `days` computation — it needs wall-clock now) |
+| 12 ✅ | `features/monthlyComparison/MonthlyComparison.utils.ts:34` `getCashFlow` | JS income sign flip, fetch-all-history, `.slice(-36)` windowing | `--invert` on the income run + `-p 'last 36 months'`. Semantic note: `slice(-36)` keeps the last 36 months-with-data while `-p` is a calendar window — the calendar window is arguably the intended behavior |
+| 13 ✅ | `features/netWorth/NetWorth.tsx:29` | Fetch-all-history + `.slice(-36)` | `--display 'date>=[cutoff]'` — NOT `-b`: the `%T` running total must accumulate from journal start (verified identical values) |
 
 ---
 

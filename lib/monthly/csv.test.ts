@@ -8,7 +8,7 @@ describe('cashFlowRowsToCsv', () => {
     );
   });
 
-  it('emits one row per month in input order with net = income - expenses', () => {
+  it('emits one row per month in input order, using the row net', () => {
     expect(
       cashFlowRowsToCsv(
         [
@@ -16,11 +16,13 @@ describe('cashFlowRowsToCsv', () => {
             date: new Date('2026-01-01T00:00:00Z'),
             income: 4500,
             expenses: 3200,
+            net: 1300,
           },
           {
             date: new Date('2026-02-01T00:00:00Z'),
             income: 4500,
             expenses: 2800,
+            net: 1700,
           },
         ],
         'USD'

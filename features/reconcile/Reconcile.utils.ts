@@ -8,9 +8,10 @@ export type ReconcileRow = {
 };
 
 /**
- * Parses the `NNN%D|%P|%A|%t\n` output of `ledger reg --uncleared` into typed
- * rows, dropping malformed lines and sorting oldest-first. `now` is injected
- * so the `days` field is deterministic in tests.
+ * Parses the `NNN%D|%P|%A|%t\n` output of `ledger reg --uncleared --sort date`
+ * into typed rows, dropping malformed lines. Row order is ledger's
+ * (oldest-first) — no JS re-sort. `now` is injected so the `days` field is
+ * deterministic in tests.
  */
 export const parseReconcileRows = (
   stdout: string,
@@ -24,6 +25,5 @@ export const parseReconcileRows = (
       const d = new Date(date);
       const days = Math.floor((now - d.getTime()) / 86_400_000);
       return { date, payee, account, amount, days };
-    })
-    .sort((a, b) => b.days - a.days);
+    });
 };

@@ -64,7 +64,7 @@ const MonthlyComparison = async () => {
                 </tr>
               ) : (
                 [...rows].reverse().map((r) => {
-                  const net = r.income - r.expenses;
+                  const net = r.net;
                   const netClass = net >= 0 ? 'text-positive' : 'text-negative';
                   return (
                     <tr key={r.date.toISOString()}>

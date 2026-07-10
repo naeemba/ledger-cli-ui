@@ -3,6 +3,7 @@ import {
   extractTotal,
   mergePortfolio,
   parseNativeRows,
+  parseNativeSplit,
 } from './parsePortfolio';
 
 describe('parseNativeRows', () => {
@@ -29,6 +30,24 @@ describe('parseNativeRows', () => {
   it('trims surrounding whitespace from columns', () => {
     expect(parseNativeRows('  Assets:Foo  |  1 USD  ')).toEqual([
       { account: 'Assets:Foo', raw: '1 USD' },
+    ]);
+  });
+});
+
+describe('parseNativeSplit', () => {
+  it('returns account, quantity and commodity per row', () => {
+    const stdout =
+      'Assets:Broker|10|AAPL\nAssets:Crypto|0.09|BTC\nAssets:Cash|2335|$\n';
+    expect(parseNativeSplit(stdout)).toEqual([
+      { account: 'Assets:Broker', quantity: '10', commodity: 'AAPL' },
+      { account: 'Assets:Crypto', quantity: '0.09', commodity: 'BTC' },
+      { account: 'Assets:Cash', quantity: '2335', commodity: '$' },
+    ]);
+  });
+
+  it('skips lines missing any of the three columns', () => {
+    expect(parseNativeSplit('Assets:Broker|10\nA|1|USD\n')).toEqual([
+      { account: 'A', quantity: '1', commodity: 'USD' },
     ]);
   });
 });
@@ -74,18 +93,25 @@ describe('mergePortfolio', () => {
 });
 
 describe('extractTotal', () => {
-  it('returns the last column of the trailing rollup row', () => {
-    // ledger emits the final total with empty account column in --flat mode.
-    const stdout =
-      'Assets:Investments:AAPL|USD 2000\nAssets:Investments:BTC|USD 30000\n|USD 32000\n';
-    expect(extractTotal(stdout)).toBe('USD 32000');
+  it('returns the amount from the account-anchored --depth 1 row', () => {
+    // `--depth 1` collapses the subtree to a single account row.
+    expect(extractTotal('Assets|$ 31,500.00\n')).toBe('$ 31,500.00');
+  });
+
+  it('ignores continuation lines for unpriced commodities', () => {
+    // The base commodity is printed first on the account row; unconvertible
+    // holdings spill onto trailing lines with no account column and no pipe.
+    const stdout = 'Assets|$ 31,500.00\n100 XYZ\n';
+    expect(extractTotal(stdout)).toBe('$ 31,500.00');
   });
 
   it('returns empty for empty stdout', () => {
     expect(extractTotal('')).toBe('');
   });
 
-  it('returns the only row when there is just one', () => {
-    expect(extractTotal('Assets:Investments:AAPL|USD 2000\n')).toBe('USD 2000');
+  it('falls back to the native amount when nothing is priced', () => {
+    // Only an unconvertible commodity remains; ledger puts it on the account
+    // row, so that is what shows (better than the old last-line heuristic).
+    expect(extractTotal('Assets|100 XYZ\n')).toBe('100 XYZ');
   });
 });

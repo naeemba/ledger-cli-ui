@@ -4,6 +4,8 @@ export type CashFlowRow = {
   date: Date;
   income: number;
   expenses: number;
+  /** income − expenses, computed once in getCashFlow so every consumer agrees. */
+  net: number;
 };
 
 /**

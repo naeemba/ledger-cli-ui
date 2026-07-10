@@ -5,6 +5,7 @@ import PageContainer from '@/components/PageContainer';
 import { Card, CardContent } from '@/components/ui/card';
 import { parseNetWorthRows } from '@/lib/netWorth/parse';
 import { getBaseCurrency } from '@/lib/settings';
+import { toISODate } from '@/utils/date';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
 import runLedger from '@/utils/runLedger';
@@ -13,6 +14,14 @@ const MONTHS_BACK = 36;
 
 const NetWorth = async () => {
   const currency = await getBaseCurrency();
+  // Window the last MONTHS_BACK months with `--display`, not `-b`: `%T` is a
+  // running total that must accumulate from journal start, so we let ledger
+  // compute over all history and only *display* the recent rows. `-b` would
+  // reset the accumulation and understate every point. See #13.
+  const now = new Date();
+  const cutoff = toISODate(
+    new Date(now.getFullYear(), now.getMonth() - (MONTHS_BACK - 1), 1)
+  );
   const stdout = await runLedger(
     [
       'reg',
@@ -21,13 +30,15 @@ const NetWorth = async () => {
       '--monthly',
       '-X',
       currency,
+      '--display',
+      `date>=[${cutoff}]`,
       '--format',
       'NNN%D|%T\n',
     ],
     { sortByDate: false }
   );
 
-  const rows = parseNetWorthRows(stdout).slice(-MONTHS_BACK);
+  const rows = parseNetWorthRows(stdout);
   const labels = rows.map((r) => formatDate(r.date, Format.SHORT_MONTH_YEAR));
   const data = rows.map((r) => r.value);
 

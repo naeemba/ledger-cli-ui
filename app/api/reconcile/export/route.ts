@@ -15,8 +15,18 @@ export async function GET(): Promise<Response> {
   await requireUser();
   try {
     const base = await getBaseCurrency();
+    // Oldest-first from ledger; parseReconcileRows no longer re-sorts.
     const stdout = await runLedger(
-      ['reg', '--uncleared', '-X', base, '--format', 'NNN%D|%P|%A|%t\n'],
+      [
+        'reg',
+        '--uncleared',
+        '-X',
+        base,
+        '--sort',
+        'date',
+        '--format',
+        'NNN%D|%P|%A|%t\n',
+      ],
       { sortByDate: false }
     );
     return csvDownload(
