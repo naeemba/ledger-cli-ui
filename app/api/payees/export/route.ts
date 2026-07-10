@@ -20,7 +20,20 @@ export async function GET(req: NextRequest): Promise<Response> {
     const start = parseISODateStrict(sp.get('start'));
     const end = parseISODateStrict(sp.get('end'));
     const base = await getBaseCurrency();
-    const args = ['reg', '^Expenses', '-X', base, '--format', 'NNN%P|%t\n'];
+    // One converted row per payee, sorted descending, via ledger itself —
+    // matches the Payees page and dodges the -X register segfault. See #5.
+    const args = [
+      'reg',
+      '^Expenses',
+      '-X',
+      base,
+      '--by-payee',
+      '--collapse',
+      '--sort',
+      '-display_amount',
+      '--format',
+      'NNN%P|%t\n',
+    ];
     if (start) args.push('-b', start);
     if (end) args.push('-e', end);
     const stdout = await runLedger(args);

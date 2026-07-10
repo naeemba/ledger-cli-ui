@@ -34,6 +34,10 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
   const user = await requireUser();
   const existingViewNames = await savedViewService.listNames(user.id);
   const currentPath = `/payees/${fromParam}/${toParam}`;
+  // `--by-payee --collapse` makes ledger emit one converted row per payee;
+  // `--sort '-display_amount'` ranks them descending by converted value. This
+  // replaces JS-side summing/sorting and avoids the plain-register variant that
+  // segfaults ledger 3.4.1 under `-X`. See LEDGER-AUDIT.md #5.
   const stdout = await runLedger([
     'reg',
     '^Expenses',
@@ -43,6 +47,10 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
     toISODate(to),
     '-X',
     currency,
+    '--by-payee',
+    '--collapse',
+    '--sort',
+    '-display_amount',
     '--format',
     'NNN%P|%t\n',
   ]);
