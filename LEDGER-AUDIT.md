@@ -60,7 +60,7 @@ check the authority for submit/save.
 | # | Location | Issue | Fix |
 |---|----------|-------|-----|
 | 11 | `features/reconcile/Reconcile.utils.ts:28` `parseReconcileRows` | `Reconcile.tsx` disables runLedger's sort (`sortByDate: false`) then re-sorts ascending in JS | Pass `--sort date` to the register call; delete the `.sort()` (keep the `days` computation — it needs wall-clock now) |
-| 12 | `features/monthlyComparison/MonthlyComparison.utils.ts:34` `getCashFlow` | JS income sign flip, fetch-all-history, `.slice(-36)` windowing | `--invert` on the income run + `-p 'last 36 months'`. Semantic note: `slice(-36)` keeps the last 36 months-with-data while `-p` is a calendar window — the calendar window is arguably the intended behavior |
+| 12 ✅ | `features/monthlyComparison/MonthlyComparison.utils.ts:34` `getCashFlow` | JS income sign flip, fetch-all-history, `.slice(-36)` windowing | `--invert` on the income run + `-p 'last 36 months'`. Semantic note: `slice(-36)` keeps the last 36 months-with-data while `-p` is a calendar window — the calendar window is arguably the intended behavior |
 | 13 | `features/netWorth/NetWorth.tsx:29` | Fetch-all-history + `.slice(-36)` | `--display 'date>=[cutoff]'` — NOT `-b`: the `%T` running total must accumulate from journal start (verified identical values) |
 
 ---
