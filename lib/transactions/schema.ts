@@ -109,47 +109,20 @@ export const transactionDraftSchema = z
       .max(MAX_POSTINGS, `At most ${MAX_POSTINGS} postings are allowed`),
   })
   .superRefine((draft, ctx) => {
-    // Assertion-only postings (no amount) check a balance; they do not
-    // participate in the transaction's own balancing.
-    const active = draft.postings.filter(
-      (p) => !(p.assertion && p.amount === '')
-    );
-    const blanks = active.filter((p) => p.amount === '').length;
+    // Structural check only: at most one blank amount (ledger's auto-balance
+    // line). The "sums to zero" verdict is NOT computed here — every write is
+    // validated with `ledger stats` (verifyJournalParseable) and rolled back
+    // if ledger rejects it, so a JS float sum would only risk disagreeing with
+    // the authority (float epsilon, `@@` cost, `= AMT` assertion handling).
+    const blanks = draft.postings.filter(
+      (p) => p.amount === '' && !p.assertion
+    ).length;
     if (blanks > 1) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Only one posting may have a blank amount (auto-balance)',
         path: ['postings'],
       });
-      return;
-    }
-    if (blanks === 1) return; // ledger will balance the blank line
-
-    const byCurrency = new Map<string, number>();
-    for (const p of active) {
-      if (p.cost) {
-        const cost = Number(p.cost.amount);
-        const amount = Number(p.amount);
-        if (!Number.isFinite(cost) || !Number.isFinite(amount)) return;
-        const sign = amount < 0 ? -1 : 1;
-        byCurrency.set(
-          p.cost.currency,
-          (byCurrency.get(p.cost.currency) ?? 0) + sign * cost
-        );
-      } else {
-        const value = Number(p.amount);
-        if (!Number.isFinite(value)) return;
-        byCurrency.set(p.currency, (byCurrency.get(p.currency) ?? 0) + value);
-      }
-    }
-    for (const [currency, total] of byCurrency) {
-      if (Math.abs(total) > 1e-9) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Postings in ${currency} do not balance (sum = ${total})`,
-          path: ['postings'],
-        });
-      }
     }
   });
 
