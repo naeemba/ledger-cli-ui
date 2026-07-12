@@ -4,6 +4,7 @@ import AppShell from '@/components/AppShell';
 import BaseCurrencyBanner from '@/components/BaseCurrencyBanner';
 import { BaseCurrencyPickerSlot } from '@/components/BaseCurrencyPicker';
 import { CryptoGate } from '@/components/crypto/CryptoGate';
+import QuickExpenseSlot from '@/features/transactions/QuickExpenseSlot';
 import { APP_NAME } from '@/lib/app';
 import { cn } from '@/lib/utils';
 import { Geist } from 'next/font/google';
@@ -53,7 +54,12 @@ export default function RootLayout({
       <body>
         <CryptoGate />
         <AppShell
-          headerSlot={<BaseCurrencyPickerSlot />}
+          headerSlot={
+            <>
+              <QuickExpenseSlot />
+              <BaseCurrencyPickerSlot />
+            </>
+          }
           bannerSlot={<BaseCurrencyBanner />}
         >
           {children}
