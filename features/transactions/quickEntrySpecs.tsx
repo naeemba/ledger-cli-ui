@@ -54,10 +54,13 @@ const firstMoneyAccount = (accounts: string[]) =>
 const isPositive = (s: string) => Number(s) > 0;
 const isNumber = (s: string) => s.trim() !== '' && !Number.isNaN(Number(s));
 
+// Every quick entry starts with a blank description so the "(optional)" field
+// is consistently empty across types; when left blank, save() derives the payee
+// from resolvePayee/label. Adapters otherwise seed a non-empty default payee.
 const seed = <F extends HeaderFields>(
   adapter: TransactionTypeAdapter<F>,
   ctx: TypeContext
-): F => ({ ...adapter.emptyFields(ctx), date: todayLocal() });
+): F => ({ ...adapter.emptyFields(ctx), payee: '', date: todayLocal() });
 
 const AmountRow = ({
   label,
@@ -198,6 +201,7 @@ const transferSpec: QuickEntrySpec<TransferFields> = {
           : f.from === f.to
             ? 'Source and destination must differ.'
             : null,
+  resolvePayee: () => 'Transfer',
   Fields: ({ fields, update, accounts }) => (
     <>
       <AmountRow
@@ -230,10 +234,11 @@ const exchangeSpec: QuickEntrySpec<ExchangeFields> = {
   label: 'Exchange',
   icon: '💱',
   adapter: exchangeAdapter,
+  // Seed only the paid-from side; leave received-into blank so the two account
+  // pickers don't default to the same account (validate then guards equality).
   makeEmpty: (ctx) => ({
     ...seed(exchangeAdapter, ctx),
     gaveFrom: firstMoneyAccount(ctx.accounts),
-    gotInto: firstMoneyAccount(ctx.accounts),
   }),
   validate: (f) =>
     !isPositive(f.gaveAmount)
@@ -246,7 +251,10 @@ const exchangeSpec: QuickEntrySpec<ExchangeFields> = {
             ? 'Pick the currency you received.'
             : !f.gotInto.trim()
               ? 'Pick the account you received into.'
-              : null,
+              : f.gaveFrom === f.gotInto
+                ? 'Paid-from and received-into accounts must differ.'
+                : null,
+  resolvePayee: () => 'Currency exchange',
   Fields: ({ fields, update, accounts }) => (
     <>
       <AmountRow
@@ -296,6 +304,7 @@ const fixBalanceSpec: QuickEntrySpec<FixBalanceFields> = {
       : !isNumber(f.targetAmount)
         ? 'Enter the correct balance.'
         : null,
+  resolvePayee: () => 'Balance adjustment',
   Fields: ({ fields, update, accounts }) => (
     <>
       <AccountField
