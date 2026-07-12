@@ -106,7 +106,7 @@ export default function QuickExpenseDialog({
     >
       <DialogTrigger
         render={
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="outline" className="h-8">
             <PlusIcon />
             <span className="hidden sm:inline">Expense</span>
           </Button>
