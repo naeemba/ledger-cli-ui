@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { parseNet, peopleFromBalance } from './parse';
+import { parseNet, peopleFromBalance, personAccountPatterns } from './parse';
+
+describe('personAccountPatterns anchors a person to their own account tree', () => {
+  it('emits an exact-account and a sub-account pattern', () => {
+    expect(personAccountPatterns('Assets:Receivable', 'Bob')).toEqual([
+      'Assets:Receivable:Bob$',
+      'Assets:Receivable:Bob:',
+    ]);
+  });
+
+  it('escapes regex metacharacters so a name is matched literally', () => {
+    // A bare `A.C` would let `.` wildcard-match `AXC`; a single `\` is
+    // un-escaped by ledger back into a wildcard, so the escape is a double `\`.
+    expect(personAccountPatterns('Assets:Receivable', 'A.C')).toEqual([
+      'Assets:Receivable:A\\\\.C$',
+      'Assets:Receivable:A\\\\.C:',
+    ]);
+  });
+});
 
 describe('peopleFromBalance', () => {
   it('collects distinct names from both roots, ignoring other accounts', () => {

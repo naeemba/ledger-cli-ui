@@ -5,6 +5,7 @@ import {
   type PersonDebt,
   parseNet,
   peopleFromBalance,
+  personAccountPatterns,
 } from './parse';
 import { isSafeLedgerArg } from '@/features/transactions/entry/typeForms/fixBalancePreview';
 import { parseBalanceRows } from '@/lib/balance/parse';
@@ -31,8 +32,8 @@ const netForPerson = async (
     '--format',
     NET_FORMAT,
     '--',
-    `${RECEIVABLE_ROOT}:${person}`,
-    `${PAYABLE_ROOT}:${person}`,
+    ...personAccountPatterns(RECEIVABLE_ROOT, person),
+    ...personAccountPatterns(PAYABLE_ROOT, person),
   ]);
   return parseNet(person, stdout);
 };
