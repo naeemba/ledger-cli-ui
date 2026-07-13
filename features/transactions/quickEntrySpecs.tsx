@@ -358,7 +358,7 @@ const knownPeople = (accounts: string[]): string[] => {
   const people = new Set<string>();
   for (const account of accounts) {
     const match = account.match(
-      /^(?:Assets:Receivable|Liabilities:Payable):(.+)$/
+      /^(?:Assets:Receivable|Liabilities:Payable):([^:]+)$/
     );
     if (match) people.add(match[1]);
   }
