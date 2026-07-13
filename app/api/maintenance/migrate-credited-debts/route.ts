@@ -14,6 +14,10 @@ const log = createLogger('migrate-credited-debts');
  * rewritten journal parses, and rolls back every touched file on failure, so a
  * bad migration is fully reversible. We surface a rollback as a structured
  * `failed` result rather than an opaque 500.
+ *
+ * Returns a `manual` result (200) listing any legacy person accounts whose net
+ * spans multiple commodities: those have no single receivable/payable sign and
+ * must be resolved by hand before the migration can run.
  */
 export async function POST(): Promise<NextResponse> {
   const user = await requireUser();

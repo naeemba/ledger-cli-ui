@@ -4,7 +4,6 @@ import 'server-only';
 import { VALID_EXTS, GENERATED_PRICE_DB_NAME, PRICE_DB_NAME } from './layout';
 import { withUserLock } from './mutex';
 import { verifyJournalParseable } from './verify';
-import { parseBalanceRows } from '@/lib/balance/parse';
 import { journalRepository } from '@/lib/journal';
 import { pull, push, StorageConflictError } from '@/lib/storage';
 import { runLedgerForUser } from '@/utils/runLedgerForUser';
@@ -31,21 +30,51 @@ export const targetAccount = (account: string, netSign: number): string => {
 
 /**
  * Build the rename map from `ledger balance Assets:Credited` output formatted
- * `<account>|<signed-quantity>`. Each legacy account maps to its receivable or
- * payable target. Rows whose amount is empty (or the footer Total row) are
- * skipped. Ledger did the netting; this only reads the sign.
+ * `<account>|%(scrub(total))`. Each legacy account maps to its receivable or
+ * payable target, keyed by the sign of its net.
+ *
+ * `%(scrub(total))` (not `%(quantity(...))`) is used because `quantity()`
+ * aborts the whole `ledger` invocation on any account whose net spans more than
+ * one commodity — `Cannot convert a balance with multiple commodities to an
+ * amount` (ledger 3.4.1). Such an account has no single sign, so picking
+ * receivable vs payable would be a valuation guess; instead its rows arrive as a
+ * commodity amount on the `|` line followed by continuation lines (no `|`), and
+ * we collect it into `manual` for the caller to surface rather than migrate.
+ *
+ * Footer Total and non-legacy accounts are skipped. Ledger did the netting;
+ * this only reads the sign of a single-commodity net.
  */
-export const planRenames = (balanceOutput: string): Map<string, string> => {
+export const planRenames = (
+  balanceOutput: string
+): { renames: Map<string, string>; manual: string[] } => {
   const renames = new Map<string, string>();
-  for (const row of parseBalanceRows(balanceOutput)) {
-    if (row.account === 'Total' || !row.account.startsWith(`${LEGACY_ROOT}:`)) {
+  const manual: string[] = [];
+  let current: string | null = null;
+
+  for (const line of balanceOutput.split('\n')) {
+    if (!line.includes('|')) {
+      // Continuation line: a second commodity for the account on the line
+      // above. That account's net is multi-commodity — hand it off to `manual`.
+      if (current && line.trim() && !manual.includes(current)) {
+        renames.delete(current);
+        manual.push(current);
+      }
       continue;
     }
-    const sign = Number(row.amount.replace(/,/g, ''));
-    if (!Number.isFinite(sign)) continue;
-    renames.set(row.account, targetAccount(row.account, sign));
+    const [accountRaw, amountRaw] = line.split('|');
+    const account = accountRaw.trim();
+    const amount = (amountRaw ?? '').trim();
+    current = null;
+    if (!account || account === 'Total' || !amount) continue;
+    if (!account.startsWith(`${LEGACY_ROOT}:`)) continue;
+    current = account;
+    if (manual.includes(account)) continue;
+    // A single-commodity net: negative iff a minus sign appears before the
+    // number (ledger renders `$ -20.00` / `-20.00 EUR`). Zero renders as `0`.
+    const sign = amount.includes('-') ? -1 : 1;
+    renames.set(account, targetAccount(account, sign));
   }
-  return renames;
+  return { renames, manual };
 };
 
 const escapeRegExp = (value: string): string =>
@@ -80,6 +109,7 @@ export const rewriteAccounts = (
 
 export type MigrateResult =
   | { status: 'skipped' }
+  | { status: 'manual'; accounts: string[] }
   | { status: 'migrated'; renamed: string[]; occurrences: number };
 
 /**
@@ -93,6 +123,10 @@ export type MigrateResult =
  * snapshots every touched file, rewrites, verifies the result parses, and rolls
  * back on any failure before pushing. Idempotent — `skipped` once no
  * `Assets:Credited` account remains.
+ *
+ * Returns `manual` (touching nothing) if any legacy person account nets across
+ * more than one commodity: that net has no single sign, so routing it to
+ * receivable vs payable is a valuation decision the user must make by hand.
  */
 export const migrateCreditedToDebts = async (
   userId: string,
@@ -118,10 +152,17 @@ export const migrateCreditedToDebts = async (
       '--flat',
       '--no-total',
       '--format',
-      '%(account)|%(quantity(scrub(total)))\n',
+      // Raw `scrub(total)`, not `quantity(...)`: quantity() aborts the whole
+      // invocation on a multi-commodity net. planRenames reads the sign of the
+      // single-commodity nets and collects any multi-commodity ones as manual.
+      '%(account)|%(scrub(total))\n',
       LEGACY_ROOT,
     ]);
-    const renames = planRenames(balance);
+    const { renames, manual } = planRenames(balance);
+    // A person whose net spans multiple commodities has no single sign; surface
+    // it for manual resolution rather than guess receivable vs payable. Touch
+    // nothing so the user can fix those accounts and re-run cleanly.
+    if (manual.length > 0) return { status: 'manual', accounts: manual };
     if (renames.size === 0) return { status: 'skipped' };
 
     // Rewrite every journal file in the dir (main + includes), skipping the

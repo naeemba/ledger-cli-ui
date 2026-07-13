@@ -30,25 +30,45 @@ describe('targetAccount', () => {
 
 describe('planRenames', () => {
   it('maps each legacy account by the sign of its net', () => {
-    const map = planRenames(
+    const { renames, manual } = planRenames(
       [
-        'Assets:Credited:Alex|30',
-        'Assets:Credited:Bob|-30',
+        'Assets:Credited:Alex|$ 30.00',
+        'Assets:Credited:Bob|$ -30.00',
         'Assets:Credited:Zero|0',
-        'Assets:Checking|500', // ignored: not a legacy account
-        '|750', // ignored: footer Total row
+        'Assets:Checking|$ 500.00', // ignored: not a legacy account
+        '|$ 750.00', // ignored: footer Total row
       ].join('\n')
     );
-    expect(map.get('Assets:Credited:Alex')).toBe('Assets:Receivable:Alex');
-    expect(map.get('Assets:Credited:Bob')).toBe('Liabilities:Payable:Bob');
-    expect(map.get('Assets:Credited:Zero')).toBe('Assets:Receivable:Zero');
-    expect(map.has('Assets:Checking')).toBe(false);
-    expect(map.size).toBe(3);
+    expect(renames.get('Assets:Credited:Alex')).toBe('Assets:Receivable:Alex');
+    expect(renames.get('Assets:Credited:Bob')).toBe('Liabilities:Payable:Bob');
+    expect(renames.get('Assets:Credited:Zero')).toBe('Assets:Receivable:Zero');
+    expect(renames.has('Assets:Checking')).toBe(false);
+    expect(renames.size).toBe(3);
+    expect(manual).toEqual([]);
   });
 
   it('handles comma-grouped amounts', () => {
-    const map = planRenames('Assets:Credited:Big|-1,200.00\n');
-    expect(map.get('Assets:Credited:Big')).toBe('Liabilities:Payable:Big');
+    const { renames } = planRenames('Assets:Credited:Big|$ -1,200.00\n');
+    expect(renames.get('Assets:Credited:Big')).toBe('Liabilities:Payable:Big');
+  });
+
+  it('collects a multi-commodity net as manual and never renames it', () => {
+    // Ledger emits the second commodity on a continuation line (no `|`).
+    const { renames, manual } = planRenames(
+      [
+        'Assets:Credited:Alex|$ 30.00',
+        'Assets:Credited:Bob|$ 50.00',
+        '                   €30.00',
+        'Assets:Credited:Carol|$ 100.00',
+      ].join('\n')
+    );
+    expect(manual).toEqual(['Assets:Credited:Bob']);
+    expect(renames.has('Assets:Credited:Bob')).toBe(false);
+    expect(renames.get('Assets:Credited:Alex')).toBe('Assets:Receivable:Alex');
+    expect(renames.get('Assets:Credited:Carol')).toBe(
+      'Assets:Receivable:Carol'
+    );
+    expect(renames.size).toBe(2);
   });
 });
 
