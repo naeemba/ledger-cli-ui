@@ -113,3 +113,52 @@ describe('resolvePayee falls back to a sensible leaf/label', () => {
     );
   });
 });
+
+describe('debt spec compiles to the right accounts', () => {
+  const debt = specOf('debt');
+  const fields = (patch: Record<string, string>) => ({
+    ...debt.makeEmpty(ctx),
+    person: 'Alex',
+    amount: '50',
+    cashAccount: 'Assets:Checking',
+    ...patch,
+  });
+  const postingsOf = (patch: Record<string, string>) =>
+    debt.compile(fields(patch), ctx).toWire('create').postings;
+
+  it('owed to you: their receivable rises, your cash falls', () => {
+    expect(postingsOf({ direction: 'owed-to-you' })).toEqual([
+      { account: 'Assets:Receivable:Alex', amount: '50', currency: 'USD' },
+      { account: 'Assets:Checking', amount: '-50', currency: 'USD' },
+    ]);
+  });
+
+  it('you owe them: your cash rises, your payable falls', () => {
+    expect(postingsOf({ direction: 'you-owe' })).toEqual([
+      { account: 'Assets:Checking', amount: '50', currency: 'USD' },
+      { account: 'Liabilities:Payable:Alex', amount: '-50', currency: 'USD' },
+    ]);
+  });
+
+  it('sanitizes a name into a single account segment', () => {
+    expect(postingsOf({ person: 'Bob:  Smith' })[0].account).toBe(
+      'Assets:Receivable:Bob Smith'
+    );
+  });
+
+  it('validate rejects a missing name', () => {
+    expect(debt.validate(fields({ person: '  ' }))).toBe('Enter a name.');
+  });
+
+  it('validate rejects the cash account resolving to the person account', () => {
+    expect(
+      debt.validate(
+        fields({
+          direction: 'owed-to-you',
+          person: 'Alex',
+          cashAccount: 'Assets:Receivable:Alex',
+        })
+      )
+    ).toBe('The cash account must differ from the person.');
+  });
+});
