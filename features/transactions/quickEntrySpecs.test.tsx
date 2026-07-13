@@ -162,3 +162,51 @@ describe('debt spec compiles to the right accounts', () => {
     ).toBe('The cash account must differ from the person.');
   });
 });
+
+describe('settle-up reverses a debt back toward zero', () => {
+  const settle = specOf('settle');
+  const fields = (patch: Record<string, string>) => ({
+    ...settle.makeEmpty(ctx),
+    person: 'Alex',
+    amount: '50',
+    cashAccount: 'Assets:Checking',
+    ...patch,
+  });
+  const postingsOf = (patch: Record<string, string>) =>
+    settle.compile(fields(patch), ctx).toWire('create').postings;
+
+  it('they paid you back: your cash rises, their receivable falls', () => {
+    expect(postingsOf({ direction: 'they-paid-you' })).toEqual([
+      { account: 'Assets:Checking', amount: '50', currency: 'USD' },
+      { account: 'Assets:Receivable:Alex', amount: '-50', currency: 'USD' },
+    ]);
+  });
+
+  it('you paid them back: your payable rises toward zero, your cash falls', () => {
+    expect(postingsOf({ direction: 'you-paid-them' })).toEqual([
+      { account: 'Liabilities:Payable:Alex', amount: '50', currency: 'USD' },
+      { account: 'Assets:Checking', amount: '-50', currency: 'USD' },
+    ]);
+  });
+
+  it('names the payee for each direction', () => {
+    expect(settle.resolvePayee?.(fields({ direction: 'they-paid-you' }))).toBe(
+      'Alex paid you back'
+    );
+    expect(settle.resolvePayee?.(fields({ direction: 'you-paid-them' }))).toBe(
+      'Paid Alex back'
+    );
+  });
+
+  it('rejects the cash account resolving to the person account', () => {
+    expect(
+      settle.validate(
+        fields({
+          direction: 'they-paid-you',
+          person: 'Alex',
+          cashAccount: 'Assets:Receivable:Alex',
+        })
+      )
+    ).toBe('The cash account must differ from the person.');
+  });
+});

@@ -475,6 +475,129 @@ const debtSpec: QuickEntrySpec<DebtFields> = {
   },
 };
 
+// --- Settle up (pay down a debt) -------------------------------------------
+// The follow-up the debt account model was designed for: reduce an existing
+// Assets:Receivable:<Name> / Liabilities:Payable:<Name> balance. Settling moves
+// money the opposite way to creating the debt, so the two accounts are exactly
+// debtAccounts' pair swapped — still a transfer, still ledger's math. We do not
+// look up the outstanding balance in JS (that's a ledger query); over- or
+// under-settling is the user's call and ledger records whatever remains.
+type SettleDirection = 'they-paid-you' | 'you-paid-them';
+
+type SettleFields = HeaderFields & {
+  direction: SettleDirection;
+  person: string;
+  amount: string;
+  currency: string;
+  cashAccount: string;
+};
+
+const settleAccounts = (
+  person: string,
+  f: SettleFields
+): [to: string, from: string] =>
+  f.direction === 'they-paid-you'
+    ? [f.cashAccount, `${RECEIVABLE_ROOT}:${person}`]
+    : [`${PAYABLE_ROOT}:${person}`, f.cashAccount];
+
+const settleSpec: QuickEntrySpec<SettleFields> = {
+  kind: 'settle',
+  label: 'Settle up',
+  icon: '✅',
+  makeEmpty: (ctx) => ({
+    date: todayLocal(),
+    payee: '',
+    status: 'none',
+    note: '',
+    direction: 'they-paid-you',
+    person: '',
+    amount: '',
+    currency: ctx.defaultCurrency,
+    cashAccount: firstMoneyAccount(ctx.accounts),
+  }),
+  validate: (f) => {
+    const person = cleanPerson(f.person);
+    if (!person) return 'Enter a name.';
+    if (!isPositive(f.amount)) return 'Enter an amount.';
+    if (!f.cashAccount.trim()) return 'Pick an account.';
+    const [to, from] = settleAccounts(person, f);
+    if (from === to) return 'The cash account must differ from the person.';
+    return null;
+  },
+  resolvePayee: (f) =>
+    f.direction === 'they-paid-you'
+      ? `${cleanPerson(f.person)} paid you back`
+      : `Paid ${cleanPerson(f.person)} back`,
+  compile: (f, ctx) => {
+    const person = cleanPerson(f.person);
+    // Swap of debtAccounts: `to` gets +amount, `from` gets −amount.
+    // They paid you back: your cash rises, their receivable falls toward zero.
+    // You paid them back: your payable rises toward zero, your cash falls.
+    const [to, from] = settleAccounts(person, f);
+    const transferFields: TransferFields = {
+      date: f.date,
+      payee: f.payee,
+      status: f.status,
+      note: f.note,
+      uid: f.uid,
+      amount: f.amount,
+      currency: f.currency,
+      from,
+      to,
+      extraItems: [],
+    };
+    return transferAdapter.compile(transferFields, ctx);
+  },
+  Fields: ({ fields, update, accounts, defaultCurrency }) => {
+    const theyPaid = fields.direction === 'they-paid-you';
+    return (
+      <>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant={theyPaid ? 'default' : 'outline'}
+            onClick={() => update({ direction: 'they-paid-you' })}
+          >
+            They paid you back
+          </Button>
+          <Button
+            type="button"
+            variant={theyPaid ? 'outline' : 'default'}
+            onClick={() => update({ direction: 'you-paid-them' })}
+          >
+            You paid them back
+          </Button>
+        </div>
+
+        <Field label="Name">
+          <Combobox
+            value={fields.person}
+            onChange={(person) => update({ person })}
+            options={knownPeople(accounts)}
+            placeholder="e.g. Alex"
+          />
+        </Field>
+
+        <AmountRow
+          label="Amount"
+          amount={fields.amount}
+          currency={fields.currency || defaultCurrency}
+          onAmount={(amount) => update({ amount })}
+          onCurrency={(currency) => update({ currency })}
+        />
+
+        <AccountField
+          label={theyPaid ? 'Received into' : 'Paid from'}
+          role={['asset', 'liability']}
+          accounts={accounts}
+          value={fields.cashAccount}
+          onChange={(cashAccount) => update({ cashAccount })}
+        />
+      </>
+    );
+  },
+};
+
 // Order shown in the dropdown; expense is the primary split-button action.
 // Erased to a uniform field type at the boundary (like registry.ts does with
 // its adapters) so the engine can treat every spec identically — each spec is
@@ -485,5 +608,6 @@ export const QUICK_ENTRY_SPECS = [
   transferSpec,
   exchangeSpec,
   debtSpec,
+  settleSpec,
   fixBalanceSpec,
 ] as unknown as readonly QuickEntrySpec<HeaderFields>[];
