@@ -19,6 +19,16 @@ describe('peopleFromBalance', () => {
       ])
     ).toEqual(['Bob Smith']);
   });
+
+  it('collapses nested sub-accounts of one person into a single name', () => {
+    expect(
+      peopleFromBalance([
+        { account: 'Assets:Receivable:Bob:Car', amount: '$50' },
+        { account: 'Assets:Receivable:Bob:Rent', amount: '$44' },
+        { account: 'Liabilities:Payable:Bob:Loan', amount: '$-10' },
+      ])
+    ).toEqual(['Bob']);
+  });
 });
 
 describe('parseNet reads the final running-total line', () => {

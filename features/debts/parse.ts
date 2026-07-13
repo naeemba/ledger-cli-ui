@@ -13,7 +13,10 @@ export type PersonDebt = {
   direction: 'owes-you' | 'you-owe';
 };
 
-const PERSON_ACCOUNT = /^(?:Assets:Receivable|Liabilities:Payable):(.+)$/;
+// Capture only the first account segment after the root, so nested sub-accounts
+// (e.g. Assets:Receivable:Bob:Car and :Bob:Rent) collapse into one person "Bob".
+// A prefix register arg then nets all of that person's sub-accounts together.
+const PERSON_ACCOUNT = /^(?:Assets:Receivable|Liabilities:Payable):([^:]+)/;
 
 /** Distinct person names holding any receivable/payable account. */
 export const peopleFromBalance = (rows: BalanceRow[]): string[] => {
