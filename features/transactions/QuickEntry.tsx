@@ -162,7 +162,10 @@ function RepeatTemplate({
         onDone();
         router.refresh();
       } else {
-        setError(result.formError ?? 'Could not save.');
+        const fieldError = result.fieldErrors
+          ? Object.values(result.fieldErrors).flat()[0]
+          : undefined;
+        setError(result.formError ?? fieldError ?? 'Could not save.');
       }
     });
 
