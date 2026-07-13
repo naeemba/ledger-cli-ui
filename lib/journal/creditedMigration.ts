@@ -71,7 +71,10 @@ export const planRenames = (
     if (manual.includes(account)) continue;
     // A single-commodity net: negative iff a minus sign appears before the
     // number (ledger renders `$ -20.00` / `-20.00 EUR`). Zero renders as `0`.
-    const sign = amount.includes('-') ? -1 : 1;
+    // Strip any quoted commodity name first — `"AK-47"` / `"T-BILL"` carry a
+    // hyphen that is not a sign, and a positive net of one (`10 "AK-47"`) would
+    // otherwise read as negative and route to the wrong account.
+    const sign = amount.replace(/"[^"]*"/g, '').includes('-') ? -1 : 1;
     renames.set(account, targetAccount(account, sign));
   }
   return { renames, manual };

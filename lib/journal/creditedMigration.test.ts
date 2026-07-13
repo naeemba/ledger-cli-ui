@@ -52,6 +52,19 @@ describe('planRenames', () => {
     expect(renames.get('Assets:Credited:Big')).toBe('Liabilities:Payable:Big');
   });
 
+  it('reads the sign from the number, not a hyphen in a quoted commodity', () => {
+    // A positive net of a hyphenated commodity renders `10 "AK-47"`; the
+    // hyphen is part of the name, not a sign, so it must route to receivable.
+    const { renames } = planRenames(
+      [
+        'Assets:Credited:Gun|10 "AK-47"',
+        'Assets:Credited:Owe|-3 "T-BILL"',
+      ].join('\n')
+    );
+    expect(renames.get('Assets:Credited:Gun')).toBe('Assets:Receivable:Gun');
+    expect(renames.get('Assets:Credited:Owe')).toBe('Liabilities:Payable:Owe');
+  });
+
   it('collects a multi-commodity net as manual and never renames it', () => {
     // Ledger emits the second commodity on a continuation line (no `|`).
     const { renames, manual } = planRenames(
