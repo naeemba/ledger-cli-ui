@@ -2,6 +2,7 @@
 
 import React from 'react';
 import AmountInput from './AmountInput';
+import type { DraftState } from './entry/draftReducer';
 import {
   AccountField,
   CurrencyCombobox,
@@ -21,6 +22,8 @@ import {
 } from './entry/types/fixBalance';
 import { incomeAdapter, type IncomeFields } from './entry/types/income';
 import { transferAdapter, type TransferFields } from './entry/types/transfer';
+import Combobox from '@/components/Combobox';
+import { Button } from '@/components/ui/button';
 
 export type QuickEntryContext = { accounts: string[]; defaultCurrency: string };
 
@@ -30,16 +33,16 @@ type FieldsProps<F> = {
 } & QuickEntryContext;
 
 /**
- * A single quick-entry form: how to seed it, validate it, name it, and render
- * its handful of inputs. The heavy lifting — turning these simple fields into a
- * correctly balanced ledger draft — is delegated to the shared `adapter`, so
- * this file never does accounting math.
+ * A single quick-entry form: how to seed it, validate it, name it, render its
+ * handful of inputs, and compile it to a ledger draft. `compile` delegates to a
+ * shared type adapter, so this file never does accounting math — it only builds
+ * the simple fields and hands them off.
  */
 export type QuickEntrySpec<F extends HeaderFields> = {
   kind: string;
   label: string;
   icon: string;
-  adapter: TransactionTypeAdapter<F>;
+  compile: (fields: F, ctx: TypeContext) => DraftState;
   makeEmpty: (ctx: QuickEntryContext) => F;
   validate: (fields: F) => string | null;
   // Fallback payee when the user leaves it blank (the journal requires one).
@@ -96,7 +99,7 @@ const expenseSpec: QuickEntrySpec<ExpenseFields> = {
   kind: 'expense',
   label: 'Expense',
   icon: '🛒',
-  adapter: expenseAdapter,
+  compile: expenseAdapter.compile,
   makeEmpty: (ctx) => ({
     ...seed(expenseAdapter, ctx),
     paidFrom: firstMoneyAccount(ctx.accounts),
@@ -141,7 +144,7 @@ const incomeSpec: QuickEntrySpec<IncomeFields> = {
   kind: 'income',
   label: 'Income',
   icon: '💰',
-  adapter: incomeAdapter,
+  compile: incomeAdapter.compile,
   makeEmpty: (ctx) => ({
     ...seed(incomeAdapter, ctx),
     receivedInto: firstMoneyAccount(ctx.accounts),
@@ -186,7 +189,7 @@ const transferSpec: QuickEntrySpec<TransferFields> = {
   kind: 'transfer',
   label: 'Transfer',
   icon: '🔁',
-  adapter: transferAdapter,
+  compile: transferAdapter.compile,
   makeEmpty: (ctx) => ({
     ...seed(transferAdapter, ctx),
     from: firstMoneyAccount(ctx.accounts),
@@ -233,7 +236,7 @@ const exchangeSpec: QuickEntrySpec<ExchangeFields> = {
   kind: 'exchange',
   label: 'Exchange',
   icon: '💱',
-  adapter: exchangeAdapter,
+  compile: exchangeAdapter.compile,
   // Seed only the paid-from side; leave received-into blank so the two account
   // pickers don't default to the same account (validate then guards equality).
   makeEmpty: (ctx) => ({
@@ -293,7 +296,7 @@ const fixBalanceSpec: QuickEntrySpec<FixBalanceFields> = {
   kind: 'fix-balance',
   label: 'Fix balance',
   icon: '⚖️',
-  adapter: fixBalanceAdapter,
+  compile: fixBalanceAdapter.compile,
   makeEmpty: (ctx) => ({
     ...seed(fixBalanceAdapter, ctx),
     account: firstMoneyAccount(ctx.accounts),
@@ -325,6 +328,143 @@ const fixBalanceSpec: QuickEntrySpec<FixBalanceFields> = {
   ),
 };
 
+// --- Debt (money owed) -----------------------------------------------------
+// Not a registry adapter: a debt is mechanically a transfer, so it compiles via
+// transferAdapter. The value it adds is translation — the user names a person
+// and the form builds the right account (Assets:Receivable:<Name> for money
+// owed to them, Liabilities:Payable:<Name> for money they owe), so a per-person
+// balance is a single ledger query over `/:<Name>$/`.
+const RECEIVABLE_ROOT = 'Assets:Receivable';
+const PAYABLE_ROOT = 'Liabilities:Payable';
+
+type DebtDirection = 'owed-to-you' | 'you-owe';
+
+type DebtFields = HeaderFields & {
+  direction: DebtDirection;
+  person: string;
+  amount: string;
+  currency: string;
+  cashAccount: string;
+};
+
+// A person name becomes a single account segment: colons would fake a
+// sub-hierarchy and doubled spaces are rejected by the account schema.
+const cleanPerson = (raw: string) =>
+  raw.replace(/:/g, ' ').replace(/\s+/g, ' ').trim();
+
+// Existing people, parsed from the receivable/payable account leaves, so the
+// same person reuses the same account instead of spawning a near-duplicate.
+const knownPeople = (accounts: string[]): string[] => {
+  const people = new Set<string>();
+  for (const account of accounts) {
+    const match = account.match(
+      /^(?:Assets:Receivable|Liabilities:Payable):(.+)$/
+    );
+    if (match) people.add(match[1]);
+  }
+  return [...people];
+};
+
+const debtSpec: QuickEntrySpec<DebtFields> = {
+  kind: 'debt',
+  label: 'Debt',
+  icon: '🤝',
+  makeEmpty: (ctx) => ({
+    date: todayLocal(),
+    payee: '',
+    status: 'none',
+    note: '',
+    direction: 'owed-to-you',
+    person: '',
+    amount: '',
+    currency: ctx.defaultCurrency,
+    cashAccount: firstMoneyAccount(ctx.accounts),
+  }),
+  validate: (f) =>
+    !cleanPerson(f.person)
+      ? 'Enter a name.'
+      : !isPositive(f.amount)
+        ? 'Enter an amount.'
+        : !f.cashAccount.trim()
+          ? 'Pick an account.'
+          : null,
+  resolvePayee: (f) =>
+    f.direction === 'owed-to-you'
+      ? `Lent to ${cleanPerson(f.person)}`
+      : `Borrowed from ${cleanPerson(f.person)}`,
+  compile: (f, ctx) => {
+    const person = cleanPerson(f.person);
+    // `to` gets +amount, `from` gets −amount (transferAdapter convention).
+    // Owed to you: their receivable rises, your cash falls.
+    // You owe them: your cash rises, your payable falls (a liability you owe).
+    const [to, from] =
+      f.direction === 'owed-to-you'
+        ? [`${RECEIVABLE_ROOT}:${person}`, f.cashAccount]
+        : [f.cashAccount, `${PAYABLE_ROOT}:${person}`];
+    const transferFields: TransferFields = {
+      date: f.date,
+      payee: f.payee,
+      status: f.status,
+      note: f.note,
+      uid: f.uid,
+      amount: f.amount,
+      currency: f.currency,
+      from,
+      to,
+      extraItems: [],
+    };
+    return transferAdapter.compile(transferFields, ctx);
+  },
+  Fields: ({ fields, update, accounts, defaultCurrency }) => {
+    const owedToYou = fields.direction === 'owed-to-you';
+    return (
+      <>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant={owedToYou ? 'default' : 'outline'}
+            onClick={() => update({ direction: 'owed-to-you' })}
+          >
+            They owe you
+          </Button>
+          <Button
+            type="button"
+            variant={owedToYou ? 'outline' : 'default'}
+            onClick={() => update({ direction: 'you-owe' })}
+          >
+            You owe them
+          </Button>
+        </div>
+
+        <Field label="Name">
+          <Combobox
+            value={fields.person}
+            onChange={(person) => update({ person })}
+            options={knownPeople(accounts)}
+            placeholder="e.g. Alex"
+          />
+        </Field>
+
+        <AmountRow
+          label="Amount"
+          amount={fields.amount}
+          currency={fields.currency || defaultCurrency}
+          onAmount={(amount) => update({ amount })}
+          onCurrency={(currency) => update({ currency })}
+        />
+
+        <AccountField
+          label={owedToYou ? 'Paid from' : 'Received into'}
+          role={['asset', 'liability']}
+          accounts={accounts}
+          value={fields.cashAccount}
+          onChange={(cashAccount) => update({ cashAccount })}
+        />
+      </>
+    );
+  },
+};
+
 // Order shown in the dropdown; expense is the primary split-button action.
 // Erased to a uniform field type at the boundary (like registry.ts does with
 // its adapters) so the engine can treat every spec identically — each spec is
@@ -334,5 +474,6 @@ export const QUICK_ENTRY_SPECS = [
   incomeSpec,
   transferSpec,
   exchangeSpec,
+  debtSpec,
   fixBalanceSpec,
 ] as unknown as readonly QuickEntrySpec<HeaderFields>[];
