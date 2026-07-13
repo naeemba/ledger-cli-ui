@@ -3,6 +3,7 @@
 import React from 'react';
 import AmountInput from './AmountInput';
 import type { DraftState } from './entry/draftReducer';
+import { ExtraItemsField } from './entry/typeForms/ExtraItemsField';
 import {
   AccountField,
   CurrencyCombobox,
@@ -129,6 +130,15 @@ const expenseSpec: QuickEntrySpec<ExpenseFields> = {
         value={fields.spentOn}
         onChange={(spentOn) => update({ spentOn })}
       />
+      <ExtraItemsField
+        sectionLabel="Split into another category"
+        addLabel="another category"
+        items={fields.extraItems}
+        accounts={accounts}
+        defaultCurrency={fields.currency}
+        baseCount={2}
+        onChange={(extraItems) => update({ extraItems })}
+      />
       <AccountField
         label="Paid from"
         role={['asset', 'liability']}
@@ -180,6 +190,15 @@ const incomeSpec: QuickEntrySpec<IncomeFields> = {
         accounts={accounts}
         value={fields.from}
         onChange={(from) => update({ from })}
+      />
+      <ExtraItemsField
+        sectionLabel="Deductions"
+        addLabel="a deduction"
+        items={fields.extraItems}
+        accounts={accounts}
+        defaultCurrency={fields.currency}
+        baseCount={2}
+        onChange={(extraItems) => update({ extraItems })}
       />
     </>
   ),

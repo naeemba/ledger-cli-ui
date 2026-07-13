@@ -114,6 +114,64 @@ describe('resolvePayee falls back to a sensible leaf/label', () => {
   });
 });
 
+describe('splits surface extra category lines to the adapter', () => {
+  it('expense: each split is its own posting, paid-from balances the rest', () => {
+    const spec = specOf('expense');
+    const fields = {
+      ...spec.makeEmpty(ctx),
+      amount: '30',
+      spentOn: 'Expenses:Groceries',
+      paidFrom: 'Assets:Checking',
+      extraItems: [
+        { account: 'Expenses:Household', amount: '20', currency: 'USD' },
+      ],
+    };
+    const draft = spec.compile(fields, ctx);
+    expect(draft.toWire('create').postings).toEqual([
+      { account: 'Expenses:Groceries', amount: '30', currency: 'USD' },
+      { account: 'Expenses:Household', amount: '20', currency: 'USD' },
+      // Amount-less: ledger fills the −50 residual, never JS.
+      { account: 'Assets:Checking', amount: '', currency: '' },
+    ]);
+  });
+
+  it('income: deductions post alongside the source, received-into balances', () => {
+    const spec = specOf('income');
+    const fields = {
+      ...spec.makeEmpty(ctx),
+      amount: '1000',
+      receivedInto: 'Assets:Checking',
+      from: 'Income:Salary',
+      extraItems: [{ account: 'Expenses:Tax', amount: '200', currency: 'USD' }],
+    };
+    const draft = spec.compile(fields, ctx);
+    expect(draft.toWire('create').postings).toEqual([
+      { account: 'Assets:Checking', amount: '', currency: '' },
+      { account: 'Income:Salary', amount: '-1000', currency: 'USD' },
+      { account: 'Expenses:Tax', amount: '200', currency: 'USD' },
+    ]);
+  });
+
+  it('drops half-filled split rows (an account or amount alone is not a posting)', () => {
+    const spec = specOf('expense');
+    const fields = {
+      ...spec.makeEmpty(ctx),
+      amount: '30',
+      spentOn: 'Expenses:Groceries',
+      paidFrom: 'Assets:Checking',
+      extraItems: [
+        { account: 'Expenses:Household', amount: '', currency: 'USD' },
+      ],
+    };
+    const draft = spec.compile(fields, ctx);
+    // No real extra → plain two-posting expense with an explicit −30.
+    expect(draft.toWire('create').postings).toEqual([
+      { account: 'Expenses:Groceries', amount: '30', currency: 'USD' },
+      { account: 'Assets:Checking', amount: '-30', currency: 'USD' },
+    ]);
+  });
+});
+
 describe('debt spec compiles to the right accounts', () => {
   const debt = specOf('debt');
   const fields = (patch: Record<string, string>) => ({
