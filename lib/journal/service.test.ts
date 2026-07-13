@@ -308,6 +308,39 @@ describe('JournalService.deleteTransaction', () => {
       '2024-09-02 coffee\n    Expenses:Coffee  USD 4\n    Assets:Cash\n'
     );
   });
+
+  // Guards the undo path (undoTransactionAction): the fingerprint resolved via
+  // findTransaction(uid) must live in the same space the delete stale-guard
+  // compares against, so undo actually removes the row. A getFingerprint-style
+  // regression (whole-journal fingerprint) would make this delete return stale.
+  it('deletes a just-added row using the fingerprint from findTransaction', async () => {
+    const userId = 'test-user';
+    await fs.mkdir(getJournalDir(userId), { recursive: true });
+
+    const added = await service.addTransaction(userId, {
+      date: '2024-09-01',
+      payee: 'lunch',
+      status: 'none',
+      postings: [
+        { account: 'Expenses:Food', amount: '10', currency: 'USD' },
+        { account: 'Assets:Cash', amount: '-10', currency: 'USD' },
+      ],
+    });
+    expect(added.ok).toBe(true);
+    const uid = added.ok ? added.uid : '';
+
+    const found = await service.findTransaction(userId, uid);
+    expect(found?.fingerprint).toBeTruthy();
+
+    const result = await service.deleteTransaction(userId, {
+      kind: 'delete',
+      uid,
+      expectedFingerprint: found!.fingerprint!,
+    });
+    expect(result.ok).toBe(true);
+
+    expect(await service.findTransaction(userId, uid)).toBeNull();
+  });
 });
 
 describe('JournalService.backfillUids', () => {
