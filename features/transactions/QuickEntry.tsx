@@ -2,7 +2,8 @@
 
 import { ChevronDownIcon, PlusIcon } from 'lucide-react';
 import { useState, useTransition } from 'react';
-import { createTransactionAction } from './actions';
+import { toast } from 'sonner';
+import { createTransactionAction, undoTransactionAction } from './actions';
 import { serializeDraftJson } from './entry/draftReducer';
 import { Field } from './entry/typeForms/fields';
 import type { HeaderFields } from './entry/types/adapter';
@@ -26,6 +27,36 @@ import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 
 type Props = { accounts: string[]; defaultCurrency: string };
+
+/**
+ * Confirm a save with a toast that carries an Undo. The toast outlives the
+ * dialog (Toaster is mounted in the app shell), so Undo runs after the form is
+ * gone — it only needs the new uid and a way to refresh the current view.
+ */
+function notifySaved(
+  label: string,
+  payee: string,
+  uid: string | undefined,
+  refresh: () => void
+) {
+  toast.success(`${label} saved`, {
+    description: payee,
+    action: uid
+      ? {
+          label: 'Undo',
+          onClick: async () => {
+            const result = await undoTransactionAction(uid);
+            if (result.ok) {
+              toast.success('Entry removed');
+              refresh();
+            } else {
+              toast.error(result.message);
+            }
+          },
+        }
+      : undefined,
+  });
+}
 
 /**
  * The dialog body for one entry type. Owns the field state and the save path
@@ -61,6 +92,7 @@ function QuickEntryContent({
       if (result.ok) {
         onDone();
         router.refresh();
+        notifySaved(spec.label, payee, result.uid, () => router.refresh());
       } else {
         const fieldError = result.fieldErrors
           ? Object.values(result.fieldErrors).flat()[0]
