@@ -114,6 +114,37 @@ describe('resolvePayee falls back to a sensible leaf/label', () => {
   });
 });
 
+describe('refund puts money back into an account and credits a category', () => {
+  const spec = specOf('refund');
+
+  it('compiles to money-in on the account and the category negated', () => {
+    const fields = {
+      ...spec.makeEmpty(ctx),
+      amount: '20',
+      receivedInto: 'Assets:Checking',
+      from: 'Expenses:Groceries',
+    };
+    expect(spec.compile(fields, ctx).toWire('create').postings).toEqual([
+      { account: 'Assets:Checking', amount: '20', currency: 'USD' },
+      { account: 'Expenses:Groceries', amount: '-20', currency: 'USD' },
+    ]);
+  });
+
+  it('names the payee after the refunded category', () => {
+    const fields = { ...spec.makeEmpty(ctx), from: 'Expenses:Groceries' };
+    expect(spec.resolvePayee?.(fields)).toBe('Refund: Groceries');
+  });
+
+  it('rejects a missing category', () => {
+    const fields = {
+      ...spec.makeEmpty(ctx),
+      amount: '20',
+      receivedInto: 'Assets:Checking',
+    };
+    expect(spec.validate(fields)).toBe('Pick the category being refunded.');
+  });
+});
+
 describe('splits surface extra category lines to the adapter', () => {
   it('expense: each split is its own posting, paid-from balances the rest', () => {
     const spec = specOf('expense');

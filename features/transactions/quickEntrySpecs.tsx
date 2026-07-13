@@ -204,6 +204,56 @@ const incomeSpec: QuickEntrySpec<IncomeFields> = {
   ),
 };
 
+// A refund is money coming back into an account and crediting a category back
+// down (a returned purchase). That is exactly an income entry whose "source" is
+// an expense account rather than an income one, so it compiles through
+// incomeAdapter unchanged — money into `receivedInto`, the same amount negated
+// on the expense category. No new adapter, no negative-amount input to fat-finger.
+const refundSpec: QuickEntrySpec<IncomeFields> = {
+  kind: 'refund',
+  label: 'Refund',
+  icon: '↩️',
+  compile: incomeAdapter.compile,
+  makeEmpty: (ctx) => ({
+    ...seed(incomeAdapter, ctx),
+    receivedInto: firstMoneyAccount(ctx.accounts),
+  }),
+  validate: (f) =>
+    !isPositive(f.amount)
+      ? 'Enter an amount.'
+      : !f.receivedInto.trim()
+        ? 'Pick where the money went back.'
+        : !f.from.trim()
+          ? 'Pick the category being refunded.'
+          : null,
+  resolvePayee: (f) => `Refund: ${leafOf(f.from)}`,
+  Fields: ({ fields, update, accounts }) => (
+    <>
+      <AmountRow
+        label="Amount"
+        amount={fields.amount}
+        currency={fields.currency}
+        onAmount={(amount) => update({ amount })}
+        onCurrency={(currency) => update({ currency })}
+      />
+      <AccountField
+        label="Refunded to"
+        role={['asset', 'liability']}
+        accounts={accounts}
+        value={fields.receivedInto}
+        onChange={(receivedInto) => update({ receivedInto })}
+      />
+      <AccountField
+        label="Category"
+        role="expense"
+        accounts={accounts}
+        value={fields.from}
+        onChange={(from) => update({ from })}
+      />
+    </>
+  ),
+};
+
 const transferSpec: QuickEntrySpec<TransferFields> = {
   kind: 'transfer',
   label: 'Transfer',
@@ -501,6 +551,7 @@ const debtSpec: QuickEntrySpec<DebtFields> = {
 export const QUICK_ENTRY_SPECS = [
   expenseSpec,
   incomeSpec,
+  refundSpec,
   transferSpec,
   exchangeSpec,
   debtSpec,
