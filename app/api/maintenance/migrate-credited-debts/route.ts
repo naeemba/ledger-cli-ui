@@ -22,8 +22,10 @@ const log = createLogger('migrate-credited-debts');
 export async function POST(): Promise<NextResponse> {
   const user = await requireUser();
   try {
-    const result = await migrateCreditedToDebts(user.id);
-    return NextResponse.json({ result });
+    const { status, ...details } = await migrateCreditedToDebts(user.id);
+    // Keep `result` a flat string (like the relocate-definitions sibling and
+    // the `failed` error branch); spread any extras alongside it.
+    return NextResponse.json({ result: status, ...details });
   } catch (error) {
     log.error({ err: error }, 'credited debts migration failed');
     return NextResponse.json(
