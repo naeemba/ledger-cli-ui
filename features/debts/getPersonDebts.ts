@@ -13,7 +13,7 @@ import runLedger from '@/utils/runLedger';
 // quantity keeps the sign (direction); the third column is the absolute
 // magnitude so the view can show "owes you $30" rather than "$-30".
 const NET_FORMAT =
-  '%(quantity(scrub(total)))|%(commodity(scrub(total)))|%(scrub(abs(total)))\n';
+  '%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))|%(scrub(abs(display_total)))\n';
 
 const netForPerson = async (
   base: string,
