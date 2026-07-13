@@ -51,7 +51,7 @@ export type QuickEntrySpec<F extends HeaderFields> = {
   Fields: (props: FieldsProps<F>) => React.JSX.Element;
 };
 
-const todayLocal = () => new Date().toLocaleDateString('en-CA');
+export const todayLocal = () => new Date().toLocaleDateString('en-CA');
 const leafOf = (account: string) => account.split(':').pop()?.trim() ?? '';
 const firstMoneyAccount = (accounts: string[]) =>
   optionsForRoles(accounts, ['asset', 'liability'])[0] ?? '';
