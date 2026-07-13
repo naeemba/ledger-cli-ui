@@ -45,5 +45,5 @@ export async function createTransactionAction(
       formError: result.formError,
     };
   }
-  return { ok: true };
+  return { ok: true, uid: result.uid };
 }

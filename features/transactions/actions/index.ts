@@ -6,3 +6,4 @@ export {
   type DeleteTransactionResult,
 } from './deleteTransaction';
 export { loadTransactionPageAction } from './loadTransactionPage';
+export { undoTransactionAction } from './undoTransaction';
