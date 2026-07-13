@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDownIcon, PlusIcon } from 'lucide-react';
+import { ChevronDownIcon, PlusIcon, RepeatIcon } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { createTransactionAction } from './actions';
 import { serializeDraftJson } from './entry/draftReducer';
@@ -19,13 +19,22 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { Template } from '@/db/schema/template';
+import { Transaction } from '@/lib/transactions/model';
 import { useRouter } from 'next/navigation';
 
-type Props = { accounts: string[]; defaultCurrency: string };
+type Props = {
+  accounts: string[];
+  defaultCurrency: string;
+  templates?: Template[];
+};
+
+const todayLocal = () => new Date().toLocaleDateString('en-CA');
 
 /**
  * The dialog body for one entry type. Owns the field state and the save path
@@ -121,12 +130,78 @@ function QuickEntryContent({
 }
 
 /**
+ * One-click repeat of a saved template with today's date — so a daily recurring
+ * entry isn't retyped. Reuses the same compile → create action path as the type
+ * forms (via Transaction.fromTemplate), so ledger validates the posted result.
+ */
+function RepeatTemplate({
+  templates,
+  defaultCurrency,
+  onDone,
+}: {
+  templates: Template[];
+  defaultCurrency: string;
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string>();
+
+  const repeat = (template: Template) =>
+    startTransition(async () => {
+      const draft = Transaction.fromTemplate(
+        template.draft,
+        defaultCurrency
+      ).withField('date', todayLocal());
+      const formData = new FormData();
+      formData.set('draft', serializeDraftJson(draft, 'create'));
+      const result = await createTransactionAction(null, formData);
+      if (result.ok) {
+        onDone();
+        router.refresh();
+      } else {
+        setError(result.formError ?? 'Could not save.');
+      }
+    });
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Repeat a template</DialogTitle>
+      </DialogHeader>
+      <div className="flex flex-col gap-2">
+        {templates.map((template) => (
+          <Button
+            key={template.id}
+            variant="outline"
+            disabled={pending}
+            className="h-auto justify-between py-2 text-left"
+            onClick={() => repeat(template)}
+          >
+            <span className="font-medium">{template.name}</span>
+            <span className="text-muted-foreground">
+              {template.draft.payee}
+            </span>
+          </Button>
+        ))}
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+    </DialogContent>
+  );
+}
+
+/**
  * Split button in the app header: the primary click logs an expense; the caret
  * opens a menu for the other entry types. Mounted globally so it's reachable
  * from every page.
  */
-export default function QuickEntry({ accounts, defaultCurrency }: Props) {
+export default function QuickEntry({
+  accounts,
+  defaultCurrency,
+  templates = [],
+}: Props) {
   const [active, setActive] = useState<string | null>(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
   const [primary, ...rest] = QUICK_ENTRY_SPECS;
   const spec = QUICK_ENTRY_SPECS.find((s) => s.kind === active) ?? null;
 
@@ -162,6 +237,15 @@ export default function QuickEntry({ accounts, defaultCurrency }: Props) {
                 {s.label}
               </DropdownMenuItem>
             ))}
+            {templates.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setTemplateOpen(true)}>
+                  <RepeatIcon />
+                  Repeat a template
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -179,6 +263,16 @@ export default function QuickEntry({ accounts, defaultCurrency }: Props) {
             accounts={accounts}
             defaultCurrency={defaultCurrency}
             onDone={() => setActive(null)}
+          />
+        )}
+      </Dialog>
+
+      <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
+        {templateOpen && (
+          <RepeatTemplate
+            templates={templates}
+            defaultCurrency={defaultCurrency}
+            onDone={() => setTemplateOpen(false)}
           />
         )}
       </Dialog>
