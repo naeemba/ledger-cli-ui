@@ -1,9 +1,9 @@
 'use client';
 
-import { XIcon } from 'lucide-react';
 import React from 'react';
 import AmountInput from './AmountInput';
 import type { DraftState } from './entry/draftReducer';
+import { ExtraItemsField } from './entry/typeForms/ExtraItemsField';
 import {
   AccountField,
   CurrencyCombobox,
@@ -17,7 +17,6 @@ import type {
 } from './entry/types/adapter';
 import { exchangeAdapter, type ExchangeFields } from './entry/types/exchange';
 import { expenseAdapter, type ExpenseFields } from './entry/types/expense';
-import type { ExtraItem } from './entry/types/extraItems';
 import {
   fixBalanceAdapter,
   type FixBalanceFields,
@@ -97,74 +96,6 @@ const AmountRow = ({
   </Field>
 );
 
-// Optional extra category lines on an expense/income. Collapsed to a single
-// "add line" affordance by default so the common one-category entry stays
-// clean; each added row is a category + amount. The adapters already turn these
-// into balancing postings, so ledger — not this UI — does the summing.
-const SplitRows = ({
-  label,
-  addLabel,
-  items,
-  currency,
-  accounts,
-  onChange,
-}: {
-  label: string;
-  addLabel: string;
-  items: ExtraItem[];
-  currency: string;
-  accounts: string[];
-  onChange: (items: ExtraItem[]) => void;
-}) => {
-  const setItem = (index: number, patch: Partial<ExtraItem>) =>
-    onChange(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
-  const add = () => onChange([...items, { account: '', amount: '', currency }]);
-  const remove = (index: number) =>
-    onChange(items.filter((_, i) => i !== index));
-
-  return (
-    <>
-      {items.map((item, index) => (
-        <div key={index} className="flex items-end gap-2">
-          <div className="flex-1">
-            <AccountField
-              label={label}
-              role="expense"
-              accounts={accounts}
-              value={item.account}
-              onChange={(account) => setItem(index, { account })}
-            />
-          </div>
-          <AmountInput
-            value={item.amount}
-            onChange={(amount) => setItem(index, { amount })}
-            placeholder="0.00"
-            className="w-28 text-right tabular-nums"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Remove line"
-            onClick={() => remove(index)}
-          >
-            <XIcon />
-          </Button>
-        </div>
-      ))}
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="self-start px-1 text-muted-foreground"
-        onClick={add}
-      >
-        + {addLabel}
-      </Button>
-    </>
-  );
-};
-
 const expenseSpec: QuickEntrySpec<ExpenseFields> = {
   kind: 'expense',
   label: 'Expense',
@@ -199,12 +130,13 @@ const expenseSpec: QuickEntrySpec<ExpenseFields> = {
         value={fields.spentOn}
         onChange={(spentOn) => update({ spentOn })}
       />
-      <SplitRows
-        label="Category"
-        addLabel="Split into another category"
+      <ExtraItemsField
+        sectionLabel="Split into another category"
+        addLabel="another category"
         items={fields.extraItems}
-        currency={fields.currency}
         accounts={accounts}
+        defaultCurrency={fields.currency}
+        baseCount={2}
         onChange={(extraItems) => update({ extraItems })}
       />
       <AccountField
@@ -259,12 +191,13 @@ const incomeSpec: QuickEntrySpec<IncomeFields> = {
         value={fields.from}
         onChange={(from) => update({ from })}
       />
-      <SplitRows
-        label="Deduction"
-        addLabel="Add a deduction"
+      <ExtraItemsField
+        sectionLabel="Deductions"
+        addLabel="a deduction"
         items={fields.extraItems}
-        currency={fields.currency}
         accounts={accounts}
+        defaultCurrency={fields.currency}
+        baseCount={2}
         onChange={(extraItems) => update({ extraItems })}
       />
     </>
