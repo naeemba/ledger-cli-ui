@@ -15,12 +15,19 @@ export function ExtraItemsField({
   defaultCurrency,
   baseCount,
   onChange,
+  sectionLabel = 'Extra items (fees, tips…)',
+  addLabel = 'Add item',
 }: {
   items: ExtraItem[];
   accounts: string[];
   defaultCurrency: string;
   baseCount: number;
   onChange: (items: ExtraItem[]) => void;
+  // Quick-entry reuses this component with its own copy — an expense splits into
+  // "another category", income into "a deduction" — but the row logic (stable
+  // ids, posting cap, per-row currency) stays shared instead of forked.
+  sectionLabel?: string;
+  addLabel?: string;
 }): React.JSX.Element {
   // `compile` emits one balancing posting per distinct residual currency, so the
   // compiled transaction can exceed the row count when extras span several
@@ -72,7 +79,7 @@ export function ExtraItemsField({
 
   return (
     <section className="flex flex-col gap-3">
-      <SectionLabel>Extra items (fees, tips…)</SectionLabel>
+      <SectionLabel>{sectionLabel}</SectionLabel>
 
       {items.map((item, index) => (
         <div
@@ -119,7 +126,7 @@ export function ExtraItemsField({
           disabled={atCap}
           onClick={addItem}
         >
-          + Add item
+          + {addLabel}
         </Button>
         {atCap && (
           <span className="text-xs text-muted-foreground">
