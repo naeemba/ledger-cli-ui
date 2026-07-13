@@ -6,7 +6,11 @@ import { createTransactionAction } from './actions';
 import { serializeDraftJson } from './entry/draftReducer';
 import { Field } from './entry/typeForms/fields';
 import type { HeaderFields } from './entry/types/adapter';
-import { QUICK_ENTRY_SPECS, type QuickEntrySpec } from './quickEntrySpecs';
+import {
+  QUICK_ENTRY_SPECS,
+  todayLocal,
+  type QuickEntrySpec,
+} from './quickEntrySpecs';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -33,8 +37,6 @@ type Props = {
   defaultCurrency: string;
   templates?: Template[];
 };
-
-const todayLocal = () => new Date().toLocaleDateString('en-CA');
 
 /**
  * The dialog body for one entry type. Owns the field state and the save path
