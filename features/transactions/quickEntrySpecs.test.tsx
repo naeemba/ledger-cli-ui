@@ -149,4 +149,16 @@ describe('debt spec compiles to the right accounts', () => {
   it('validate rejects a missing name', () => {
     expect(debt.validate(fields({ person: '  ' }))).toBe('Enter a name.');
   });
+
+  it('validate rejects the cash account resolving to the person account', () => {
+    expect(
+      debt.validate(
+        fields({
+          direction: 'owed-to-you',
+          person: 'Alex',
+          cashAccount: 'Assets:Receivable:Alex',
+        })
+      )
+    ).toBe('The cash account must differ from the person.');
+  });
 });

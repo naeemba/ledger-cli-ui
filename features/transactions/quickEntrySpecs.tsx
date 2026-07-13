@@ -365,6 +365,16 @@ const knownPeople = (accounts: string[]): string[] => {
   return [...people];
 };
 
+// Resolve the person account and its opposite (cash) side for a direction, so
+// validate and compile agree on which two accounts a debt touches.
+const debtAccounts = (
+  person: string,
+  f: DebtFields
+): [to: string, from: string] =>
+  f.direction === 'owed-to-you'
+    ? [`${RECEIVABLE_ROOT}:${person}`, f.cashAccount]
+    : [f.cashAccount, `${PAYABLE_ROOT}:${person}`];
+
 const debtSpec: QuickEntrySpec<DebtFields> = {
   kind: 'debt',
   label: 'Debt',
@@ -380,14 +390,17 @@ const debtSpec: QuickEntrySpec<DebtFields> = {
     currency: ctx.defaultCurrency,
     cashAccount: firstMoneyAccount(ctx.accounts),
   }),
-  validate: (f) =>
-    !cleanPerson(f.person)
-      ? 'Enter a name.'
-      : !isPositive(f.amount)
-        ? 'Enter an amount.'
-        : !f.cashAccount.trim()
-          ? 'Pick an account.'
-          : null,
+  validate: (f) => {
+    const person = cleanPerson(f.person);
+    if (!person) return 'Enter a name.';
+    if (!isPositive(f.amount)) return 'Enter an amount.';
+    if (!f.cashAccount.trim()) return 'Pick an account.';
+    const [to, from] = debtAccounts(person, f);
+    // The cash picker offers receivable/payable accounts too, so a user can
+    // pick the same person's account as cash — that nets to zero on one account.
+    if (from === to) return 'The cash account must differ from the person.';
+    return null;
+  },
   resolvePayee: (f) =>
     f.direction === 'owed-to-you'
       ? `Lent to ${cleanPerson(f.person)}`
@@ -397,10 +410,7 @@ const debtSpec: QuickEntrySpec<DebtFields> = {
     // `to` gets +amount, `from` gets −amount (transferAdapter convention).
     // Owed to you: their receivable rises, your cash falls.
     // You owe them: your cash rises, your payable falls (a liability you owe).
-    const [to, from] =
-      f.direction === 'owed-to-you'
-        ? [`${RECEIVABLE_ROOT}:${person}`, f.cashAccount]
-        : [f.cashAccount, `${PAYABLE_ROOT}:${person}`];
+    const [to, from] = debtAccounts(person, f);
     const transferFields: TransferFields = {
       date: f.date,
       payee: f.payee,
