@@ -54,10 +54,7 @@ function QuickEntryContent({
     startTransition(async () => {
       const payee =
         fields.payee.trim() || spec.resolvePayee?.(fields) || spec.label;
-      const draft = spec.adapter.compile(
-        { ...fields, payee },
-        { defaultCurrency }
-      );
+      const draft = spec.compile({ ...fields, payee }, { defaultCurrency });
       const formData = new FormData();
       formData.set('draft', serializeDraftJson(draft, 'create'));
       const result = await createTransactionAction(null, formData);
