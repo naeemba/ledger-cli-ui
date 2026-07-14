@@ -3,8 +3,7 @@
 import { MoreHorizontal, Pencil, Trash2, BookmarkPlus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { deleteTransactionAction } from './actions';
-import { type TransactionRow } from './transactionRow';
+import { deleteTransactionByUid } from './actions';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,23 +14,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SaveAsTemplateDialog } from '@/features/templates/SaveAsTemplateButton';
-import { Transaction } from '@/lib/transactions/model';
+import type { TemplateDraft } from '@/lib/templates/schema';
 import { useRouter } from 'next/navigation';
 
-type Props = { transaction: TransactionRow };
+type Props = { uid: string; templateDraft?: TemplateDraft };
 
-const RowActions = ({ transaction: t }: Props) => {
+const RowActions = ({ uid, templateDraft }: Props) => {
   const router = useRouter();
   const [saveOpen, setSaveOpen] = useState(false);
 
   const onDelete = async () => {
-    const res = await deleteTransactionAction(t.uid!, t.fingerprint!);
+    const res = await deleteTransactionByUid(uid);
     if (res.ok) toast.success('Transaction deleted');
     else toast.error(res.message);
     router.refresh();
   };
-
-  const templateDraft = Transaction.from(t).toTemplate();
 
   return (
     <>
@@ -45,15 +42,17 @@ const RowActions = ({ transaction: t }: Props) => {
         />
         <DropdownMenuContent align="end">
           <DropdownMenuItem
-            onClick={() => router.push(`/transactions/${t.uid}/edit`)}
+            onClick={() => router.push(`/transactions/${uid}/edit`)}
           >
             <Pencil className="h-4 w-4" />
             Edit
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSaveOpen(true)}>
-            <BookmarkPlus className="h-4 w-4" />
-            Save as template
-          </DropdownMenuItem>
+          {templateDraft && (
+            <DropdownMenuItem onClick={() => setSaveOpen(true)}>
+              <BookmarkPlus className="h-4 w-4" />
+              Save as template
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <ConfirmDialog
             title="Delete transaction?"
@@ -69,11 +68,13 @@ const RowActions = ({ transaction: t }: Props) => {
           </ConfirmDialog>
         </DropdownMenuContent>
       </DropdownMenu>
-      <SaveAsTemplateDialog
-        open={saveOpen}
-        onOpenChange={setSaveOpen}
-        draft={templateDraft}
-      />
+      {templateDraft && (
+        <SaveAsTemplateDialog
+          open={saveOpen}
+          onOpenChange={setSaveOpen}
+          draft={templateDraft}
+        />
+      )}
     </>
   );
 };

@@ -4,20 +4,21 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import TransactionRowItem from './TransactionRowItem';
 import { loadTransactionPageAction } from './actions';
 import { type TransactionFilters } from './applyTransactionFilters';
 import { PAGE_SIZE, appendPage } from './pageTransactions';
-import { type TransactionRow } from './transactionRow';
+import TransactionRow from './row/TransactionRow';
+import { transactionRowToView } from './row/rowView';
+import { type TransactionRow as TransactionRowData } from './transactionRow';
 
 type Props = {
-  initialRows: TransactionRow[];
+  initialRows: TransactionRowData[];
   total: number;
   initialNextOffset: number | null;
   filters: TransactionFilters;
 };
 
-const rowKey = (r: TransactionRow) => r.uid ?? `${r.file}:${r.startLine}`;
+const rowKey = (r: TransactionRowData) => r.uid ?? `${r.file}:${r.startLine}`;
 
 const TransactionList = ({
   initialRows,
@@ -27,7 +28,7 @@ const TransactionList = ({
 }: Props) => {
   const parentRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<{
-    rows: TransactionRow[];
+    rows: TransactionRowData[];
     nextOffset: number | null;
   }>({ rows: initialRows, nextOffset: initialNextOffset });
   const loadingRef = useRef(false);
@@ -91,7 +92,7 @@ const TransactionList = ({
                 transform: `translateY(${vi.start}px)`,
               }}
             >
-              <TransactionRowItem row={row} />
+              <TransactionRow view={transactionRowToView(row)} />
             </div>
           );
         })}
