@@ -10,7 +10,7 @@ import Help from '@/components/Help';
 import PageContainer from '@/components/PageContainer';
 import { buttonVariants } from '@/components/ui/button';
 import { Card as ShadcnCard } from '@/components/ui/card';
-import { TableScroll } from '@/components/ui/table';
+import TransactionRow from '@/features/transactions/row/TransactionRow';
 import { requireUser } from '@/lib/auth/require-user';
 import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency } from '@/lib/settings';
@@ -196,52 +196,26 @@ const Dashboard = async () => {
             </Link>
           </div>
         </div>
-        <ShadcnCard className="gap-0 overflow-hidden p-0">
-          <TableScroll bleed={false}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Payee</th>
-                  <th>Account</th>
-                  <th className="text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="py-6 text-center text-muted-foreground"
-                    >
-                      No transactions
-                    </td>
-                  </tr>
-                ) : (
-                  recent.map((row, idx) => (
-                    <tr key={idx}>
-                      <td className="whitespace-nowrap text-muted-foreground">
-                        {formatDate(row.date, Format.DATE)}
-                      </td>
-                      <td>{row.payee || '—'}</td>
-                      <td>
-                        <Link
-                          className="text-fg hover:text-accent-text"
-                          href={`/accounts/${encodeURIComponent(row.account)}`}
-                        >
-                          {row.account}
-                        </Link>
-                      </td>
-                      <td className="text-right whitespace-nowrap">
-                        {formatAmount(row.amount, true)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </TableScroll>
-        </ShadcnCard>
+        {recent.length === 0 ? (
+          <ShadcnCard className="p-6 text-center text-sm text-muted-foreground">
+            No transactions
+          </ShadcnCard>
+        ) : (
+          <div className="flex flex-col">
+            {recent.map((posting, i) => (
+              <TransactionRow
+                key={posting.uid ?? i}
+                view={{
+                  date: posting.date,
+                  payee: posting.payee,
+                  amount: posting.amount,
+                  account: posting.account,
+                  uid: posting.uid,
+                }}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="flex flex-col gap-4">

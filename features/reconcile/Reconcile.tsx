@@ -2,11 +2,9 @@ import { parseReconcileRows } from './Reconcile.utils';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import PageContainer from '@/components/PageContainer';
+import TransactionRow from '@/features/transactions/row/TransactionRow';
 import { getBaseCurrency } from '@/lib/settings';
-import formatAmount from '@/utils/formatAmount';
-import formatDate, { Format } from '@/utils/formatDate';
 import runLedger from '@/utils/runLedger';
-import Link from 'next/link';
 
 const STALE_DAYS = 30;
 
@@ -24,7 +22,7 @@ const Reconcile = async () => {
       '--sort',
       'date',
       '--format',
-      'NNN%D|%P|%A|%t\n',
+      'NNN%D|%P|%A|%t|%(note)\n',
     ],
     { sortByDate: false }
   );
@@ -59,56 +57,27 @@ const Reconcile = async () => {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th className="text-right">Age</th>
-              <th>Payee</th>
-              <th>Account</th>
-              <th className="text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="py-6 text-center text-muted-foreground"
-                >
-                  Nothing to reconcile
-                </td>
-              </tr>
-            ) : (
-              rows.map((row, idx) => (
-                <tr key={idx}>
-                  <td className="whitespace-nowrap text-muted-foreground">
-                    {formatDate(row.date, Format.DATE)}
-                  </td>
-                  <td
-                    className={`text-right tabular-nums ${row.days > STALE_DAYS ? 'text-negative' : 'text-muted-foreground'}`}
-                  >
-                    {row.days}d
-                  </td>
-                  <td>{row.payee || '—'}</td>
-                  <td>
-                    <Link
-                      className="text-fg hover:text-accent-text"
-                      href={`/accounts/${encodeURIComponent(row.account)}`}
-                    >
-                      {row.account}
-                    </Link>
-                  </td>
-                  <td className="text-right">
-                    {formatAmount(row.amount, true)}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {rows.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
+          Nothing to reconcile
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {rows.map((row, i) => (
+            <TransactionRow
+              key={row.uid ?? i}
+              view={{
+                date: row.date,
+                payee: row.payee,
+                amount: row.amount,
+                account: row.account,
+                age: row.days,
+                uid: row.uid,
+              }}
+            />
+          ))}
+        </div>
+      )}
     </PageContainer>
   );
 };
