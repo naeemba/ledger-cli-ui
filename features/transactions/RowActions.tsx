@@ -4,6 +4,7 @@ import { MoreHorizontal, Pencil, Trash2, BookmarkPlus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { deleteTransactionByUid } from './actions';
+import { openEditTransaction } from './editTransactionStore';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,9 +42,7 @@ const RowActions = ({ uid, templateDraft }: Props) => {
           }
         />
         <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={() => router.push(`/transactions/${uid}/edit`)}
-          >
+          <DropdownMenuItem onClick={() => openEditTransaction(uid)}>
             <Pencil className="h-4 w-4" />
             Edit
           </DropdownMenuItem>

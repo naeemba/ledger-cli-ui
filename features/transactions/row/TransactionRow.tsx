@@ -1,4 +1,5 @@
 import RowActions from '../RowActions';
+import EditPayeeTrigger from './EditPayeeTrigger';
 import type { TransactionRowView } from './rowView';
 import formatAmount from '@/utils/formatAmount';
 import { Format, formatDateWithLocale } from '@/utils/formatDateCore';
@@ -22,9 +23,7 @@ const money = (value?: string) =>
 
 const payeeNode = (view: TransactionRowView) =>
   view.uid ? (
-    <Link href={`/transactions/${view.uid}/edit`} className="hover:underline">
-      {view.payee}
-    </Link>
+    <EditPayeeTrigger uid={view.uid} payee={view.payee} />
   ) : (
     <span>{view.payee}</span>
   );
