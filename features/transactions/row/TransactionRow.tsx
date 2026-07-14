@@ -76,6 +76,8 @@ const TransactionRow = ({ view }: { view: TransactionRowView }) => (
         view supplies a runningTotal (account register); the main list keeps
         its original 6-column layout so this refactor doesn't shift it. */}
     {view.runningTotal ? (
+      // ponytail: two grid templates (6-col vs 7-col) must stay in sync;
+      // duplication is deliberate to preserve layout isolation per surface.
       <div className="hidden grid-cols-[7rem_1.5rem_1fr_1fr_8rem_8rem_6rem] items-center gap-2 border-t border-border py-2 text-sm md:grid">
         <span className="whitespace-nowrap tabular-nums">
           {formatDateWithLocale(view.date, Format.DATE)}
