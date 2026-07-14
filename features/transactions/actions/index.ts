@@ -7,3 +7,7 @@ export {
 } from './deleteTransaction';
 export { deleteTransactionByUid } from './deleteTransactionByUid';
 export { loadTransactionPageAction } from './loadTransactionPage';
+export {
+  loadTransactionForEditAction,
+  type LoadTransactionForEditResult,
+} from './loadTransactionForEdit';
