@@ -1,0 +1,223 @@
+import { promises as fs } from 'fs';
+import path from 'path';
+import 'server-only';
+import { VALID_EXTS, GENERATED_PRICE_DB_NAME, PRICE_DB_NAME } from './layout';
+import { withUserLock } from './mutex';
+import { verifyJournalParseable } from './verify';
+import { journalRepository } from '@/lib/journal';
+import { pull, push, StorageConflictError } from '@/lib/storage';
+import { runLedgerForUser } from '@/utils/runLedgerForUser';
+import { revalidatePath } from 'next/cache';
+
+// Legacy debts lived under one signed account per person. The current model
+// splits them: money owed TO you is an asset, money you owe is a liability.
+export const LEGACY_ROOT = 'Assets:Credited';
+export const RECEIVABLE_ROOT = 'Assets:Receivable';
+export const PAYABLE_ROOT = 'Liabilities:Payable';
+
+/**
+ * Target account for a legacy `Assets:Credited:<rest>` account, keyed by the
+ * SIGN of its net balance (from ledger — never summed here). A non-negative net
+ * means the balance is owed to you → receivable; a negative net means you owe
+ * it → payable. Only the `Assets:Credited` prefix is swapped; the person path
+ * (`<rest>`, any depth) is preserved.
+ */
+export const targetAccount = (account: string, netSign: number): string => {
+  const rest = account.slice(LEGACY_ROOT.length); // includes the leading ':'
+  const root = netSign < 0 ? PAYABLE_ROOT : RECEIVABLE_ROOT;
+  return `${root}${rest}`;
+};
+
+/**
+ * Build the rename map from `ledger balance Assets:Credited` output formatted
+ * `<account>|%(scrub(total))`. Each legacy account maps to its receivable or
+ * payable target, keyed by the sign of its net.
+ *
+ * `%(scrub(total))` (not `%(quantity(...))`) is used because `quantity()`
+ * aborts the whole `ledger` invocation on any account whose net spans more than
+ * one commodity — `Cannot convert a balance with multiple commodities to an
+ * amount` (ledger 3.4.1). Such an account has no single sign, so picking
+ * receivable vs payable would be a valuation guess; instead its rows arrive as a
+ * commodity amount on the `|` line followed by continuation lines (no `|`), and
+ * we collect it into `manual` for the caller to surface rather than migrate.
+ *
+ * Footer Total and non-legacy accounts are skipped. Ledger did the netting;
+ * this only reads the sign of a single-commodity net.
+ */
+export const planRenames = (
+  balanceOutput: string
+): { renames: Map<string, string>; manual: string[] } => {
+  const renames = new Map<string, string>();
+  const manual: string[] = [];
+  let current: string | null = null;
+
+  for (const line of balanceOutput.split('\n')) {
+    if (!line.includes('|')) {
+      // Continuation line: a second commodity for the account on the line
+      // above. That account's net is multi-commodity — hand it off to `manual`.
+      if (current && line.trim() && !manual.includes(current)) {
+        renames.delete(current);
+        manual.push(current);
+      }
+      continue;
+    }
+    const [accountRaw, amountRaw] = line.split('|');
+    const account = accountRaw.trim();
+    const amount = (amountRaw ?? '').trim();
+    current = null;
+    if (!account || account === 'Total' || !amount) continue;
+    if (!account.startsWith(`${LEGACY_ROOT}:`)) continue;
+    current = account;
+    if (manual.includes(account)) continue;
+    // A single-commodity net: negative iff a minus sign appears before the
+    // number (ledger renders `$ -20.00` / `-20.00 EUR`). Zero renders as `0`.
+    // Strip any quoted commodity name first — `"AK-47"` / `"T-BILL"` carry a
+    // hyphen that is not a sign, and a positive net of one (`10 "AK-47"`) would
+    // otherwise read as negative and route to the wrong account.
+    const sign = amount.replace(/"[^"]*"/g, '').includes('-') ? -1 : 1;
+    renames.set(account, targetAccount(account, sign));
+  }
+  return { renames, manual };
+};
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Replace whole-account occurrences of each legacy account in the journal text,
+ * preserving everything else. The boundaries `(?<![\w:])`/`(?![\w:])` stop a
+ * shorter name from matching inside a longer sibling (`:Alex` inside
+ * `:Alexander`); longest names are rewritten first for the same reason. Returns
+ * the new text and how many occurrences changed.
+ */
+export const rewriteAccounts = (
+  text: string,
+  renames: Map<string, string>
+): { text: string; count: number } => {
+  let count = 0;
+  let output = text;
+  const accounts = [...renames.keys()].sort((a, b) => b.length - a.length);
+  for (const account of accounts) {
+    const pattern = new RegExp(
+      `(?<![\\w:])${escapeRegExp(account)}(?![\\w:])`,
+      'g'
+    );
+    output = output.replace(pattern, () => {
+      count += 1;
+      return renames.get(account)!;
+    });
+  }
+  return { text: output, count };
+};
+
+export type MigrateResult =
+  | { status: 'skipped' }
+  | { status: 'manual'; accounts: string[] }
+  | { status: 'migrated'; renamed: string[]; occurrences: number };
+
+/**
+ * One-shot migration of the legacy `Assets:Credited:<person>` debts model to
+ * the current split model: each person account becomes `Assets:Receivable` (net
+ * owed to you) or `Liabilities:Payable` (net you owe), decided by ledger's net
+ * sign — no summation here. A pure account rename, so every transaction stays
+ * balanced and the change is reversible.
+ *
+ * Mirrors relocateLegacyDefinitions: takes the per-user lock, pulls fresh,
+ * snapshots every touched file, rewrites, verifies the result parses, and rolls
+ * back on any failure before pushing. Idempotent — `skipped` once no
+ * `Assets:Credited` account remains.
+ *
+ * Returns `manual` (touching nothing) if any legacy person account nets across
+ * more than one commodity: that net has no single sign, so routing it to
+ * receivable vs payable is a valuation decision the user must make by hand.
+ */
+export const migrateCreditedToDebts = async (
+  userId: string,
+  repo = journalRepository
+): Promise<MigrateResult> => {
+  return withUserLock(userId, async () => {
+    try {
+      await pull(userId);
+    } catch {
+      // Locked/encrypted (no DEK) or transient storage error: never write
+      // plaintext over ciphertext. A later attempt retries once decryptable.
+      return { status: 'skipped' };
+    }
+
+    const layout = await repo.ensureLayout(userId);
+    // `--empty` includes zero-balance accounts so every posting-bearing legacy
+    // account is in the rename map — otherwise a hidden zero sibling like
+    // `Assets:Credited:Bob Smith` could be partially matched by an
+    // `Assets:Credited:Bob` rule.
+    const balance = await runLedgerForUser(userId, [
+      'balance',
+      '--empty',
+      '--flat',
+      '--no-total',
+      '--format',
+      // Raw `scrub(total)`, not `quantity(...)`: quantity() aborts the whole
+      // invocation on a multi-commodity net. planRenames reads the sign of the
+      // single-commodity nets and collects any multi-commodity ones as manual.
+      '%(account)|%(scrub(total))\n',
+      LEGACY_ROOT,
+    ]);
+    const { renames, manual } = planRenames(balance);
+    // A person whose net spans multiple commodities has no single sign; surface
+    // it for manual resolution rather than guess receivable vs payable. Touch
+    // nothing so the user can fix those accounts and re-run cleanly.
+    if (manual.length > 0) return { status: 'manual', accounts: manual };
+    if (renames.size === 0) return { status: 'skipped' };
+
+    // Rewrite every journal file in the dir (main + includes), skipping the
+    // price DBs. Snapshot originals so a failed verify restores all of them.
+    const entries = await fs.readdir(layout.dir);
+    const priceFiles = new Set([PRICE_DB_NAME, GENERATED_PRICE_DB_NAME]);
+    const targets = entries.filter(
+      (name) =>
+        VALID_EXTS.includes(path.extname(name).toLowerCase()) &&
+        !priceFiles.has(name)
+    );
+
+    const snapshots = new Map<string, string>();
+    let occurrences = 0;
+    try {
+      for (const name of targets) {
+        const absPath = path.join(layout.dir, name);
+        const original = await repo.readFile(absPath);
+        const { text, count } = rewriteAccounts(original, renames);
+        if (count === 0) continue;
+        snapshots.set(absPath, original);
+        occurrences += count;
+        await repo.writeFileAtomic(absPath, text);
+      }
+
+      if (occurrences === 0) return { status: 'skipped' };
+
+      const verify = await verifyJournalParseable(layout.mainPath);
+      if (!verify.ok) {
+        throw new Error(
+          `ledger rejected the migrated journal: ${verify.message}`
+        );
+      }
+      await push(userId);
+    } catch (error) {
+      // Restore every file we touched so the journal is exactly as before.
+      for (const [absPath, original] of snapshots) {
+        await repo.writeFileAtomic(absPath, original);
+      }
+      if (error instanceof StorageConflictError) return { status: 'skipped' };
+      throw error;
+    }
+
+    try {
+      revalidatePath('/', 'layout');
+    } catch {
+      // no-op outside the Next.js runtime
+    }
+    return {
+      status: 'migrated',
+      renamed: [...renames.keys()],
+      occurrences,
+    };
+  });
+};

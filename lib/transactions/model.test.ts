@@ -168,6 +168,17 @@ describe('Transaction.fromTemplate', () => {
     );
     expect(t.postings[0].currency).toBe('JPY');
   });
+
+  // The quick-entry "Repeat a template" path: hydrate, stamp today's date,
+  // and serialize for the create action.
+  it('stamps a date onto a repeated template for a create draft', () => {
+    const wire = Transaction.fromTemplate(tmpl, 'USD')
+      .withField('date', '2026-07-13')
+      .toWire('create');
+    expect(wire.date).toBe('2026-07-13');
+    expect(wire.payee).toBe('Groceries');
+    expect(wire.postings).toHaveLength(2);
+  });
 });
 
 describe('Transaction immutable updates', () => {

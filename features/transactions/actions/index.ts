@@ -11,3 +11,4 @@ export {
   loadTransactionForEditAction,
   type LoadTransactionForEditResult,
 } from './loadTransactionForEdit';
+export { undoTransactionAction } from './undoTransaction';

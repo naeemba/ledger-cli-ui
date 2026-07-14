@@ -32,7 +32,7 @@ const HEADER_START_REGEX = /^\d{4}[-/]\d{2}[-/]\d{2}/;
 const PATH_TRAVERSAL = /(^|[/\\])\.\.([/\\]|$)/;
 
 export type AddTransactionResult =
-  | { ok: true }
+  | { ok: true; uid: string }
   | {
       ok: false;
       reason: 'invalid' | 'quota' | 'write-failed' | 'parse-failed' | 'stale';
@@ -152,7 +152,8 @@ export class JournalService {
     }
 
     return withUserLock(userId, async () => {
-      const draft: TransactionDraft = { ...parsed.data, uid: generateUid() };
+      const uid = generateUid();
+      const draft: TransactionDraft = { ...parsed.data, uid };
       await pull(userId);
       const { mainPath } = await this.repo.ensureLayout(userId);
       // Snapshot the file so we can roll back if ledger rejects the result.
@@ -202,7 +203,7 @@ export class JournalService {
         return { ok: false, reason: 'stale', fieldErrors: {}, formError };
       }
       invalidateCache(userId);
-      return { ok: true };
+      return { ok: true, uid };
     });
   }
 
