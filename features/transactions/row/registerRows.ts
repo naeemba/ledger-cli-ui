@@ -6,17 +6,35 @@ import { uidFromNote } from '@/lib/journal/uid';
 // it is taken as the rejoined remainder after the four fixed leading fields.
 export const REGISTER_FORMAT = 'NNN%D|%P|%t|%T|%(note)';
 
-export const parseAccountRegister = (stdout: string): TransactionRowView[] =>
+export type RegisterRow = {
+  /** Trimmed leading fixed fields (`%D|%P|…`), positional per surface. */
+  cols: string[];
+  /** Uid extracted from the note (the rejoined remainder after `cols[3]`). */
+  uid?: string;
+};
+
+/**
+ * Splits `ledger reg --format 'NNN…|…'` output into trimmed columns plus the
+ * uid carried in the note. Shared by every register surface (account register,
+ * dashboard recent, reconcile) so they agree on the malformed-line guard and
+ * the note-is-the-remainder rule. A `|` inside a note can't drop the uid, and a
+ * short/blank chunk is dropped rather than rendered as an empty row.
+ */
+export const splitRegisterRows = (stdout: string): RegisterRow[] =>
   stdout
     .split('NNN')
-    .filter(Boolean)
-    .map((chunk) => {
-      const cols = chunk.split('|');
-      const date = (cols[0] ?? '').trim();
-      const payee = (cols[1] ?? '').trim();
-      const amount = (cols[2] ?? '').trim();
-      const runningTotal = (cols[3] ?? '').trim();
-      const note = cols.slice(4).join('|');
-      const uid = uidFromNote(note) ?? undefined;
-      return { date, payee, amount, runningTotal, uid };
-    });
+    .map((line) => line.split('|'))
+    .filter((cols) => cols.length >= 4 && cols[0].trim())
+    .map((cols) => ({
+      cols: cols.map((s) => s.trim()),
+      uid: uidFromNote(cols.slice(4).join('|')) ?? undefined,
+    }));
+
+export const parseAccountRegister = (stdout: string): TransactionRowView[] =>
+  splitRegisterRows(stdout).map(({ cols, uid }) => ({
+    date: cols[0],
+    payee: cols[1],
+    amount: cols[2],
+    runningTotal: cols[3],
+    uid,
+  }));

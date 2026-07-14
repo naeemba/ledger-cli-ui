@@ -1,4 +1,4 @@
-import { uidFromNote } from '@/lib/journal/uid';
+import { splitRegisterRows } from '@/features/transactions/row/registerRows';
 import { parseAmountParts } from '@/utils/amountParts';
 import runLedger from '@/utils/runLedger';
 
@@ -26,21 +26,16 @@ export type RecentPosting = {
 
 /**
  * Parses the `NNN%D|%P|%A|%t|%(note)\n` output of `ledger reg --head N` into
- * typed rows, dropping malformed lines. The note is the rejoined remainder
- * after the fixed fields, so a `|` inside a note can't drop the uid.
+ * typed rows, dropping malformed lines.
  */
 export const parseRecentPostings = (stdout: string): RecentPosting[] =>
-  stdout
-    .split('NNN')
-    .map((line) => line.split('|'))
-    .filter((cols) => cols.length >= 4 && cols[0].trim())
-    .map((cols) => ({
-      date: cols[0].trim(),
-      payee: cols[1].trim(),
-      account: cols[2].trim(),
-      amount: cols[3].trim(),
-      uid: uidFromNote(cols.slice(4).join('|')) ?? undefined,
-    }));
+  splitRegisterRows(stdout).map(({ cols, uid }) => ({
+    date: cols[0],
+    payee: cols[1],
+    account: cols[2],
+    amount: cols[3],
+    uid,
+  }));
 
 export const getRecentTransactions = async (
   limit: number
