@@ -5,6 +5,7 @@ import {
   findUidInBlock,
   detectFirstPostingIndent,
   insertUidLine,
+  uidFromNote,
 } from './uid';
 
 describe('UID helpers', () => {
@@ -64,5 +65,24 @@ describe('UID helpers', () => {
     expect(result).toBe(
       '2024-09-01 lunch\n\t; :uid: 01HZX5G5KJDS9HQRYK8E5T0DJC\n\tExpenses:Restaurant\t10\n\tAssets:Cash'
     );
+  });
+});
+
+describe('uidFromNote', () => {
+  it('extracts a uid from ledger %(note) text (no leading semicolon)', () => {
+    expect(uidFromNote(' :uid: 01HZY0Z9QK8G7F6E5D4C3B2A1Z')).toBe(
+      '01HZY0Z9QK8G7F6E5D4C3B2A1Z'
+    );
+  });
+
+  it('finds the uid among other note text', () => {
+    expect(
+      uidFromNote('groceries :uid: 01HZY0Z9QK8G7F6E5D4C3B2A1Z shared')
+    ).toBe('01HZY0Z9QK8G7F6E5D4C3B2A1Z');
+  });
+
+  it('returns null when no uid is present', () => {
+    expect(uidFromNote('just a note')).toBeNull();
+    expect(uidFromNote('')).toBeNull();
   });
 });
