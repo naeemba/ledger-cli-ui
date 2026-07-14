@@ -50,6 +50,24 @@ describe('TransactionRow', () => {
     expect(out).not.toContain('/transactions/');
   });
 
+  it('shows the "no uid" hint on the main list (templateDraft present) when there is no uid', () => {
+    const view = transactionRowToView({ ...row, uid: undefined });
+    const out = html(view);
+    expect(out).toContain('no uid');
+  });
+
+  it('stays silent for a bare register row (no templateDraft) when there is no uid', () => {
+    const view = {
+      date: '2026-01-02',
+      payee: 'X',
+      amount: '$ 5.00',
+      runningTotal: '$ 42.00',
+      status: 'cleared' as const,
+    };
+    const out = html(view);
+    expect(out).not.toContain('no uid');
+  });
+
   it('renders a running total when present', () => {
     const view = {
       date: '2026-01-02',

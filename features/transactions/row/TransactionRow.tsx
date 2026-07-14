@@ -29,10 +29,23 @@ const payeeNode = (view: TransactionRowView) =>
     <span>{view.payee}</span>
   );
 
-const actionsNode = (view: TransactionRowView) =>
-  view.uid ? (
-    <RowActions uid={view.uid} templateDraft={view.templateDraft} />
-  ) : null;
+const actionsNode = (view: TransactionRowView) => {
+  if (view.uid)
+    return <RowActions uid={view.uid} templateDraft={view.templateDraft} />;
+  // Only the main list supplies templateDraft, so restore its legacy "no uid"
+  // hint there — a not-yet-backfilled transaction shows why it can't be edited.
+  // Bare register/dashboard/reconcile rows stay silent.
+  if (view.templateDraft)
+    return (
+      <span
+        className="text-xs text-muted-foreground"
+        title="Re-import the journal to enable editing for this transaction"
+      >
+        no uid
+      </span>
+    );
+  return null;
+};
 
 // The middle descriptor: accounts summary as plain text (main list), a link
 // to the account register for a single account (dashboard/reconcile), or
