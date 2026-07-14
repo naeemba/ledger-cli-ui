@@ -10,16 +10,15 @@ export type EditSurface =
 // A simplified spec form renders a single amount/account pair. `detect` returns
 // splits as `extraItems`, which those forms never show — so a detected shape
 // with any split must fall through to Raw instead of round-tripping invisibly.
+// Costs/assertions need no separate guard: every adapter's `detect` already
+// rejects them, except the exchange adapter, which represents its cost
+// faithfully — a blanket cost guard would wrongly force every exchange to Raw.
 const hasSplits = (fields: unknown): boolean => {
   const extraItems = (fields as { extraItems?: unknown[] }).extraItems;
   return Array.isArray(extraItems) && extraItems.length > 0;
 };
 
 export function pickEditSurface(draft: DraftState): EditSurface {
-  // Any posting with a cost or assertion must go to raw; forms lack the precision
-  // to safely round-trip these without silently altering them.
-  if (draft.postings.some((p) => p.cost || p.assertion)) return { kind: 'raw' };
-
   const detected = detectType(draft);
   if (!detected || hasSplits(detected.fields)) return { kind: 'raw' };
   const spec = QUICK_ENTRY_SPECS.find((entry) => entry.kind === detected.id);

@@ -32,7 +32,7 @@ describe('pickEditSurface', () => {
     expect(surface.kind).toBe('raw');
   });
 
-  it('routes a posting with a cost annotation to raw', () => {
+  it('routes a clean 2-posting exchange to the exchange form', () => {
     const surface = pickEditSurface(
       draftOf([
         {
@@ -42,6 +42,18 @@ describe('pickEditSurface', () => {
           cost: { amount: '100', currency: 'USD' },
         },
         { account: 'Assets:Cash', amount: '-100', currency: 'USD' },
+      ])
+    );
+    expect(surface.kind).toBe('type');
+    if (surface.kind === 'type') expect(surface.spec.kind).toBe('exchange');
+  });
+
+  it('routes an undetectable multi-posting shape to raw', () => {
+    const surface = pickEditSurface(
+      draftOf([
+        { account: 'Assets:A', amount: '50', currency: 'USD' },
+        { account: 'Assets:B', amount: '50', currency: 'USD' },
+        { account: 'Assets:C', amount: '-100', currency: 'USD' },
       ])
     );
     expect(surface.kind).toBe('raw');
