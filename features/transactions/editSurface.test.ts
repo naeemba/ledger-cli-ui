@@ -58,4 +58,42 @@ describe('pickEditSurface', () => {
     );
     expect(surface.kind).toBe('raw');
   });
+
+  it('routes a plain income pair to the income form', () => {
+    const surface = pickEditSurface(
+      draftOf([
+        { account: 'Assets:Checking', amount: '1000', currency: 'USD' },
+        { account: 'Income:Salary', amount: '-1000', currency: 'USD' },
+      ])
+    );
+    expect(surface.kind).toBe('type');
+    if (surface.kind === 'type') expect(surface.spec.kind).toBe('income');
+  });
+
+  it('routes a plain transfer pair to the transfer form', () => {
+    const surface = pickEditSurface(
+      draftOf([
+        { account: 'Assets:Savings', amount: '100', currency: 'USD' },
+        { account: 'Assets:Checking', amount: '-100', currency: 'USD' },
+      ])
+    );
+    expect(surface.kind).toBe('type');
+    if (surface.kind === 'type') expect(surface.spec.kind).toBe('transfer');
+  });
+
+  it('routes an asserted balance-fix pair to the fix-balance form', () => {
+    const surface = pickEditSurface(
+      draftOf([
+        {
+          account: 'Assets:Checking',
+          amount: '',
+          currency: '',
+          assertion: { amount: '500', currency: 'USD' },
+        },
+        { account: 'Equity:Adjustments', amount: '', currency: '' },
+      ])
+    );
+    expect(surface.kind).toBe('type');
+    if (surface.kind === 'type') expect(surface.spec.kind).toBe('fix-balance');
+  });
 });
