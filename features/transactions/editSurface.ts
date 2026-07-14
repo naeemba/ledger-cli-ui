@@ -5,7 +5,7 @@ import { QUICK_ENTRY_SPECS, type QuickEntrySpec } from './quickEntrySpecs';
 
 export type EditSurface =
   | { kind: 'type'; spec: QuickEntrySpec<HeaderFields>; fields: HeaderFields }
-  | { kind: 'raw' };
+  | { kind: 'raw'; seed?: DraftState };
 
 // A simplified spec form renders a single amount/account pair. `detect` returns
 // splits as `extraItems`, which those forms never show — so a detected shape
