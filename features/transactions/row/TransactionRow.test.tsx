@@ -62,4 +62,17 @@ describe('TransactionRow', () => {
     const out = html(view);
     expect(out).toContain('42');
   });
+
+  it('renders age on both mobile and desktop when present', () => {
+    const view = {
+      date: '2026-01-02',
+      payee: 'X',
+      amount: '$ 5.00',
+      age: 42,
+      uid: 'U1',
+      status: 'cleared' as const,
+    };
+    const out = html(view);
+    expect(out).toContain('42d');
+  });
 });

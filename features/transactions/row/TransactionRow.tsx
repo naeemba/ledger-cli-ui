@@ -81,6 +81,7 @@ const TransactionRow = ({ view }: { view: TransactionRowView }) => (
       <div className="hidden grid-cols-[7rem_1.5rem_1fr_1fr_8rem_8rem_6rem] items-center gap-2 border-t border-border py-2 text-sm md:grid">
         <span className="whitespace-nowrap tabular-nums">
           {formatDateWithLocale(view.date, Format.DATE)}
+          {view.age !== undefined ? ` · ${view.age}d` : ''}
         </span>
         <span>{statusBadge(view.status)}</span>
         <span className="min-w-0 truncate">{payeeNode(view)}</span>
@@ -99,6 +100,7 @@ const TransactionRow = ({ view }: { view: TransactionRowView }) => (
       <div className="hidden grid-cols-[7rem_1.5rem_1fr_1fr_8rem_6rem] items-center gap-2 border-t border-border py-2 text-sm md:grid">
         <span className="whitespace-nowrap tabular-nums">
           {formatDateWithLocale(view.date, Format.DATE)}
+          {view.age !== undefined ? ` · ${view.age}d` : ''}
         </span>
         <span>{statusBadge(view.status)}</span>
         <span className="min-w-0 truncate">{payeeNode(view)}</span>
