@@ -38,16 +38,16 @@ describe('TransactionRow', () => {
     expect(out).toContain('Expenses:Food');
   });
 
-  it('links to /transactions/U1/edit when the view has a uid', () => {
+  it('renders the payee as an edit trigger button when the view has a uid', () => {
     const view = transactionRowToView(row);
     const out = html(view);
-    expect(out).toContain('/transactions/U1/edit');
+    expect(out).toContain('<button');
   });
 
-  it('does NOT render an edit link when the view has no uid', () => {
+  it('does NOT render an edit trigger button when the view has no uid', () => {
     const view = transactionRowToView({ ...row, uid: undefined });
     const out = html(view);
-    expect(out).not.toContain('/transactions/');
+    expect(out).not.toContain('<button');
   });
 
   it('shows the "no uid" hint on the main list (templateDraft present) when there is no uid', () => {

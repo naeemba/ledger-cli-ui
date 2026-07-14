@@ -1,4 +1,5 @@
 import QuickEntry from './QuickEntry';
+import TransactionEditDialog from './TransactionEditDialog';
 import { getAvailableCurrencies } from '@/lib/settings';
 import { getAccountSuggestions } from '@/lib/transactions/suggestions';
 
@@ -11,5 +12,10 @@ export default async function QuickEntrySlot() {
     getAccountSuggestions(),
     getAvailableCurrencies(),
   ]);
-  return <QuickEntry accounts={accounts} defaultCurrency={base} />;
+  return (
+    <>
+      <QuickEntry accounts={accounts} defaultCurrency={base} />
+      <TransactionEditDialog />
+    </>
+  );
 }
