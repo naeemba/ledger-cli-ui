@@ -1,3 +1,4 @@
+import { splitRegisterRows } from '@/features/transactions/row/registerRows';
 import { parseAmountParts } from '@/utils/amountParts';
 import runLedger from '@/utils/runLedger';
 
@@ -20,7 +21,21 @@ export type RecentPosting = {
   payee: string;
   account: string;
   amount: string;
+  uid?: string;
 };
+
+/**
+ * Parses the `NNN%D|%P|%A|%t|%(note)\n` output of `ledger reg --head N` into
+ * typed rows, dropping malformed lines.
+ */
+export const parseRecentPostings = (stdout: string): RecentPosting[] =>
+  splitRegisterRows(stdout).map(({ cols, uid }) => ({
+    date: cols[0],
+    payee: cols[1],
+    account: cols[2],
+    amount: cols[3],
+    uid,
+  }));
 
 export const getRecentTransactions = async (
   limit: number
@@ -30,18 +45,9 @@ export const getRecentTransactions = async (
     '--head',
     String(limit),
     '--format',
-    'NNN%D|%P|%A|%t\n',
+    'NNN%D|%P|%A|%t|%(note)\n',
   ]);
-  return stdout
-    .split('NNN')
-    .map((line) => line.split('|').map((s) => s.trim()))
-    .filter((cols) => cols.length >= 4 && cols[0])
-    .map(([date, payee, account, amount]) => ({
-      date,
-      payee,
-      account,
-      amount,
-    }));
+  return parseRecentPostings(stdout);
 };
 
 export type JournalStats = {

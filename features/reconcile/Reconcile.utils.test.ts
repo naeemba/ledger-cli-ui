@@ -52,4 +52,24 @@ describe('parseReconcileRows', () => {
     expect(rows[0].account).toBe('account');
     expect(rows[0].amount).toBe('amount');
   });
+
+  it('extracts uid from a 5th %(note) column', () => {
+    const stdout =
+      'NNN2026-05-01|Coffee|Expenses:Food|USD 5| :uid: 01HZY0Z9QK8G7F6E5D4C3B2A1Z\n';
+    const [row] = parseReconcileRows(stdout, NOW);
+    expect(row.uid).toBe('01HZY0Z9QK8G7F6E5D4C3B2A1Z');
+  });
+
+  it('leaves uid undefined when the note has no uid tag', () => {
+    const stdout = 'NNN2026-05-01|Coffee|Expenses:Food|USD 5|\n';
+    const [row] = parseReconcileRows(stdout, NOW);
+    expect(row.uid).toBeUndefined();
+  });
+
+  it('rejoins note columns so a pipe inside the note cannot drop the uid', () => {
+    const stdout =
+      'NNN2026-05-01|Coffee|Expenses:Food|USD 5|a|b| :uid: 01HZY0Z9QK8G7F6E5D4C3B2A1Z\n';
+    const [row] = parseReconcileRows(stdout, NOW);
+    expect(row.uid).toBe('01HZY0Z9QK8G7F6E5D4C3B2A1Z');
+  });
 });
