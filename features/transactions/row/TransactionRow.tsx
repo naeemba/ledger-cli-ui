@@ -34,10 +34,23 @@ const actionsNode = (view: TransactionRowView) =>
     <RowActions uid={view.uid} templateDraft={view.templateDraft} />
   ) : null;
 
-// The middle descriptor: accounts summary (main list) or single account
-// (dashboard/reconcile); empty on the account register.
-const descriptor = (view: TransactionRowView) =>
-  view.accountsSummary ?? view.account ?? '';
+// The middle descriptor: accounts summary as plain text (main list), a link
+// to the account register for a single account (dashboard/reconcile), or
+// empty on the account register.
+const descriptor = (view: TransactionRowView): React.ReactNode => {
+  if (view.accountsSummary) return view.accountsSummary;
+  if (view.account) {
+    return (
+      <Link
+        href={`/accounts/${encodeURIComponent(view.account)}`}
+        className="hover:underline"
+      >
+        {view.account}
+      </Link>
+    );
+  }
+  return '';
+};
 
 const TransactionRow = ({ view }: { view: TransactionRowView }) => (
   <>

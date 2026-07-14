@@ -14,7 +14,7 @@ const AccountRegister = ({ views }: { views: TransactionRowView[] }) => {
   return (
     <div className="flex flex-col">
       {views.map((view, i) => (
-        <TransactionRow key={view.uid ?? i} view={view} />
+        <TransactionRow key={`${view.uid ?? 'nouid'}:${i}`} view={view} />
       ))}
     </div>
   );

@@ -204,7 +204,7 @@ const Dashboard = async () => {
           <div className="flex flex-col">
             {recent.map((posting, i) => (
               <TransactionRow
-                key={posting.uid ?? i}
+                key={`${posting.uid ?? 'nouid'}:${i}`}
                 view={{
                   date: posting.date,
                   payee: posting.payee,

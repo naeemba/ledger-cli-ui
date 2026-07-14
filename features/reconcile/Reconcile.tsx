@@ -65,7 +65,7 @@ const Reconcile = async () => {
         <div className="flex flex-col">
           {rows.map((row, i) => (
             <TransactionRow
-              key={row.uid ?? i}
+              key={`${row.uid ?? 'nouid'}:${i}`}
               view={{
                 date: row.date,
                 payee: row.payee,

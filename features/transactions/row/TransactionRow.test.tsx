@@ -75,4 +75,16 @@ describe('TransactionRow', () => {
     const out = html(view);
     expect(out).toContain('42d');
   });
+
+  it('links the account to its register when the view has an account but no accountsSummary', () => {
+    const view = {
+      date: '2026-01-02',
+      payee: 'X',
+      amount: '$ 5.00',
+      account: 'Assets:Checking',
+      status: 'cleared' as const,
+    };
+    const out = html(view);
+    expect(out).toContain('/accounts/Assets');
+  });
 });
