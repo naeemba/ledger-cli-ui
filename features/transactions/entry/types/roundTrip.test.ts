@@ -63,6 +63,21 @@ describe('detect -> compile round trip', () => {
     );
   });
 
+  it('transfer (debt): rebuilds a receivable/payable pair back to its accounts', () => {
+    // The accepted simplification routes a debt (Assets:Receivable / Liabilities:
+    // Payable) to the Transfer form. This is the pair most likely to silently
+    // corrupt a balance if the round trip ever stops reproducing the accounts.
+    const draft = draftOf([
+      { account: 'Assets:Receivable:Bob', amount: '50', currency: 'USD' },
+      { account: 'Liabilities:Payable:Bob', amount: '-50', currency: 'USD' },
+    ]);
+    const detected = transferAdapter.detect(draft);
+    if (!detected) throw new Error('expected debt pair to be detected');
+    expect(transferAdapter.compile(detected, ctx).postings).toEqual(
+      draft.postings
+    );
+  });
+
   it('exchange: rebuilds the original postings, including the cost annotation', () => {
     const draft = draftOf([
       {

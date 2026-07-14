@@ -7,11 +7,16 @@ export type EditSurface =
   | { kind: 'type'; spec: QuickEntrySpec<HeaderFields>; fields: HeaderFields }
   | { kind: 'raw'; seed?: DraftState };
 
-// A simplified spec form renders a single amount/account pair. `detect` returns
-// splits as `extraItems`, which those forms never show — so a detected shape
-// with any split must fall through to Raw instead of round-tripping invisibly.
-// Costs/assertions need no separate guard: every adapter's `detect` already
-// rejects them, except the exchange adapter, which represents its cost
+// A detected shape carrying splits (`extraItems`) is routed to Raw. Not because
+// the simple forms can't show splits — the expense/income forms both render
+// `ExtraItemsField` — but because the split `compile` path emits an amount-less
+// auto-balance line (extraItems.ts `balancingPostings`) where a parsed journal
+// transaction carries an explicit paying amount. So `detect → compile` is *not*
+// a pure inverse for splits (compile drops the paying amount and leaves it to
+// ledger), the same reason fixBalance is excluded from roundTrip.test.ts. Until
+// that path is verified against a real saved+parsed split, Raw is the safe
+// default. Costs/assertions need no separate guard: every adapter's `detect`
+// already rejects them, except the exchange adapter, which represents its cost
 // faithfully — a blanket cost guard would wrongly force every exchange to Raw.
 const hasSplits = (fields: unknown): boolean => {
   const extraItems = (fields as { extraItems?: unknown[] }).extraItems;

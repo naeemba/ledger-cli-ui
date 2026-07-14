@@ -45,13 +45,14 @@ export default function TransactionEditDialog() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!uid) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoaded(null);
-      setSurface(null);
-      setNotFound(false);
-      return;
-    }
+    // Reset on every uid change, not just uid→null: a direct A→B switch must
+    // clear A's loaded/surface, else B renders A's field values inside B's spec
+    // (QuickTypeForm's key stays uid=B, so useState never re-seeds mid-load).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoaded(null);
+    setSurface(null);
+    setNotFound(false);
+    if (!uid) return;
     let cancelled = false;
     loadTransactionForEditAction(uid).then((result) => {
       if (cancelled) return;
