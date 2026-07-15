@@ -1,7 +1,6 @@
 // features/transactions/TransactionList.tsx
 'use client';
 
-import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { loadTransactionPageAction } from './actions';
@@ -26,25 +25,12 @@ const TransactionList = ({
   initialNextOffset,
   filters,
 }: Props) => {
-  const parentRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<{
     rows: TransactionRowData[];
     nextOffset: number | null;
   }>({ rows: initialRows, nextOffset: initialNextOffset });
   const loadingRef = useRef(false);
-  // Window-scrolled virtualizer needs the list's offset from the top of the
-  // document; measured post-mount since refs can't be read during render.
-  const [scrollMargin, setScrollMargin] = useState(0);
-  useEffect(() => {
-    if (parentRef.current) setScrollMargin(parentRef.current.offsetTop);
-  }, []);
-
-  const virtualizer = useWindowVirtualizer({
-    count: page.rows.length,
-    scrollMargin,
-    estimateSize: () => 80,
-    overscan: 8,
-  });
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const loadMore = useCallback(async () => {
     if (loadingRef.current || page.nextOffset === null) return;
@@ -63,15 +49,19 @@ const TransactionList = ({
     }
   }, [page.nextOffset, filters]);
 
-  const items = virtualizer.getVirtualItems();
-
-  // Prefetch the next page when the last rendered item nears the loaded tail.
+  // Load the next page when the sentinel below the list scrolls into view.
   useEffect(() => {
-    const last = items[items.length - 1];
-    if (!last) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (last.index >= page.rows.length - 10) void loadMore();
-  }, [items, page.rows.length, loadMore]);
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void loadMore();
+      },
+      { rootMargin: '600px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   if (total === 0) {
     return (
@@ -82,28 +72,11 @@ const TransactionList = ({
   }
 
   return (
-    <div ref={parentRef}>
-      <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
-        {items.map((vi) => {
-          const row = page.rows[vi.index];
-          return (
-            <div
-              key={rowKey(row)}
-              data-index={vi.index}
-              ref={virtualizer.measureElement}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                transform: `translateY(${vi.start - scrollMargin}px)`,
-              }}
-            >
-              <TransactionRow view={transactionRowToView(row)} />
-            </div>
-          );
-        })}
-      </div>
+    <div>
+      {page.rows.map((row) => (
+        <TransactionRow key={rowKey(row)} view={transactionRowToView(row)} />
+      ))}
+      {page.nextOffset !== null && <div ref={sentinelRef} aria-hidden />}
     </div>
   );
 };
