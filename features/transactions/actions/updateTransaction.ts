@@ -7,6 +7,7 @@ import { journalService } from '@/lib/journal';
 import { getJournalDirSize } from '@/lib/journal/quota';
 import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 import type { TransactionDraft } from '@/lib/transactions/schema';
+import { revalidatePath } from 'next/cache';
 
 export async function updateTransactionAction(
   _prev: TransactionActionState | null,
@@ -62,5 +63,6 @@ export async function updateTransactionAction(
       fieldErrors: result.fieldErrors,
     };
   }
+  revalidatePath('/', 'layout');
   return { ok: true };
 }

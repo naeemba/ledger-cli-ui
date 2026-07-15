@@ -5,6 +5,7 @@ import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { getJournalDirSize } from '@/lib/journal/quota';
 import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
+import { revalidatePath } from 'next/cache';
 
 export type DeleteTransactionResult =
   { ok: true } | { ok: false; message: string };
@@ -34,5 +35,6 @@ export async function deleteTransactionAction(
     ...(await auditRequestMeta()),
   });
   if (!result.ok) return { ok: false, message: result.message };
+  revalidatePath('/', 'layout');
   return { ok: true };
 }
