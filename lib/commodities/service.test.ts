@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CommodityDefinitionService } from './service';
 import { getJournalDir } from '@/lib/journal/layout';
 import { JournalRepository } from '@/lib/journal/repository';
-import { resetObjectStore } from '@/lib/storage';
+import { push, resetObjectStore } from '@/lib/storage';
 import {
   setupTestDb,
   teardownTestDb,
@@ -156,5 +156,28 @@ describe('CommodityDefinitionService', () => {
       ).ok
     ).toBe(false);
     expect((await service.remove(USER, 'NOPE')).ok).toBe(false);
+  });
+
+  it('lists commodities in other files as read-only', async () => {
+    // First, push the initial main.ledger to the object store so pull() won't delete it
+    await push(USER);
+
+    // Append a commodity block to main.ledger
+    const mainPath = path.join(dir, 'main.ledger');
+    const current = await fs.readFile(mainPath, 'utf-8');
+    const updated = current + '\ncommodity EUR\n\tnote hand-authored\n';
+    await fs.writeFile(mainPath, updated, 'utf-8');
+
+    // Push the updated main.ledger
+    await push(USER);
+
+    // List should now include the EUR commodity as read-only
+    const rows = await service.list(USER);
+    const eur = rows.find((row) => row.symbol === 'EUR');
+    expect(eur).toMatchObject({
+      file: 'main.ledger',
+      editable: false,
+      note: 'hand-authored',
+    });
   });
 });

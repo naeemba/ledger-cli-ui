@@ -10,7 +10,7 @@ import { ensureIncluded } from '@/lib/journal/include';
 import {
   DEFINITIONS_NAME,
   GENERATED_PRICE_DB_NAME,
-  PRICE_DB_NAME,
+  VALID_EXTS,
 } from '@/lib/journal/layout';
 import { withUserLock } from '@/lib/journal/mutex';
 import type { JournalRepository } from '@/lib/journal/repository';
@@ -45,7 +45,7 @@ export class CommodityDefinitionService {
     const rows: CommodityRow[] = [];
     const entries = await fs.readdir(layout.dir).catch(() => [] as string[]);
     for (const name of entries) {
-      if (!/\.(ledger|dat|journal|txt)$/.test(name)) continue;
+      if (!VALID_EXTS.includes(path.extname(name))) continue;
       if (name === GENERATED_PRICE_DB_NAME) continue;
       const text = await this.repo
         .readFile(path.join(layout.dir, name))
@@ -173,16 +173,7 @@ export class CommodityDefinitionService {
       await this.repo.writeFileAtomic(definitionsPath, nextText);
       await ensureIncluded(this.repo, layout.mainPath, definitionsPath);
 
-      const generatedPath = path.join(layout.dir, GENERATED_PRICE_DB_NAME);
-      const priceDbPath = await fs
-        .access(generatedPath)
-        .then(() => generatedPath)
-        .catch(() =>
-          fs
-            .access(path.join(layout.dir, PRICE_DB_NAME))
-            .then(() => path.join(layout.dir, PRICE_DB_NAME))
-            .catch(() => undefined)
-        );
+      const priceDbPath = layout.priceDbPath ?? undefined;
       const verify = await verifyJournalParseable(layout.mainPath, priceDbPath);
       if (!verify.ok) {
         if (original === null) await fs.rm(definitionsPath, { force: true });
