@@ -22,7 +22,10 @@ describe('pickEditSurface', () => {
     if (surface.kind === 'type') expect(surface.spec.kind).toBe('expense');
   });
 
-  it('routes a split expense to raw (simple form would hide the split)', () => {
+  it('routes a split expense with an EXPLICIT paying amount to raw', () => {
+    // Split compile leaves the paying line amount-less, so it cannot reproduce
+    // this explicit `-12` — round-trip fails and it falls back to raw rather
+    // than silently rewriting that posting.
     const surface = pickEditSurface(
       draftOf([
         { account: 'Expenses:Food', amount: '10', currency: 'USD' },
@@ -31,6 +34,21 @@ describe('pickEditSurface', () => {
       ])
     );
     expect(surface.kind).toBe('raw');
+  });
+
+  it('routes a split expense with an amount-less paying line to the expense form', () => {
+    // Exactly what the entry form writes for a split: two expense postings and
+    // an amount-less paying line for ledger to balance. This round-trips, so it
+    // belongs in the expense form (with its ExtraItemsField), not raw.
+    const surface = pickEditSurface(
+      draftOf([
+        { account: 'Expenses:Cigarette', amount: '300', currency: 'KIRT' },
+        { account: 'Expenses:Wage', amount: '0.9', currency: 'KIRT' },
+        { account: 'Assets:Bank:Blubank', amount: '', currency: '' },
+      ])
+    );
+    expect(surface.kind).toBe('type');
+    if (surface.kind === 'type') expect(surface.spec.kind).toBe('expense');
   });
 
   it('routes a clean 2-posting exchange to the exchange form', () => {
