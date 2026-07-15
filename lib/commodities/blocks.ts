@@ -17,7 +17,7 @@ export type CommodityBlock = CommodityDefinition & {
 const unquote = (symbol: string): string => symbol.replace(/^"(.*)"$/, '$1');
 
 // Ledger requires quoting when the symbol contains digits or the characters
-// it tokenizes on. Mirrors the quoting `extractDefinitions` applies.
+// it tokenizes on.
 const needsQuoting = (symbol: string): boolean => /[\d.,;\s"-]/.test(symbol);
 
 const renderSymbol = (symbol: string): string =>
