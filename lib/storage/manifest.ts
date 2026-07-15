@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { getJournalDir } from '@/lib/journal/layout';
@@ -50,7 +50,9 @@ export const writeManifest = async (
   // concurrent reader never sees a half-written manifest — a torn manifest
   // would fail JSON.parse, reset to {}, and silently disable the conflict guard.
   const dest = manifestPath(userId);
-  const tmp = dest + '.tmp';
+  // Unique tmp name per write so concurrent writers never share (and rename
+  // away) each other's scratch file — a fixed name races to ENOENT on rename.
+  const tmp = `${dest}.${randomUUID()}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(m, null, 2), 'utf-8');
   await fs.rename(tmp, dest);
 };
