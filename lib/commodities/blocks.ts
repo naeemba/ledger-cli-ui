@@ -23,11 +23,14 @@ const needsQuoting = (symbol: string): boolean => /[\d.,;\s"-]/.test(symbol);
 const renderSymbol = (symbol: string): string =>
   needsQuoting(symbol) ? `"${symbol}"` : symbol;
 
-const NUMBER_TOKEN = /-?[\d,]+(?:\.(\d+))?/;
+// Only a thousands-grouped sample is editable: serialization always emits
+// `1,000...`, so accepting a non-grouped sample (`100000`) would silently
+// switch the commodity to grouped display on the first edit.
+const GROUPED_NUMBER_TOKEN = /-?\d{1,3}(?:,\d{3})+(?:\.(\d+))?/;
 
-/** Decimal places of a format sample, or null when it has no numeric token. */
+/** Decimal places of a format sample, or null when it has no grouped numeric token. */
 const sampleDecimalPlaces = (sample: string): number | null => {
-  const match = NUMBER_TOKEN.exec(sample);
+  const match = GROUPED_NUMBER_TOKEN.exec(sample);
   if (!match) return null;
   return match[1]?.length ?? 0;
 };

@@ -63,6 +63,15 @@ describe('parseCommodityBlocks', () => {
     expect(block.opaque).toBe(true);
   });
 
+  it('marks a non-grouped format sample opaque', () => {
+    const [noDecimals] = parseCommodityBlocks('commodity X\n\tformat X 100000');
+    expect(noDecimals.opaque).toBe(true);
+    const [withDecimals] = parseCommodityBlocks(
+      'commodity X\n\tformat X 1000.5'
+    );
+    expect(withDecimals.opaque).toBe(true);
+  });
+
   it('zero-decimal format parses as decimalPlaces 0', () => {
     const [block] = parseCommodityBlocks('commodity KIRT\n\tformat KIRT 1,000');
     expect(block.decimalPlaces).toBe(0);
