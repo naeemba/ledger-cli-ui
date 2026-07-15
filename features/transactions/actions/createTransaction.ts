@@ -6,6 +6,7 @@ import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { getJournalDirSize } from '@/lib/journal/quota';
 import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
+import { revalidatePath } from 'next/cache';
 
 export async function createTransactionAction(
   _prev: TransactionActionState | null,
@@ -45,5 +46,6 @@ export async function createTransactionAction(
       formError: result.formError,
     };
   }
+  revalidatePath('/', 'layout');
   return { ok: true, uid: result.uid };
 }
