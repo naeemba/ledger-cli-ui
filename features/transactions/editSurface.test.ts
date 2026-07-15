@@ -51,6 +51,21 @@ describe('pickEditSurface', () => {
     if (surface.kind === 'type') expect(surface.spec.kind).toBe('expense');
   });
 
+  it('routes a split whose amount-less paying line carries the default currency to the expense form', () => {
+    // loadTransactionForEdit runs withDefaultCurrency over the parsed draft,
+    // stamping the default currency onto the amount-less paying line. Compile
+    // emits that line with currency '' — the mismatch must not force raw.
+    const surface = pickEditSurface(
+      draftOf([
+        { account: 'Expenses:Cigarette', amount: '300', currency: 'KIRT' },
+        { account: 'Expenses:Wage', amount: '0.9', currency: 'KIRT' },
+        { account: 'Assets:Bank:Blubank', amount: '', currency: 'KIRT' },
+      ])
+    );
+    expect(surface.kind).toBe('type');
+    if (surface.kind === 'type') expect(surface.spec.kind).toBe('expense');
+  });
+
   it('routes a clean 2-posting exchange to the exchange form', () => {
     const surface = pickEditSurface(
       draftOf([

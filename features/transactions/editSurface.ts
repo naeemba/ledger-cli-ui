@@ -20,7 +20,10 @@ const postingsMatch = (a: readonly Posting[], b: readonly Posting[]): boolean =>
     return (
       p.account === q.account &&
       p.amount === q.amount &&
-      p.currency === q.currency &&
+      // An amount-less posting has no meaningful currency — ledger fills the
+      // amount on parse, and the edit loader stamps the default currency onto
+      // it — so only compare currencies when an amount is present.
+      (p.amount === '' || p.currency === q.currency) &&
       annotationsMatch(p.cost, q.cost) &&
       annotationsMatch(p.assertion, q.assertion)
     );
