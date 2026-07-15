@@ -6,7 +6,7 @@
 
 Commodity display behavior (decimal precision, aliases, note, `nomarket`,
 `default`) is controlled by `commodity` directive blocks in the user's
-`price-db.ledger`. Today the only way to change one is a full backup
+definitions file. Today the only way to change one is a full backup
 download → hand edit → re-import round trip. Concretely: a
 `format KIRT 1,000` block (zero decimals) makes every register surface render
 `Kirt 0.9` as `KIRT 1`, and there is no in-app way to fix it.
@@ -14,12 +14,15 @@ download → hand edit → re-import round trip. Concretely: a
 ## Goal
 
 A CRUD surface for commodity definitions on the existing `/currencies` page,
-editing `price-db.ledger` blocks in place without disturbing the rest of the
-file.
+editing `definitions.ledger` blocks in place without disturbing the rest of
+the file. (`definitions.ledger` is the relocated home for user declarations —
+included by the main journal; the legacy `price-db.ledger` is deleted by the
+relocation flow. Users not yet relocated see their legacy blocks read-only
+with a hint until relocation runs.)
 
 ## Non-goals
 
-- Editing definitions that live in files other than `price-db.ledger`
+- Editing definitions that live in files other than `definitions.ledger`
   (shown read-only with a hint instead).
 - Editing `P` price directives (the Prices page owns those).
 - Arbitrary raw `format` strings in the form — the UI models display
@@ -33,9 +36,9 @@ file.
 - **Commodities** — new. A table of every commodity observed in the journal
   (existing available-currencies source) left-joined with parsed definition
   blocks:
-  - Defined in price-db: editable row (edit dialog).
-  - Defined elsewhere (main journal include): read-only row with a
-    "defined in <file>" hint.
+  - Defined in `definitions.ledger`: editable row (edit dialog).
+  - Defined elsewhere (legacy `price-db.ledger` or another include):
+    read-only row with a "defined in <file>" hint.
   - No definition: row with an "Add definition" action, pre-filled symbol.
 
 Form fields:
@@ -89,8 +92,9 @@ type CommodityDefinition = {
 
 One server action per operation (project convention):
 
-- `createCommodityAction` — append a block to `price-db.ledger`
-  (after the last existing commodity block, else at top).
+- `createCommodityAction` — append a block to `definitions.ledger`,
+  creating the file (banner + `include` line in the main journal) when
+  missing.
 - `updateCommodityAction` — replace exactly `startLine..endLine`.
 - `deleteCommodityAction` — remove the span plus one adjacent blank line.
 - Setting `default` rewrites the previous default holder's block too
