@@ -1,8 +1,4 @@
-import {
-  getHighestExpense,
-  getJournalStats,
-  getRecentTransactions,
-} from './Dashboard.utils';
+import { getHighestExpense, getJournalStats } from './Dashboard.utils';
 import EmptyJournal from './EmptyJournal';
 import SavedViewsCard from './SavedViewsCard';
 import Card from '@/components/Card';
@@ -10,7 +6,10 @@ import Help from '@/components/Help';
 import PageContainer from '@/components/PageContainer';
 import { buttonVariants } from '@/components/ui/button';
 import { Card as ShadcnCard } from '@/components/ui/card';
+import { loadJournalTransactions } from '@/features/transactions/loadJournalTransactions';
+import { pageTransactions } from '@/features/transactions/pageTransactions';
 import TransactionRow from '@/features/transactions/row/TransactionRow';
+import { transactionRowToView } from '@/features/transactions/row/rowView';
 import { requireUser } from '@/lib/auth/require-user';
 import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency } from '@/lib/settings';
@@ -95,7 +94,9 @@ const Dashboard = async () => {
       '--format',
       '%A|%t\n',
     ]),
-    getRecentTransactions(RECENT_LIMIT),
+    loadJournalTransactions(user.id).then((all) =>
+      pageTransactions(all, {}, 0, RECENT_LIMIT).rows.map(transactionRowToView)
+    ),
     getJournalStats(),
     savedViewService.list(user.id),
   ]);
@@ -176,9 +177,9 @@ const Dashboard = async () => {
               Recent transactions
             </h2>
             <Help label="About recent transactions">
-              The {RECENT_LIMIT} most recently dated postings across your
-              journal. A single transaction typically produces multiple postings
-              (e.g. a debit and matching credit).
+              The {RECENT_LIMIT} most recently dated transactions across your
+              journal. Each row is one transaction; its postings (e.g. a debit
+              and matching credit) are summarized as the accounts it touches.
             </Help>
           </div>
           <div className="flex items-center gap-2">
@@ -202,17 +203,8 @@ const Dashboard = async () => {
           </ShadcnCard>
         ) : (
           <div className="flex flex-col">
-            {recent.map((posting, i) => (
-              <TransactionRow
-                key={`${posting.uid ?? 'nouid'}:${i}`}
-                view={{
-                  date: posting.date,
-                  payee: posting.payee,
-                  amount: posting.amount,
-                  account: posting.account,
-                  uid: posting.uid,
-                }}
-              />
+            {recent.map((view, i) => (
+              <TransactionRow key={`${view.uid ?? 'nouid'}:${i}`} view={view} />
             ))}
           </div>
         )}

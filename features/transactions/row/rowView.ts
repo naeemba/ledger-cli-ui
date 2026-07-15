@@ -14,7 +14,7 @@ export type TransactionRowView = {
   uid?: string;
 
   // Optional extras — each rendered in a consistent slot when present.
-  accountsSummary?: string; // main list: "Expenses:Coffee → Assets:Checking"
+  accountsSummary?: string; // main list: "Checking → Coffee" (source → dest)
   account?: string; // dashboard / reconcile single-account context
   runningTotal?: string; // account register (same '\n' shape as amount)
   age?: number; // reconcile (days)

@@ -6,7 +6,65 @@ on:
   pull_request:
 
 jobs:
-  check:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm type-check
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ledger_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install ledger
+        run: sudo apt-get update && sudo apt-get install -y ledger
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  build:
     runs-on: ubuntu-latest
     env:
       BETTER_AUTH_SECRET: ci-dummy-secret-32-chars-minimum-XX
@@ -26,27 +84,14 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
-      - name: Install ledger
-        run: sudo apt-get update && sudo apt-get install -y ledger
-
       - run: pnpm install --frozen-lockfile
-
-      - run: pnpm lint
-
-      - run: pnpm type-check
-
-      - run: pnpm test
-
       # Production build — catches client/server import violations (e.g. a
       # `'use client'` component pulling in a `server-only` module) that lint,
       # type-check, and unit tests do not. Runs migrations against the Postgres
