@@ -14,6 +14,9 @@ export const AUDIT_ACTIONS = [
   'crypto.passphrase-change',
   'crypto.recovery-rotate',
   'crypto.reset',
+  'commodity.create',
+  'commodity.update',
+  'commodity.delete',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
