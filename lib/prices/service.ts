@@ -51,6 +51,7 @@ import type {
   ManualPrice,
 } from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
+import { ensureIncluded } from '@/lib/journal/include';
 import {
   DEFINITIONS_NAME,
   GENERATED_PRICE_DB_NAME,
@@ -1014,7 +1015,7 @@ export class PriceService {
           : `${DEFINITIONS_BANNER}\n${relocated}\n`;
 
       await this.deps.journalRepo.writeFileAtomic(defsPath, body);
-      await this.prependInclude(layout.mainPath, defsPath);
+      await ensureIncluded(this.deps.journalRepo, layout.mainPath, defsPath);
 
       // Rebuild the generated price file under its own name (fully derived from
       // the DB, so safe to leave in place even on rollback).
@@ -1069,33 +1070,5 @@ export class PriceService {
       if (hasDefinitions(text)) return text;
     }
     return null;
-  }
-
-  /** Prepend `include <relpath>` to the main journal unless already present, so
-   * commodity aliases resolve before any posting that uses them. */
-  private async prependInclude(
-    mainPath: string,
-    defsPath: string
-  ): Promise<void> {
-    const main = await this.deps.journalRepo.readFile(mainPath).catch(() => '');
-    let rel = path
-      .relative(path.dirname(mainPath), defsPath)
-      .split(path.sep)
-      .join('/');
-    if (!rel.startsWith('.')) rel = `./${rel}`;
-    const directive = `include ${rel}`;
-    const mainDir = path.dirname(mainPath);
-    const alreadyIncluded = main.split('\n').some((line) => {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('include ')) return false;
-      const target = trimmed.slice('include '.length).trim();
-      if (!target) return false;
-      return path.resolve(mainDir, target) === path.resolve(defsPath);
-    });
-    if (alreadyIncluded) return;
-    await this.deps.journalRepo.writeFileAtomic(
-      mainPath,
-      `${directive}\n${main}`
-    );
   }
 }

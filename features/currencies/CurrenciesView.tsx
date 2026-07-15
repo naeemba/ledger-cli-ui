@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import CommodityCombobox from '@/components/CommodityCombobox/CommodityCombobox';
-import PageContainer from '@/components/PageContainer';
 import { TableScroll } from '@/components/ui/table';
 import {
   upsertMappingAction,
@@ -74,15 +73,12 @@ export default function CurrenciesView({ rows: initial }: Props) {
   };
 
   return (
-    <PageContainer>
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Currencies</h1>
-        <p className="text-muted-foreground text-sm">
-          Every commodity symbol in your journal. Confirm or override how each
-          is tracked for automatic price lookups. Rows highlighted in amber need
-          your attention.
-        </p>
-      </header>
+    <>
+      <p className="text-muted-foreground text-sm">
+        Every commodity symbol in your journal. Confirm or override how each is
+        tracked for automatic price lookups. Rows highlighted in amber need your
+        attention.
+      </p>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
@@ -171,6 +167,6 @@ export default function CurrenciesView({ rows: initial }: Props) {
           </tbody>
         </table>
       </TableScroll>
-    </PageContainer>
+    </>
   );
 }
