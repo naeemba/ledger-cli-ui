@@ -24,7 +24,7 @@ describe('transactionRowToView', () => {
     expect(view.payee).toBe('Coffee Shop');
     expect(view.status).toBe('cleared');
     expect(view.uid).toBe('u1');
-    expect(view.accountsSummary).toContain('Expenses:Coffee');
+    expect(view.accountsSummary).toBe('Checking → Coffee');
     expect(view.amount).toContain('USD');
     expect(view.templateDraft).toBeDefined();
     expect(view.templateDraft?.payee).toBe('Coffee Shop');

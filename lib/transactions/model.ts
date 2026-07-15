@@ -289,10 +289,35 @@ export class Transaction {
     return computeBalance(this.postings);
   }
 
-  /** First two posting accounts joined for a compact list summary. */
+  /**
+   * Compact `source → destination` summary using leaf account names. Sides are
+   * split by posting sign (money out vs money in) so the arrow reflects the
+   * real flow — `Blubank → Cigarette_Alcohol, Wage` — rather than journal
+   * order. Leaf names keep the useful legs from being truncated away behind
+   * long `Expenses:`/`Assets:Bank:` prefixes. Not accounting math: it only
+   * reads the signs ledger already assigned, and never sums across currencies.
+   */
   accountsSummary(): string {
-    const accounts = this.postings.slice(0, 2).map((p) => p.account);
-    return `${accounts.join(' → ')}${this.postings.length > 2 ? ' …' : ''}`;
+    const leaf = (account: string) => account.split(':').pop() || account;
+    const side = (accounts: string[]) => {
+      const names = accounts.map(leaf);
+      return names.length > 2
+        ? `${names.slice(0, 2).join(', ')} +${names.length - 2}`
+        : names.join(', ');
+    };
+    const sources: string[] = [];
+    const destinations: string[] = [];
+    for (const p of this.postings) {
+      const value = Number(p.amount);
+      if (value < 0) sources.push(p.account);
+      else if (value > 0) destinations.push(p.account);
+    }
+    if (sources.length && destinations.length) {
+      return `${side(sources)} → ${side(destinations)}`;
+    }
+    // No clear two sides (single posting, or amounts that don't parse):
+    // fall back to a plain leaf-name list.
+    return side(this.postings.map((p) => p.account));
   }
 
   /** Sum of positive posting amounts per currency — the transaction magnitude. */

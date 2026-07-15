@@ -35,7 +35,7 @@ describe('TransactionRow', () => {
   it('renders the account summary in the descriptor', () => {
     const view = transactionRowToView(row);
     const out = html(view);
-    expect(out).toContain('Expenses:Food');
+    expect(out).toContain('Cash → Food');
   });
 
   it('renders the payee as an edit trigger button when the view has a uid', () => {

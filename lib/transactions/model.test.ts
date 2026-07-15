@@ -234,6 +234,51 @@ describe('Transaction immutable updates', () => {
   });
 });
 
+describe('Transaction.accountsSummary', () => {
+  const summary = (postings: TransactionData['postings']) =>
+    Transaction.from(transactionFixture({ postings })).accountsSummary();
+
+  it('splits source → destination by sign using leaf names', () => {
+    expect(
+      summary([
+        {
+          account: 'Expenses:Cigarette_Alcohol',
+          amount: '300.00',
+          currency: 'KIRT',
+        },
+        { account: 'Expenses:Wage', amount: '0.90', currency: 'KIRT' },
+        { account: 'Assets:Bank:Blubank', amount: '-300.90', currency: 'KIRT' },
+      ])
+    ).toBe('Blubank → Cigarette_Alcohol, Wage');
+  });
+
+  it('reads a transfer as from → to', () => {
+    expect(
+      summary([
+        { account: 'Assets:Bank:Blubank', amount: '100', currency: 'KIRT' },
+        { account: 'Assets:Crypto:Tabdeal', amount: '-100', currency: 'KIRT' },
+      ])
+    ).toBe('Tabdeal → Blubank');
+  });
+
+  it('caps each side at two names with +N overflow', () => {
+    expect(
+      summary([
+        { account: 'Expenses:A', amount: '1', currency: 'USD' },
+        { account: 'Expenses:B', amount: '1', currency: 'USD' },
+        { account: 'Expenses:C', amount: '1', currency: 'USD' },
+        { account: 'Assets:Cash', amount: '-3', currency: 'USD' },
+      ])
+    ).toBe('Cash → A, B +1');
+  });
+
+  it('falls back to a plain list when there is no clear two sides', () => {
+    expect(
+      summary([{ account: 'Equity:Opening', amount: '0', currency: 'USD' }])
+    ).toBe('Opening');
+  });
+});
+
 describe('Transaction outputs', () => {
   const t = () =>
     Transaction.from({
