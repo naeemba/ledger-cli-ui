@@ -125,7 +125,7 @@ export function FormLens({
           <BalanceIndicator balance={balance} />
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="@container flex flex-col gap-2">
           {draft.postings.map((posting, idx) => (
             <PostingRow
               key={idx}
@@ -178,24 +178,24 @@ const PostingRow = ({
   onChange: (patch: Partial<DraftPosting>) => void;
   onRemove: () => void;
 }) => (
-  <div className="grid grid-cols-1 items-center gap-2 rounded-lg border border-border p-2 sm:grid-cols-[1fr_140px_90px_auto] sm:rounded-none sm:border-0 sm:p-0">
+  <div className="grid grid-cols-1 items-center gap-2 rounded-lg border border-border p-2 @sm:grid-cols-[1fr_140px_90px_auto] @sm:rounded-none @sm:border-0 @sm:p-0">
     <Combobox
       value={posting.account}
       onChange={(v) => onChange({ account: v })}
       options={accounts}
       placeholder="Account (e.g. Expenses:Food)"
     />
-    <div className="flex items-center gap-2 sm:contents">
+    <div className="flex items-center gap-2 @sm:contents">
       <AmountInput
         value={posting.amount}
         onChange={(amount) => onChange({ amount })}
         placeholder="Amount"
-        className="flex-1 text-right tabular-nums sm:flex-none"
+        className="flex-1 text-right tabular-nums @sm:flex-none"
       />
       <CurrencyCombobox
         value={posting.currency}
         onChange={(currency) => onChange({ currency })}
-        className="w-24 sm:w-auto"
+        className="w-24 @sm:w-auto"
       />
       <Button
         type="button"
