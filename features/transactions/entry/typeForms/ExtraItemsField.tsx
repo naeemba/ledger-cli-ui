@@ -78,13 +78,13 @@ export function ExtraItemsField({
   };
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="@container flex flex-col gap-3">
       <SectionLabel>{sectionLabel}</SectionLabel>
 
       {items.map((item, index) => (
         <div
           key={ids[index]}
-          className="grid grid-cols-1 items-center gap-2 rounded-lg border border-border p-2 sm:grid-cols-[1fr_140px_90px_auto] sm:rounded-none sm:border-0 sm:p-0"
+          className="grid grid-cols-1 items-center gap-2 rounded-lg border border-border p-2 @sm:grid-cols-[minmax(0,1fr)_140px_90px_auto] @sm:rounded-none @sm:border-0 @sm:p-0"
         >
           <Combobox
             value={item.account}
@@ -92,17 +92,17 @@ export function ExtraItemsField({
             options={expenseAccounts}
             placeholder="Account, e.g. Expenses:Fees"
           />
-          <div className="flex items-center gap-2 sm:contents">
+          <div className="flex items-center gap-2 @sm:contents">
             <AmountInput
               value={item.amount}
               onChange={(amount) => setItem(index, { amount })}
               placeholder="Amount"
-              className="flex-1 text-right tabular-nums sm:flex-none"
+              className="flex-1 text-right tabular-nums @sm:flex-none"
             />
             <CurrencyCombobox
               value={item.currency}
               onChange={(currency) => setItem(index, { currency })}
-              className="w-24 sm:w-auto"
+              className="w-24 @sm:w-auto"
             />
             <Button
               type="button"
