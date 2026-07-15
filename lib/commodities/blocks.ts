@@ -82,14 +82,19 @@ export const parseCommodityBlocks = (text: string): CommodityBlock[] => {
     const directive = /^(\S+)(?:\s+(.*))?$/.exec(trimmed);
     const keyword = directive?.[1];
     const argument = directive?.[2]?.trim() ?? '';
-    if (keyword === 'note') current.note = argument;
-    else if (keyword === 'alias') current.aliases.push(unquote(argument));
+    if (keyword === 'note') {
+      if (current.note) current.opaque = true;
+      else current.note = argument;
+    } else if (keyword === 'alias') current.aliases.push(unquote(argument));
     else if (keyword === 'nomarket' && argument === '') current.nomarket = true;
     else if (keyword === 'default' && argument === '') current.isDefault = true;
     else if (keyword === 'format') {
-      const decimals = sampleDecimalPlaces(argument);
-      if (decimals === null) current.opaque = true;
-      else current.decimalPlaces = decimals;
+      if (current.decimalPlaces !== null) current.opaque = true;
+      else {
+        const decimals = sampleDecimalPlaces(argument);
+        if (decimals === null) current.opaque = true;
+        else current.decimalPlaces = decimals;
+      }
     } else current.opaque = true; // comment or unknown sub-directive
   });
   close();

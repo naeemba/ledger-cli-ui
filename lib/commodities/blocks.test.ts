@@ -67,6 +67,13 @@ describe('parseCommodityBlocks', () => {
     const [block] = parseCommodityBlocks('commodity KIRT\n\tformat KIRT 1,000');
     expect(block.decimalPlaces).toBe(0);
   });
+
+  it('marks a block with a duplicate note or format directive opaque', () => {
+    const [block] = parseCommodityBlocks(
+      'commodity X\n\tformat X 1,000\n\tformat X 1,000.00'
+    );
+    expect(block.opaque).toBe(true);
+  });
 });
 
 describe('serializeCommodityBlock', () => {
