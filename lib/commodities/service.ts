@@ -27,6 +27,47 @@ export type CommodityWriteResult =
   { ok: true } | { ok: false; message: string };
 
 /**
+ * A change to definitions.ledger expressed against the original line
+ * numbers: replace lines `startLine..endLine` (inclusive) with `text`
+ * (`null` deletes the span), or append `append` after the last line when
+ * `startLine`/`endLine` are out of range (used for `create`).
+ */
+type Splice = {
+  startLine: number;
+  endLine: number;
+  text: string | null;
+  append?: string;
+};
+
+/** Applies line-span splices to `source`, bottom-up, so line numbers named
+ * by earlier splices stay valid as later ones are applied. Everything
+ * outside a spliced span — including content between and after blocks —
+ * passes through untouched. */
+const applySplices = (source: string, splices: Splice[]): string => {
+  const appended = splices.find((splice) => splice.append !== undefined);
+  const inPlace = splices
+    .filter((splice) => splice.append === undefined)
+    .sort((a, b) => b.startLine - a.startLine);
+
+  const lines = source.split('\n');
+  for (const splice of inPlace) {
+    const replacement = splice.text === null ? [] : splice.text.split('\n');
+    lines.splice(
+      splice.startLine,
+      splice.endLine - splice.startLine + 1,
+      ...replacement
+    );
+  }
+
+  let text = lines.join('\n');
+  if (appended?.append !== undefined) {
+    const base = text.trimEnd() || DEFINITIONS_BANNER;
+    text = `${base}\n\n${appended.append}`;
+  }
+  return text.endsWith('\n') ? text : `${text}\n`;
+};
+
+/**
  * CRUD over `commodity` directive blocks in the user's `definitions.ledger`.
  * Blocks found in other journal files (legacy `price-db.ledger`, hand-made
  * includes) are listed read-only. Every mutation is verified with ledger and
@@ -65,16 +106,18 @@ export class CommodityDefinitionService {
     userId: string,
     definition: CommodityDefinition
   ): Promise<CommodityWriteResult> {
-    return this.mutate(userId, (blocks) => {
+    return this.mutate(userId, (blocks, current) => {
       if (blocks.some((block) => block.symbol === definition.symbol)) {
         return { error: `${definition.symbol} is already defined` };
       }
-      return {
-        blocks: [
-          ...this.withDefaultCleared(blocks, definition),
-          { text: serializeCommodityBlock(definition) },
-        ],
-      };
+      const splices = this.defaultClearedSplices(blocks, definition);
+      splices.push({
+        startLine: Number.MAX_SAFE_INTEGER,
+        endLine: Number.MAX_SAFE_INTEGER,
+        text: null,
+        append: serializeCommodityBlock(definition),
+      });
+      return { splices };
     });
   }
 
@@ -84,64 +127,89 @@ export class CommodityDefinitionService {
     next: CommodityDefinition | { raw: string }
   ): Promise<CommodityWriteResult> {
     return this.mutate(userId, (blocks) => {
-      const index = blocks.findIndex((block) => block.symbol === symbol);
-      if (index === -1) return { error: `${symbol} is not defined` };
+      const target = blocks.find((block) => block.symbol === symbol);
+      if (!target) return { error: `${symbol} is not defined` };
       if ('raw' in next) {
-        const result = blocks.map((block) => ({ text: block.raw }));
-        result[index] = { text: next.raw };
-        return { blocks: result };
+        return {
+          splices: [
+            {
+              startLine: target.startLine,
+              endLine: target.endLine,
+              text: next.raw,
+            },
+          ],
+        };
       }
-      const result = this.withDefaultCleared(blocks, next);
-      result[index] = { text: serializeCommodityBlock(next) };
-      return { blocks: result };
+      const splices = this.defaultClearedSplices(
+        blocks.filter((block) => block !== target),
+        next
+      );
+      splices.push({
+        startLine: target.startLine,
+        endLine: target.endLine,
+        text: serializeCommodityBlock(next),
+      });
+      return { splices };
     });
   }
 
   remove(userId: string, symbol: string): Promise<CommodityWriteResult> {
-    return this.mutate(userId, (blocks) => {
-      if (!blocks.some((block) => block.symbol === symbol)) {
-        return { error: `${symbol} is not defined` };
+    return this.mutate(userId, (blocks, current) => {
+      const target = blocks.find((block) => block.symbol === symbol);
+      if (!target) return { error: `${symbol} is not defined` };
+      // Also drop one adjacent blank separator line, preferring the one
+      // after the block so a leading header/comment stays attached above.
+      const lines = current.split('\n');
+      let endLine = target.endLine;
+      if (lines[endLine + 1]?.trim() === '') endLine += 1;
+      else if (
+        target.startLine > 0 &&
+        lines[target.startLine - 1]?.trim() === ''
+      ) {
+        return {
+          splices: [{ startLine: target.startLine - 1, endLine, text: null }],
+        };
       }
       return {
-        blocks: blocks
-          .filter((block) => block.symbol !== symbol)
-          .map((block) => ({ text: block.raw })),
+        splices: [{ startLine: target.startLine, endLine, text: null }],
       };
     });
   }
 
-  /** Re-serialize every block, clearing `default` from previous holders when
-   * the incoming definition claims it. Opaque blocks stay verbatim. */
-  private withDefaultCleared(
+  /** Splices that re-serialize other holders of `default` when the incoming
+   * definition claims it. Opaque blocks are left untouched. */
+  private defaultClearedSplices(
     blocks: CommodityBlock[],
     incoming: CommodityDefinition
-  ): { text: string }[] {
-    return blocks.map((block) => {
-      if (
-        incoming.isDefault &&
-        block.isDefault &&
-        block.symbol !== incoming.symbol &&
-        !block.opaque
-      ) {
-        return {
-          text: serializeCommodityBlock({ ...block, isDefault: false }),
-        };
-      }
-      return { text: block.raw };
-    });
+  ): Splice[] {
+    if (!incoming.isDefault) return [];
+    return blocks
+      .filter(
+        (block) =>
+          block.isDefault && block.symbol !== incoming.symbol && !block.opaque
+      )
+      .map((block) => ({
+        startLine: block.startLine,
+        endLine: block.endLine,
+        text: serializeCommodityBlock({ ...block, isDefault: false }),
+      }));
   }
 
   /**
-   * Locked read-modify-write on definitions.ledger: parse current blocks, let
-   * `change` produce the next block list, rewrite the file (preserving the
-   * banner/header lines above the first block), verify with ledger, roll back
-   * on rejection, push. Mirrors JournalService.addTransaction's write flow.
+   * Locked read-modify-write on definitions.ledger: parse current blocks,
+   * let `change` produce a set of line-span splices against the untouched
+   * source text, apply them bottom-up so earlier line numbers stay valid,
+   * verify with ledger, roll back on rejection, push. Splicing (rather than
+   * rebuilding the file from blocks) preserves any non-commodity content
+   * that sits between or after blocks. Mirrors JournalService.addTransaction's
+   * write flow.
    */
   private mutate(
     userId: string,
     change: (
-      blocks: CommodityBlock[]
-    ) => { blocks: { text: string }[] } | { error: string }
+      blocks: CommodityBlock[],
+      current: string
+    ) => { splices: Splice[] } | { error: string }
   ): Promise<CommodityWriteResult> {
     return withUserLock(userId, async (): Promise<CommodityWriteResult> => {
       try {
@@ -158,17 +226,10 @@ export class CommodityDefinitionService {
 
       const current = original ?? '';
       const blocks = parseCommodityBlocks(current);
-      const outcome = change(blocks);
+      const outcome = change(blocks, current);
       if ('error' in outcome) return { ok: false, message: outcome.error };
 
-      // Header = everything above the first block (banner, user comments).
-      const headerEnd = blocks.length > 0 ? blocks[0].startLine : null;
-      const header =
-        headerEnd !== null
-          ? current.split('\n').slice(0, headerEnd).join('\n').trimEnd()
-          : current.trimEnd() || DEFINITIONS_BANNER;
-      const body = outcome.blocks.map((block) => block.text).join('\n\n');
-      const nextText = `${header ? header + '\n\n' : ''}${body}\n`;
+      const nextText = applySplices(current, outcome.splices);
 
       await this.repo.writeFileAtomic(definitionsPath, nextText);
       await ensureIncluded(this.repo, layout.mainPath, definitionsPath);

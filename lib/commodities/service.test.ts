@@ -158,6 +158,56 @@ describe('CommodityDefinitionService', () => {
     expect((await service.remove(USER, 'NOPE')).ok).toBe(false);
   });
 
+  it('preserves non-commodity lines between and after blocks on update/remove', async () => {
+    await push(USER);
+    const definitionsPath = path.join(dir, 'definitions.ledger');
+    await fs.writeFile(
+      definitionsPath,
+      [
+        'commodity KIRT',
+        '\tnote toman',
+        '',
+        'account Assets:Bank:Blubank',
+        'alias OldAccount=Assets:New',
+        '',
+        'commodity ADA',
+        '\tnomarket',
+        '',
+      ].join('\n'),
+      'utf-8'
+    );
+    const mainPath = path.join(dir, 'main.ledger');
+    const main = await fs.readFile(mainPath, 'utf-8');
+    await fs.writeFile(
+      mainPath,
+      main + '\ninclude ./definitions.ledger\n',
+      'utf-8'
+    );
+    await push(USER);
+
+    const updated = await service.update(USER, 'KIRT', {
+      symbol: 'KIRT',
+      note: 'toman',
+      aliases: [],
+      decimalPlaces: 1,
+      nomarket: false,
+      isDefault: false,
+    });
+    expect(updated).toEqual({ ok: true });
+    let text = await fs.readFile(definitionsPath, 'utf-8');
+    expect(text).toContain('account Assets:Bank:Blubank');
+    expect(text).toContain('alias OldAccount=Assets:New');
+    expect(text).toContain('commodity ADA');
+    expect(text).toContain('\tnomarket');
+
+    const removed = await service.remove(USER, 'ADA');
+    expect(removed).toEqual({ ok: true });
+    text = await fs.readFile(definitionsPath, 'utf-8');
+    expect(text).toContain('account Assets:Bank:Blubank');
+    expect(text).toContain('alias OldAccount=Assets:New');
+    expect(text).not.toContain('commodity ADA');
+  });
+
   it('lists commodities in other files as read-only', async () => {
     // First, push the initial main.ledger to the object store so pull() won't delete it
     await push(USER);

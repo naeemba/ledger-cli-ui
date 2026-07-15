@@ -49,7 +49,10 @@ export default function CommoditiesView({ rows, observedSymbols }: Props) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.symbol} className="border-b last:border-0">
+              <tr
+                key={`${row.file}:${row.symbol}`}
+                className="border-b last:border-0"
+              >
                 <td className="py-2 pr-4 font-mono font-medium">
                   {row.symbol}
                 </td>
@@ -96,7 +99,10 @@ export default function CommoditiesView({ rows, observedSymbols }: Props) {
               </tr>
             ))}
             {undefinedRows.map((row) => (
-              <tr key={row.symbol} className="border-b last:border-0">
+              <tr
+                key={`undefined:${row.symbol}`}
+                className="border-b last:border-0"
+              >
                 <td className="py-2 pr-4 font-mono font-medium">
                   {row.symbol}
                 </td>

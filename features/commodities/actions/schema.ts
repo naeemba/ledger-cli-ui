@@ -32,7 +32,16 @@ export type CommodityDefinitionInput = z.infer<
 
 export const updateCommoditySchema = z.union([
   z.object({ symbol: symbolSchema, definition: commodityDefinitionSchema }),
-  z.object({ symbol: symbolSchema, raw: z.string().max(2000) }),
+  z.object({
+    symbol: symbolSchema,
+    raw: z
+      .string()
+      .max(2000)
+      .refine(
+        (value) => !/^\s*include\b/m.test(value),
+        'include directives are not allowed here'
+      ),
+  }),
 ]);
 
 export type UpdateCommodityInput = z.infer<typeof updateCommoditySchema>;
