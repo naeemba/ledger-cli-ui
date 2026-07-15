@@ -1,7 +1,7 @@
 // features/transactions/TransactionList.tsx
 'use client';
 
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { loadTransactionPageAction } from './actions';
@@ -32,10 +32,16 @@ const TransactionList = ({
     nextOffset: number | null;
   }>({ rows: initialRows, nextOffset: initialNextOffset });
   const loadingRef = useRef(false);
+  // Window-scrolled virtualizer needs the list's offset from the top of the
+  // document; measured post-mount since refs can't be read during render.
+  const [scrollMargin, setScrollMargin] = useState(0);
+  useEffect(() => {
+    if (parentRef.current) setScrollMargin(parentRef.current.offsetTop);
+  }, []);
 
-  const virtualizer = useVirtualizer({
+  const virtualizer = useWindowVirtualizer({
     count: page.rows.length,
-    getScrollElement: () => parentRef.current,
+    scrollMargin,
     estimateSize: () => 80,
     overscan: 8,
   });
@@ -63,6 +69,7 @@ const TransactionList = ({
   useEffect(() => {
     const last = items[items.length - 1];
     if (!last) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (last.index >= page.rows.length - 10) void loadMore();
   }, [items, page.rows.length, loadMore]);
 
@@ -75,7 +82,7 @@ const TransactionList = ({
   }
 
   return (
-    <div ref={parentRef} className="h-[70vh] overflow-auto">
+    <div ref={parentRef}>
       <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
         {items.map((vi) => {
           const row = page.rows[vi.index];
@@ -89,7 +96,7 @@ const TransactionList = ({
                 top: 0,
                 left: 0,
                 width: '100%',
-                transform: `translateY(${vi.start}px)`,
+                transform: `translateY(${vi.start - scrollMargin}px)`,
               }}
             >
               <TransactionRow view={transactionRowToView(row)} />
