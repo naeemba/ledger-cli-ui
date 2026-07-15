@@ -277,6 +277,15 @@ describe('Transaction.accountsSummary', () => {
       summary([{ account: 'Equity:Opening', amount: '0', currency: 'USD' }])
     ).toBe('Opening');
   });
+
+  it('treats a bare auto-balanced posting as the opposite side', () => {
+    expect(
+      summary([
+        { account: 'Expenses:Coffee', amount: '5', currency: 'USD' },
+        { account: 'Assets:Checking', amount: '', currency: '' },
+      ])
+    ).toBe('Checking → Coffee');
+  });
 });
 
 describe('Transaction outputs', () => {

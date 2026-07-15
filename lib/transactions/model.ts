@@ -307,10 +307,23 @@ export class Transaction {
     };
     const sources: string[] = [];
     const destinations: string[] = [];
+    const balancing: string[] = [];
     for (const p of this.postings) {
       const value = Number(p.amount);
       if (value < 0) sources.push(p.account);
       else if (value > 0) destinations.push(p.account);
+      // A bare auto-balanced posting parses to `amount: ''` (→ NaN). It's the
+      // balancing leg, so its sign is opposite the explicit legs — the most
+      // common ledger style elides exactly this side.
+      else if (p.amount.trim() === '' || !Number.isFinite(value))
+        balancing.push(p.account);
+    }
+    // Assign the elided balancing leg to whichever side is empty: if every
+    // explicit posting is money-out it settles as money-in, and vice versa.
+    if (balancing.length) {
+      if (destinations.length && !sources.length) sources.push(...balancing);
+      else if (sources.length && !destinations.length)
+        destinations.push(...balancing);
     }
     if (sources.length && destinations.length) {
       return `${side(sources)} → ${side(destinations)}`;
