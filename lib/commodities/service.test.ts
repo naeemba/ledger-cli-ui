@@ -180,4 +180,52 @@ describe('CommodityDefinitionService', () => {
       note: 'hand-authored',
     });
   });
+
+  it('saving decimalPlaces changes ledger register rendering (0.9 no longer shows as 1)', async () => {
+    const { execFile } = await import('child_process');
+    const { promisify } = await import('util');
+    const run = promisify(execFile);
+    const mainPath = path.join(dir, 'main.ledger');
+    const register = async () => {
+      const { LEDGER_PRICE_DB: _p, LEDGER_FILE: _f, ...env } = process.env;
+      const { stdout } = await run(
+        'ledger',
+        [
+          '--init-file',
+          '/dev/null',
+          '-f',
+          mainPath,
+          'reg',
+          'Expenses:Wage',
+          '--format',
+          '%t\n',
+        ],
+        { env }
+      );
+      return stdout.trim();
+    };
+
+    // Push the initial main.ledger to the object store so pull() won't delete it.
+    await push(USER);
+
+    await service.create(USER, {
+      symbol: 'KIRT',
+      note: '',
+      aliases: [],
+      decimalPlaces: 0,
+      nomarket: false,
+      isDefault: false,
+    });
+    expect(await register()).toBe('KIRT 1'); // 0-decimal format rounds display
+
+    await service.update(USER, 'KIRT', {
+      symbol: 'KIRT',
+      note: '',
+      aliases: [],
+      decimalPlaces: 1,
+      nomarket: false,
+      isDefault: false,
+    });
+    expect(await register()).toBe('KIRT 0.9');
+  });
 });
