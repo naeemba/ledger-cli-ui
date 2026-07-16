@@ -69,16 +69,19 @@ const firstIndexAfter = (
   const after = toUtc(afterExclusive);
   const elapsedDays =
     (after.getTime() - anchor.getTime()) / (24 * 60 * 60 * 1000);
-  // Estimate then correct: clamping (short months) can only push a date
-  // earlier, so the estimate may be at most a couple of steps off.
+  // Estimate then correct: divide by the MAXIMUM possible step length (31
+  // days/month, 366 days/year) so elapsedDays / approxStepDays can only
+  // UNDER-estimate k, never over. The forward-only correction loop below
+  // then walks up to the exact index; an over-estimate would never be
+  // corrected back down.
   const approxStepDays =
     schedule.unit === 'day'
       ? schedule.count
       : schedule.unit === 'week'
         ? schedule.count * 7
         : schedule.unit === 'month'
-          ? schedule.count * 28
-          : schedule.count * 365;
+          ? schedule.count * 31
+          : schedule.count * 366;
   let k = Math.max(0, Math.floor(elapsedDays / approxStepDays) - 2);
   while (occurrenceAt(schedule, k) <= afterExclusive) k++;
   return k;

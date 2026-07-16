@@ -82,6 +82,36 @@ describe('expandSchedule', () => {
       '2026-02-28',
     ]);
   });
+  it('does not drop monthly occurrences for a far-past anchor (regression)', () => {
+    const monthlySince2000 = {
+      unit: 'month' as const,
+      count: 1,
+      anchor: '2000-01-01',
+    };
+    expect(
+      expandSchedule(monthlySince2000, '2026-07-16', '2026-09-30')
+    ).toEqual(['2026-08-01', '2026-09-01']);
+  });
+  it('does not drop clamped monthly occurrences for a far-past anchor (regression)', () => {
+    const monthly31Since2000 = {
+      unit: 'month' as const,
+      count: 1,
+      anchor: '2000-01-31',
+    };
+    expect(
+      expandSchedule(monthly31Since2000, '2026-07-16', '2026-09-30')
+    ).toEqual(['2026-07-31', '2026-08-31', '2026-09-30']);
+  });
+  it('does not drop yearly occurrences for a far-past anchor (regression)', () => {
+    const yearlySince1990 = {
+      unit: 'year' as const,
+      count: 1,
+      anchor: '1990-06-15',
+    };
+    expect(expandSchedule(yearlySince1990, '2026-01-01', '2027-12-31')).toEqual(
+      ['2026-06-15', '2027-06-15']
+    );
+  });
 });
 
 describe('lastOccurrenceBefore', () => {
@@ -89,5 +119,15 @@ describe('lastOccurrenceBefore', () => {
     const fifth = { unit: 'month' as const, count: 1, anchor: '2026-01-05' };
     expect(lastOccurrenceBefore(fifth, '2026-07-16')).toBe('2026-07-05');
     expect(lastOccurrenceBefore(fifth, '2026-01-05')).toBeNull();
+  });
+  it('does not drop occurrences for a far-past anchor (regression)', () => {
+    const monthlySince2000 = {
+      unit: 'month' as const,
+      count: 1,
+      anchor: '2000-01-05',
+    };
+    expect(lastOccurrenceBefore(monthlySince2000, '2026-07-16')).toBe(
+      '2026-07-05'
+    );
   });
 });
