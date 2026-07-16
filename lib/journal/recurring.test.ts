@@ -80,3 +80,37 @@ describe('recurringDraftSchema', () => {
     ).toBe(false);
   });
 });
+
+describe(':handled: state line', () => {
+  it('round-trips through format and parse without polluting note', () => {
+    const testDraft = {
+      period: 'every 1 months from 2026/01/05',
+      note: 'Netflix',
+      uid: '01HZX5G5KJDS9HQRYK8E5T0DJC',
+      handled: '2026-07-05',
+      postings: [
+        { account: 'Expenses:Netflix', amount: '15', currency: 'USD' },
+        { account: 'Assets:Checking', amount: '', currency: '' },
+      ],
+    };
+    const block = formatRecurring(testDraft);
+    expect(block).toContain('; :handled: 2026-07-05');
+    const parsed = parseRecurringFile('main.ledger', block + '\n');
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].handled).toBe('2026-07-05');
+    expect(parsed[0].note).toBe('Netflix');
+  });
+
+  it('changes the fingerprint when handled advances', () => {
+    const base = {
+      period: 'every 1 months from 2026/01/05',
+      postings: [
+        { account: 'Expenses:Netflix', amount: '15', currency: 'USD' },
+        { account: 'Assets:Checking', amount: '', currency: '' },
+      ],
+    };
+    expect(fingerprintRecurring({ ...base, handled: '2026-06-05' })).not.toBe(
+      fingerprintRecurring({ ...base, handled: '2026-07-05' })
+    );
+  });
+});

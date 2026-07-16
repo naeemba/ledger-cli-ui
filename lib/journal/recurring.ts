@@ -36,10 +36,16 @@ const uidSchema = z
   )
   .optional();
 
+const handledSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'handled must be YYYY-MM-DD')
+  .optional();
+
 export const recurringDraftSchema = z.object({
   period: periodSchema,
   note: noteSchema,
   uid: uidSchema,
+  handled: handledSchema,
   postings: z
     .array(postingSchema)
     .min(2, 'At least 2 postings are required')
@@ -59,19 +65,25 @@ export type ParsedRecurring = RecurringDraft & {
 export const formatRecurring = (draft: RecurringDraft): string => {
   const header = `~ ${draft.period}`;
   const uidLines = draft.uid ? [`    ; :uid: ${draft.uid}`] : [];
+  const handledLines = draft.handled
+    ? [`    ; :handled: ${draft.handled}`]
+    : [];
   const noteLines = (draft.note ?? '')
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => `    ; ${line}`);
   const postings = draft.postings.map(formatPosting);
-  return [header, ...uidLines, ...noteLines, ...postings].join('\n');
+  return [header, ...uidLines, ...handledLines, ...noteLines, ...postings].join(
+    '\n'
+  );
 };
 
 export const fingerprintRecurring = (draft: RecurringDraft): string =>
   createHash('sha256').update(formatRecurring(draft)).digest('hex');
 
 const RECURRING_HEADER_REGEX = /^~\s+(\S.*)$/;
+const HANDLED_LINE_REGEX = /^\s*;\s*:handled:\s*(\d{4}-\d{2}-\d{2})\s*$/;
 const COMMENT_LINE_REGEX = /^\s*;\s?(.*)$/;
 
 const parseRecurringBlock = (
@@ -85,6 +97,7 @@ const parseRecurringBlock = (
   if (!header) return null;
 
   let uid: string | undefined;
+  let handled: string | undefined;
   const noteLines: string[] = [];
   const postings: ParsedPosting[] = [];
 
@@ -94,6 +107,11 @@ const parseRecurringBlock = (
     const uidMatch = line.match(UID_LINE_REGEX);
     if (uidMatch) {
       uid = uidMatch[1];
+      continue;
+    }
+    const handledMatch = line.match(HANDLED_LINE_REGEX);
+    if (handledMatch) {
+      handled = handledMatch[1];
       continue;
     }
     const commentMatch = line.match(COMMENT_LINE_REGEX);
@@ -109,6 +127,7 @@ const parseRecurringBlock = (
   return {
     period: header[1].trim(),
     uid,
+    handled,
     note: noteLines.length > 0 ? noteLines.join('\n') : undefined,
     postings,
   };
