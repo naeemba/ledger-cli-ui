@@ -2,6 +2,7 @@ import { Settings } from '@/features/settings';
 import { auditService } from '@/lib/audit';
 import { requireUser } from '@/lib/auth/require-user';
 import { cryptoStatus } from '@/lib/crypto/gate';
+import { parseDashboardWidgets } from '@/lib/dashboard/widgets';
 import { env } from '@/lib/env';
 import { getAvailableCurrencies, userSettingRepository } from '@/lib/settings';
 import { parseEntryTabOrder } from '@/lib/transactions/entryTabs';
@@ -25,6 +26,7 @@ const SettingsPage = async () => {
       encryptionEnabled={status !== 'unset'}
       recentActivity={recentActivity}
       entryTabOrder={parseEntryTabOrder(row?.entryTabOrder ?? null)}
+      dashboardWidgets={parseDashboardWidgets(row?.dashboardWidgets ?? null)}
     />
   );
 };

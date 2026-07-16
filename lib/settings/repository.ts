@@ -34,4 +34,14 @@ export class UserSettingRepository {
         set: { entryTabOrder: value, updatedAt: sql`now()` },
       });
   }
+
+  async upsertDashboardWidgets(userId: string, value: string): Promise<void> {
+    await this.db
+      .insert(userSetting)
+      .values({ userId, dashboardWidgets: value })
+      .onConflictDoUpdate({
+        target: userSetting.userId,
+        set: { dashboardWidgets: value, updatedAt: sql`now()` },
+      });
+  }
 }

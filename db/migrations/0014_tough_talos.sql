@@ -1,0 +1,1 @@
+ALTER TABLE "userSetting" ADD COLUMN "dashboardWidgets" text;

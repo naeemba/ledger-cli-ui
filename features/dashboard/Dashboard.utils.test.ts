@@ -26,6 +26,16 @@ describe('getHighestExpense', () => {
     expect(getHighestExpense('\n\n')).toBe('');
   });
 
+  it('skips synthetic <Adjustment>/<Revalued> rows even when they are largest', () => {
+    const stdout = [
+      '<Adjustment>|USD 9,999',
+      '<Revalued>|USD 8,888',
+      'Expenses:Rent|USD 1500',
+      '',
+    ].join('\n');
+    expect(getHighestExpense(stdout)).toBe('Expenses:Rent|USD 1500');
+  });
+
   it('skips rows whose amount field is malformed', () => {
     const stdout = ['Expenses:Food|garbage', 'Expenses:Rent|USD 100', ''].join(
       '\n'

@@ -692,6 +692,8 @@ for (const rel of localRels) {
 
 ### E4. getLayout/ensureLayout are not request-memoized: duplicate userSetting queries on every runLedger call
 
+> ✅ FIXED — `cachedEnsureLayout` (React `cache()`, read paths only) in `lib/journal/repository.ts`; `getFingerprint` and `runLedger` share one layout resolution per request. Write paths keep the uncached methods.
+
 **Severity:** MEDIUM · **Effort:** S (<1h) · **Location:** `utils/runLedger.ts:36`
 
 Each runLedger call performs two identical userSetting selects: getFingerprint → ensureLayout → getLayout (lib/journal/repository.ts:40) and then its own explicit getLayout, plus repeated mkdir/access/price-db fs.access checks. The repository already React-caches the pull (cachedPull) precisely because 'a single render fires ~8 concurrent reads', but the layout lookup was left uncached — so a dashboard render (5 runLedger calls) plus the layout slots issues ~14 identical DB round-trips per request.

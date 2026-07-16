@@ -27,6 +27,18 @@ const cachedPull = cache((userId: string): Promise<{ fingerprint: string }> =>
   pullLocked(userId)
 );
 
+/**
+ * Request-scoped dedup of the layout resolution, same rationale as cachedPull:
+ * every runLedger call needs the layout (userSetting select + fs checks), and a
+ * dashboard render fires ~8 of them — without this each spawns two identical
+ * selects. Read paths only; write paths (setMainFile & co.) keep calling the
+ * uncached methods so a layout change is visible within the same request.
+ */
+const cachedEnsureLayout = cache(
+  (repo: JournalRepository, userId: string): Promise<JournalLayout> =>
+    repo.ensureLayout(userId)
+);
+
 export type JournalLayout = {
   dir: string;
   mainFile: string;
@@ -136,8 +148,13 @@ export class JournalRepository {
    * Garage) invalidates `unstable_cache`. Also guarantees the local stub exists. */
   async getFingerprint(userId: string): Promise<string> {
     const { fingerprint } = await cachedPull(userId);
-    await this.ensureLayout(userId);
+    await this.ensureLayoutCached(userId);
     return fingerprint;
+  }
+
+  /** Read-path ensureLayout, deduped per request via React cache(). */
+  async ensureLayoutCached(userId: string): Promise<JournalLayout> {
+    return cachedEnsureLayout(this, userId);
   }
 
   /**

@@ -16,6 +16,10 @@ export const userSetting = pgTable('userSetting', {
   // Nullable: consumers fall back to DEFAULT_TAB_ORDER when null. The first id
   // is the default tab the entry shell opens on.
   entryTabOrder: text('entryTabOrder'),
+  // Comma-joined dashboard widget order; a "-" prefix marks a hidden widget
+  // (e.g. "stats,-savedViews,trends"). Nullable: consumers fall back to
+  // DEFAULT_WIDGETS when null.
+  dashboardWidgets: text('dashboardWidgets'),
   updatedAt: timestamp('updatedAt')
     .notNull()
     .default(sql`now()`),
