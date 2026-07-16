@@ -23,6 +23,8 @@ export type RecurringRowView = {
   note?: string;
   fingerprint: string;
   postings: PostingRow[];
+  nextDue?: string;
+  unsupported: boolean;
 };
 
 type Props = { rows: RecurringRowView[]; baseCurrency: string };
@@ -125,7 +127,8 @@ const RecurringView = ({ rows, baseCurrency }: Props) => {
               />
             </div>
             <p className="text-muted-foreground text-xs">
-              E.g. every 1 month(s) from the anchor date.
+              Repeats on the anchor&apos;s day — e.g. every 1 months starting
+              2026-01-05 runs on the 5th.
             </p>
           </div>
           <div className="space-y-1">
@@ -255,6 +258,7 @@ const RecurringView = ({ rows, baseCurrency }: Props) => {
                   <th className="py-1 whitespace-nowrap">Repeats</th>
                   <th>Note</th>
                   <th>Postings</th>
+                  <th className="whitespace-nowrap">Next due</th>
                   <th />
                 </tr>
               </thead>
@@ -271,6 +275,15 @@ const RecurringView = ({ rows, baseCurrency }: Props) => {
                             : p.account
                         )
                         .join(' → ')}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {row.unsupported ? (
+                        <span className="text-muted-foreground text-xs">
+                          unsupported schedule
+                        </span>
+                      ) : (
+                        (row.nextDue ?? '')
+                      )}
                     </td>
                     <td className="text-right">
                       {row.uid ? (
