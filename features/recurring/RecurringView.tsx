@@ -10,7 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TableScroll } from '@/components/ui/table';
 
-type PostingRow = { account: string; amount: string; currency: string };
+type PostingRow = {
+  id?: string;
+  account: string;
+  amount: string;
+  currency: string;
+};
 
 export type RecurringRowView = {
   uid?: string;
@@ -30,6 +35,7 @@ const PERIOD_SUGGESTIONS = [
 ];
 
 const emptyPosting = (currency: string): PostingRow => ({
+  id: crypto.randomUUID(),
   account: '',
   amount: '',
   currency,
@@ -45,7 +51,7 @@ const RecurringView = ({ rows, baseCurrency }: Props) => {
   const [note, setNote] = useState('');
   const [postings, setPostings] = useState<PostingRow[]>([
     emptyPosting(baseCurrency),
-    { account: '', amount: '', currency: '' },
+    emptyPosting(''),
   ]);
 
   const [isDeleting, startDelete] = useTransition();
@@ -121,7 +127,7 @@ const RecurringView = ({ rows, baseCurrency }: Props) => {
         <div className="space-y-2">
           {postings.map((p, i) => (
             <div
-              key={i}
+              key={p.id ?? i}
               className="flex flex-col gap-2 rounded-lg border p-2 sm:flex-row sm:items-end sm:rounded-none sm:border-0 sm:p-0"
             >
               <div className="flex-2 space-y-1 sm:flex-1">

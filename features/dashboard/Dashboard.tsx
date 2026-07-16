@@ -287,7 +287,8 @@ const Dashboard = async () => {
                   Income
                 </dt>
                 <dd className="font-semibold tabular-nums text-positive">
-                  {formatNumber(lastMonthReview.income)}
+                  {formatNumber(lastMonthReview.income)}{' '}
+                  {currency.toUpperCase()}
                 </dd>
               </div>
               <div className="flex flex-col gap-1">
@@ -295,7 +296,8 @@ const Dashboard = async () => {
                   Expenses
                 </dt>
                 <dd className="font-semibold tabular-nums text-negative">
-                  {formatNumber(lastMonthReview.expenses)}
+                  {formatNumber(lastMonthReview.expenses)}{' '}
+                  {currency.toUpperCase()}
                 </dd>
               </div>
               <div className="flex flex-col gap-1">
@@ -305,7 +307,7 @@ const Dashboard = async () => {
                 <dd
                   className={`font-semibold tabular-nums ${lastMonthReview.net >= 0 ? 'text-positive' : 'text-negative'}`}
                 >
-                  {formatNumber(lastMonthReview.net)}
+                  {formatNumber(lastMonthReview.net)} {currency.toUpperCase()}
                 </dd>
               </div>
               <div className="flex flex-col gap-1">
