@@ -13,6 +13,7 @@ import {
   ListChecks,
   PiggyBank,
   PlusCircle,
+  Repeat,
   Settings,
   TrendingUp,
   Users,
@@ -162,6 +163,15 @@ export const getNavSections = (): NavSection[] => {
           description: 'Append a new transaction to your journal.',
           icon: PlusCircle,
           keywords: ['new', 'create', 'entry'],
+        },
+        {
+          id: 'recurring',
+          title: 'Recurring',
+          href: '/recurring',
+          match: 'exact',
+          description: 'Bills and subscriptions that repeat on a schedule.',
+          icon: Repeat,
+          keywords: ['bills', 'subscriptions', 'periodic', 'schedule'],
         },
         {
           id: 'templates',

@@ -4,6 +4,8 @@ export const AUDIT_ACTIONS = [
   'tx.add',
   'tx.edit',
   'tx.delete',
+  'recurring.add',
+  'recurring.delete',
   'journal.import',
   'price.add',
   'price.delete',
