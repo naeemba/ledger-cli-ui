@@ -23,16 +23,11 @@ export type RecurringRowView = {
   note?: string;
   fingerprint: string;
   postings: PostingRow[];
+  nextDue?: string;
+  unsupported: boolean;
 };
 
 type Props = { rows: RecurringRowView[]; baseCurrency: string };
-
-const PERIOD_SUGGESTIONS = [
-  'Monthly',
-  'Weekly',
-  'Yearly',
-  'Monthly from 2026/01/01',
-];
 
 const emptyPosting = (currency: string): PostingRow => ({
   id: crypto.randomUUID(),
@@ -47,7 +42,11 @@ const RecurringView = ({ rows, baseCurrency }: Props) => {
     FormData
   >(createRecurringAction, null);
 
-  const [period, setPeriod] = useState('Monthly');
+  const [unit, setUnit] = useState<'day' | 'week' | 'month' | 'year'>('month');
+  const [count, setCount] = useState('1');
+  const [anchor, setAnchor] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
   const [note, setNote] = useState('');
   const [postings, setPostings] = useState<PostingRow[]>([
     emptyPosting(baseCurrency),
@@ -76,7 +75,7 @@ const RecurringView = ({ rows, baseCurrency }: Props) => {
     setPostings((ps) => (ps.length > 2 ? ps.filter((_, j) => j !== i) : ps));
 
   const draft = JSON.stringify({
-    period: period.trim(),
+    schedule: { unit, count: Number(count), anchor },
     note: note.trim() || undefined,
     postings: postings
       .filter((p) => p.account.trim())
@@ -94,23 +93,42 @@ const RecurringView = ({ rows, baseCurrency }: Props) => {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label htmlFor="recurring-period">Repeats</Label>
-            <Input
-              id="recurring-period"
-              list="recurring-period-suggestions"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              placeholder="Monthly from 2026/01/01"
-              required
-            />
-            <datalist id="recurring-period-suggestions">
-              {PERIOD_SUGGESTIONS.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
+            <Label htmlFor="recurring-count">Repeats</Label>
+            <div className="flex gap-2">
+              <Input
+                id="recurring-count"
+                type="number"
+                min={1}
+                max={366}
+                value={count}
+                onChange={(e) => setCount(e.target.value)}
+                className="w-20"
+                required
+              />
+              <select
+                id="recurring-unit"
+                value={unit}
+                onChange={(e) =>
+                  setUnit(e.target.value as 'day' | 'week' | 'month' | 'year')
+                }
+                className="border-input bg-background rounded-md border px-3 py-2 text-sm"
+              >
+                <option value="day">Day(s)</option>
+                <option value="week">Week(s)</option>
+                <option value="month">Month(s)</option>
+                <option value="year">Year(s)</option>
+              </select>
+              <Input
+                id="recurring-anchor"
+                type="date"
+                value={anchor}
+                onChange={(e) => setAnchor(e.target.value)}
+                required
+              />
+            </div>
             <p className="text-muted-foreground text-xs">
-              Any ledger period expression works, e.g. “Monthly from
-              2026/01/05”, “Every 2 weeks”, “Yearly”.
+              Repeats on the anchor&apos;s day — e.g. every 1 months starting
+              2026-01-05 runs on the 5th.
             </p>
           </div>
           <div className="space-y-1">
@@ -240,6 +258,7 @@ const RecurringView = ({ rows, baseCurrency }: Props) => {
                   <th className="py-1 whitespace-nowrap">Repeats</th>
                   <th>Note</th>
                   <th>Postings</th>
+                  <th className="whitespace-nowrap">Next due</th>
                   <th />
                 </tr>
               </thead>
@@ -256,6 +275,15 @@ const RecurringView = ({ rows, baseCurrency }: Props) => {
                             : p.account
                         )
                         .join(' → ')}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {row.unsupported ? (
+                        <span className="text-muted-foreground text-xs">
+                          unsupported schedule
+                        </span>
+                      ) : (
+                        (row.nextDue ?? '')
+                      )}
                     </td>
                     <td className="text-right">
                       {row.uid ? (

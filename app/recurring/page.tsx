@@ -1,9 +1,13 @@
 import Help from '@/components/Help';
 import PageContainer from '@/components/PageContainer';
 import RecurringView from '@/features/recurring/RecurringView';
+import { buildDueList } from '@/features/recurring/dueList';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { getBaseCurrency } from '@/lib/settings';
+import { toISODate } from '@/utils/date';
+
+const HORIZON_DAYS = 30;
 
 const RecurringPage = async () => {
   const user = await requireUser();
@@ -11,6 +15,22 @@ const RecurringPage = async () => {
     journalService.listRecurring(user.id),
     getBaseCurrency(),
   ]);
+
+  const now = new Date();
+  const todayIso = toISODate(now);
+  const horizonIso = toISODate(
+    new Date(now.getTime() + HORIZON_DAYS * 24 * 60 * 60 * 1000)
+  );
+  const dueList = buildDueList(recurring, todayIso, horizonIso);
+  const unsupportedUids = new Set(
+    dueList.unsupported.map((rule) => rule.ruleUid)
+  );
+  const nextDueByUid = new Map<string, string>();
+  for (const occurrence of [...dueList.due, ...dueList.upcoming]) {
+    if (!nextDueByUid.has(occurrence.ruleUid)) {
+      nextDueByUid.set(occurrence.ruleUid, occurrence.date);
+    }
+  }
 
   return (
     <PageContainer>
@@ -43,6 +63,8 @@ const RecurringPage = async () => {
             amount,
             currency,
           })),
+          nextDue: uid ? nextDueByUid.get(uid) : undefined,
+          unsupported: !uid || unsupportedUids.has(uid),
         }))}
       />
     </PageContainer>

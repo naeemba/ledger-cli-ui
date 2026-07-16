@@ -29,7 +29,8 @@ export async function createRecurringAction(
   }
 
   const bytesBefore = await getJournalDirSize(user.id);
-  const result = await journalService.addRecurring(user.id, parsed);
+  const today = new Date().toISOString().slice(0, 10);
+  const result = await journalService.addRecurring(user.id, parsed, today);
   const bytesAfter = await getJournalDirSize(user.id);
   await auditService.record(user.id, {
     action: 'recurring.add',

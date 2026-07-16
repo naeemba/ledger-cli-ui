@@ -99,52 +99,6 @@ export const getSafeToSpend = async (
   return { amount, until, basedOnIncome: nextIncome !== null };
 };
 
-export type UpcomingBill = {
-  date: string;
-  account: string;
-  amount: string;
-};
-
-/**
- * Forecasts the next stretch of expenses from the journal's periodic (`~`)
- * directives via `ledger --forecast`. Ledger generates the future postings;
- * JS only parses rows. Ledger only forecasts dates after the journal's last
- * real transaction, so already-posted bills don't reappear.
- */
-export const getUpcomingBills = async (
-  start: string,
-  end: string
-): Promise<UpcomingBill[]> => {
-  const stdout = await runLedger(
-    [
-      'reg',
-      '^Expenses',
-      '--forecast',
-      `d<[${end}]`,
-      '-b',
-      start,
-      '-e',
-      end,
-      '--sort',
-      'date',
-      '--date-format',
-      '%Y-%m-%d',
-      '--format',
-      '%D|%A|%t\n',
-    ],
-    { sortByDate: false }
-  );
-  return stdout
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [date, account, amount] = line.split('|');
-      return { date, account, amount };
-    })
-    .filter((bill) => bill.date && bill.account && bill.amount);
-};
-
 /**
  * Monthly net-worth running total for the sparkline — same query as the
  * /net-worth page: window with `--display`, never `-b`, because `%T` must
