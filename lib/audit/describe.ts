@@ -7,6 +7,22 @@ const COPY: Record<string, [string, string]> = {
   'tx.add': ['Added a transaction', 'Failed to add a transaction'],
   'tx.edit': ['Edited a transaction', 'Failed to edit a transaction'],
   'tx.delete': ['Deleted a transaction', 'Failed to delete a transaction'],
+  'recurring.add': [
+    'Added a recurring transaction',
+    'Failed to add a recurring transaction',
+  ],
+  'recurring.delete': [
+    'Deleted a recurring transaction',
+    'Failed to delete a recurring transaction',
+  ],
+  'recurring.post': [
+    'Posted a recurring occurrence',
+    'Failed to post a recurring occurrence',
+  ],
+  'recurring.skip': [
+    'Skipped a recurring occurrence',
+    'Failed to skip a recurring occurrence',
+  ],
   'journal.import': ['Imported journal', 'Import failed'],
   'price.add': ['Recorded a price', 'Failed to record a price'],
   'price.delete': ['Deleted a price', 'Failed to delete a price'],
@@ -22,6 +38,10 @@ const COPY: Record<string, [string, string]> = {
     'Failed to rotate recovery code',
   ],
   'crypto.reset': ['Reset encryption', 'Failed to reset encryption'],
+  'price.map': ['Mapped a commodity', 'Failed to map a commodity'],
+  'commodity.create': ['Created a commodity', 'Failed to create a commodity'],
+  'commodity.update': ['Updated a commodity', 'Failed to update a commodity'],
+  'commodity.delete': ['Deleted a commodity', 'Failed to delete a commodity'],
 };
 
 // More specific copy for a failed import, keyed by the recorded reason code.

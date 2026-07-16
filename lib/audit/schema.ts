@@ -6,6 +6,8 @@ export const AUDIT_ACTIONS = [
   'tx.delete',
   'recurring.add',
   'recurring.delete',
+  'recurring.post',
+  'recurring.skip',
   'journal.import',
   'price.add',
   'price.delete',
