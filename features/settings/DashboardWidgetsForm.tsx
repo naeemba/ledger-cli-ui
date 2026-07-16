@@ -4,7 +4,11 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { setDashboardWidgetsAction } from '@/features/settings/actions';
-import { WIDGET_LABELS, type WidgetSetting } from '@/lib/dashboard/widgets';
+import {
+  WIDGET_LABELS,
+  serializeDashboardWidgets,
+  type WidgetSetting,
+} from '@/lib/dashboard/widgets';
 
 type Props = { initial: WidgetSetting[] };
 
@@ -20,13 +24,11 @@ const move = (
   return next;
 };
 
-const serialize = (widgets: WidgetSetting[]) =>
-  widgets.map(({ id, hidden }) => (hidden ? `-${id}` : id)).join(',');
-
 const DashboardWidgetsForm = ({ initial }: Props) => {
   const [widgets, setWidgets] = useState<WidgetSetting[]>(initial);
   const [pending, startTransition] = useTransition();
-  const dirty = serialize(widgets) !== serialize(initial);
+  const dirty =
+    serializeDashboardWidgets(widgets) !== serializeDashboardWidgets(initial);
 
   const onSave = () => {
     startTransition(async () => {
