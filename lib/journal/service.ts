@@ -13,6 +13,13 @@ import { resolveIncludes } from './loader';
 import { withUserLock } from './mutex';
 import { parseJournalFile, type ParsedJournal } from './parser';
 import { getJournalDirSize, journalQuotaBytes, journalQuotaMb } from './quota';
+import {
+  formatRecurring,
+  parseRecurringFile,
+  recurringDraftSchema,
+  type ParsedRecurring,
+  type RecurringDraft,
+} from './recurring';
 import { JournalRepository } from './repository';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
 import { verifyJournalParseable } from './verify';
@@ -219,6 +226,166 @@ export class JournalService {
     input: WriteDeleteInput
   ): Promise<WriteResult> {
     return withUserLock(userId, () => this.performDelete(userId, input));
+  }
+
+  // ---- recurring (periodic `~` directives) ----------------------------------
+
+  async listRecurring(userId: string): Promise<ParsedRecurring[]> {
+    await pullLocked(userId);
+    const { mainPath } = await this.repo.getLayout(userId);
+    const files = await resolveIncludes(mainPath);
+    const result: ParsedRecurring[] = [];
+    for (const file of files) {
+      const text = await this.repo.readFile(file);
+      result.push(...parseRecurringFile(file, text));
+    }
+    return result;
+  }
+
+  async addRecurring(
+    userId: string,
+    rawDraft: unknown
+  ): Promise<AddTransactionResult> {
+    const parsed = recurringDraftSchema.safeParse(rawDraft);
+    if (!parsed.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path.join('.') || 'form';
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      return { ok: false, reason: 'invalid', fieldErrors };
+    }
+
+    return withUserLock(userId, async () => {
+      const uid = generateUid();
+      const draft: RecurringDraft = { ...parsed.data, uid };
+      await pull(userId);
+      const { mainPath } = await this.repo.ensureLayout(userId);
+      const snapshot = await this.repo.readFile(mainPath);
+      const block = `\n\n${formatRecurring(draft)}\n`;
+      const projected =
+        (await getJournalDirSize(userId)) + Buffer.byteLength(block);
+      if (projected > journalQuotaBytes()) {
+        return {
+          ok: false,
+          reason: 'quota',
+          fieldErrors: {},
+          formError: `This entry would exceed your ${journalQuotaMb()} MB journal limit.`,
+        };
+      }
+      try {
+        await this.repo.appendFile(mainPath, block);
+      } catch (e) {
+        return {
+          ok: false,
+          reason: 'write-failed',
+          fieldErrors: {},
+          formError: e instanceof Error ? e.message : 'Failed to write journal',
+        };
+      }
+      // Ledger is the authority on the period expression — a bad one fails
+      // `ledger stats` here and the write rolls back.
+      const verify = await verifyJournalParseable(mainPath);
+      if (!verify.ok) {
+        await this.repo.writeFileAtomic(mainPath, snapshot);
+        return {
+          ok: false,
+          reason: 'parse-failed',
+          fieldErrors: {},
+          formError: `Ledger rejected the recurring entry: ${verify.message}`,
+        };
+      }
+      try {
+        await push(userId);
+      } catch (e) {
+        await this.repo.writeFileAtomic(mainPath, snapshot);
+        const formError =
+          e instanceof StorageConflictError
+            ? e.message
+            : 'Failed to save journal to storage.';
+        return { ok: false, reason: 'stale', fieldErrors: {}, formError };
+      }
+      invalidateCache(userId);
+      return { ok: true, uid };
+    });
+  }
+
+  async deleteRecurring(
+    userId: string,
+    input: WriteDeleteInput
+  ): Promise<WriteResult> {
+    return withUserLock(userId, async () => {
+      await pull(userId);
+      const { mainPath } = await this.repo.getLayout(userId);
+      const files = await resolveIncludes(mainPath);
+
+      let current: ParsedRecurring | null = null;
+      let text = '';
+      for (const file of files) {
+        const fileText = await this.repo.readFile(file);
+        const match = parseRecurringFile(file, fileText).find(
+          (r) => r.uid === input.uid
+        );
+        if (match) {
+          current = match;
+          text = fileText;
+          break;
+        }
+      }
+      if (!current) {
+        return {
+          ok: false,
+          reason: 'not-found',
+          message: 'Recurring entry not found.',
+        };
+      }
+      if (current.fingerprint !== input.expectedFingerprint) {
+        return {
+          ok: false,
+          reason: 'stale',
+          message: 'This recurring entry was modified somewhere else.',
+        };
+      }
+
+      const lines = text.split('\n');
+      let removeStart = current.startLine - 1;
+      let removeEnd = current.endLine - 1;
+      if (lines[removeEnd + 1] === '') {
+        removeEnd++;
+      } else if (removeStart > 0 && lines[removeStart - 1] === '') {
+        removeStart--;
+      }
+      const next = [
+        ...lines.slice(0, removeStart),
+        ...lines.slice(removeEnd + 1),
+      ].join('\n');
+      await this.repo.writeFileAtomic(current.file, next);
+
+      const verify = await verifyJournalParseable(mainPath);
+      if (!verify.ok) {
+        await this.repo.writeFileAtomic(current.file, text);
+        return {
+          ok: false,
+          reason: 'parse-failed',
+          message: `Ledger rejected the delete: ${verify.message}`,
+        };
+      }
+      try {
+        await push(userId);
+      } catch (e) {
+        await this.repo.writeFileAtomic(current.file, text);
+        return {
+          ok: false,
+          reason: 'stale',
+          message:
+            e instanceof StorageConflictError
+              ? e.message
+              : 'Failed to save journal to storage.',
+        };
+      }
+      invalidateCache(userId);
+      return { ok: true };
+    });
   }
 
   // ---- bulk + import --------------------------------------------------------
