@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import {
   firstNonEmptyLine,
   getHighestExpense,
@@ -21,9 +22,10 @@ import { pageTransactions } from '@/features/transactions/pageTransactions';
 import TransactionRow from '@/features/transactions/row/TransactionRow';
 import { transactionRowToView } from '@/features/transactions/row/rowView';
 import { requireUser } from '@/lib/auth/require-user';
+import { type WidgetId } from '@/lib/dashboard/widgets';
 import { env } from '@/lib/env';
 import { savedViewService } from '@/lib/savedViews';
-import { getBaseCurrency } from '@/lib/settings';
+import { getBaseCurrency, getDashboardWidgets } from '@/lib/settings';
 import { endOfMonth, startOfMonth, toISODate } from '@/utils/date';
 import formatAmount from '@/utils/formatAmount';
 import formatDate, { Format } from '@/utils/formatDate';
@@ -77,6 +79,7 @@ const Dashboard = async () => {
     netWorthSeries,
     netWorthChange,
     cashFlow,
+    widgets,
   ] = await Promise.all([
     // `bal --collapse` folds the whole period into one rollup row, so the
     // total comes straight from ledger's `%T` instead of guessing which line
@@ -119,6 +122,9 @@ const Dashboard = async () => {
     getNetWorthSeries(currency, sparklineCutoff),
     getNetWorthChange(currency, lastMonthStart, thisMonthStart),
     getCashFlow(currency),
+    // ponytail: data for hidden widgets is still fetched; skip the fetches if
+    // the ledger calls ever get slow enough to matter.
+    getDashboardWidgets(),
   ]);
 
   const lastMonthReview =
@@ -145,22 +151,8 @@ const Dashboard = async () => {
     return <EmptyJournal />;
   }
 
-  return (
-    <PageContainer>
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <Help label="About the dashboard">
-            What&apos;s safe to spend before your next income, this month&apos;s
-            spending, and your single biggest expense category. All values are
-            converted to your default currency.
-          </Help>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {formatDate(now.toISOString(), Format.MONTH_YEAR)} overview
-        </p>
-      </div>
-
+  const sections: Record<WidgetId, React.ReactNode> = {
+    stats: (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card
           label={`Safe to Spend until ${formatDate(safeToSpend.until, Format.DATE)}`}
@@ -207,7 +199,8 @@ const Dashboard = async () => {
           action={{ title: 'More details', href: `/balance/${monthRange}` }}
         />
       </div>
-
+    ),
+    trends: (
       <div className="grid gap-4 lg:grid-cols-2">
         <ShadcnCard className="flex flex-col gap-3 p-6">
           <div className="flex items-start justify-between gap-2">
@@ -322,7 +315,8 @@ const Dashboard = async () => {
           )}
         </ShadcnCard>
       </div>
-
+    ),
+    upcomingBills: (
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -369,7 +363,8 @@ const Dashboard = async () => {
           </ShadcnCard>
         )}
       </section>
-
+    ),
+    savedViews: (
       <SavedViewsCard
         views={savedViews.map(({ id, name, targetPath }) => ({
           id,
@@ -377,7 +372,8 @@ const Dashboard = async () => {
           targetPath,
         }))}
       />
-
+    ),
+    recentTransactions: (
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -417,7 +413,8 @@ const Dashboard = async () => {
           </div>
         )}
       </section>
-
+    ),
+    journalHealth: (
       <section className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold tracking-tight">
@@ -438,6 +435,29 @@ const Dashboard = async () => {
           <Stat label="Days since last" value={stats.daysSinceLast} />
         </ShadcnCard>
       </section>
+    ),
+  };
+
+  return (
+    <PageContainer>
+      <div>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <Help label="About the dashboard">
+            What&apos;s safe to spend before your next income, this month&apos;s
+            spending, and your single biggest expense category. All values are
+            converted to your default currency.
+          </Help>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {formatDate(now.toISOString(), Format.MONTH_YEAR)} overview
+        </p>
+      </div>
+      {widgets
+        .filter((widget) => !widget.hidden)
+        .map((widget) => (
+          <Fragment key={widget.id}>{sections[widget.id]}</Fragment>
+        ))}
     </PageContainer>
   );
 };

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect, vi } from 'vitest';
 import Settings from './Settings';
+import { DEFAULT_WIDGETS } from '@/lib/dashboard/widgets';
 
 // Settings pulls in client cards with server-action imports; stub the action
 // barrel and child cards that aren't under test so the static render stays pure.
@@ -11,6 +12,7 @@ vi.mock('./actions', () => ({
   clearSessionBaseCurrencyAction: vi.fn(),
   setSavedBaseCurrencyAction: vi.fn(),
   setEntryTabOrderAction: vi.fn(),
+  setDashboardWidgetsAction: vi.fn(),
   deleteAccountAction: vi.fn(),
   requestAccountDeletionAction: vi.fn(),
   changePassphraseAction: vi.fn(),
@@ -27,6 +29,7 @@ vi.mock('@/features/settings/actions', () => ({
   clearSessionBaseCurrencyAction: vi.fn(),
   setSavedBaseCurrencyAction: vi.fn(),
   setEntryTabOrderAction: vi.fn(),
+  setDashboardWidgetsAction: vi.fn(),
   deleteAccountAction: vi.fn(),
   requestAccountDeletionAction: vi.fn(),
   changePassphraseAction: vi.fn(),
@@ -52,6 +55,7 @@ const common = {
   envFallback: 'USD',
   encryptionEnabled: false,
   recentActivity: [],
+  dashboardWidgets: DEFAULT_WIDGETS,
 };
 
 describe('Settings', () => {
@@ -62,5 +66,13 @@ describe('Settings', () => {
     expect(out).toContain('Transaction entry tabs');
     // The reorder list renders the three tab labels and a Default marker.
     expect(out).toContain('Default');
+  });
+
+  it('renders the dashboard-widgets card with all widget labels', () => {
+    const out = html(
+      <Settings {...common} entryTabOrder={['types', 'form', 'raw']} />
+    );
+    expect(out).toContain('Dashboard widgets');
+    expect(out).toContain('Journal health');
   });
 });

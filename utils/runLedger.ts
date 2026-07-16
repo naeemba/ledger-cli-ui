@@ -33,7 +33,11 @@ const runLedger = async (
   // getFingerprint pulls the canonical journal into the local cache (so the
   // ledger CLI can read it) and returns the content fingerprint for the key.
   const fingerprint = await journalRepository.getFingerprint(user.id);
-  const { mainPath, priceDbPath } = await journalRepository.getLayout(user.id);
+  // Same request-scoped cached lookup getFingerprint just resolved — no second
+  // userSetting select or fs round-trip per runLedger call.
+  const { mainPath, priceDbPath } = await journalRepository.ensureLayoutCached(
+    user.id
+  );
 
   const baseArgs: string[] = ['--file', mainPath];
   if (priceDbPath) baseArgs.push('--price-db', priceDbPath);

@@ -12,8 +12,12 @@ export const getHighestExpense = (stdout: string): string => {
   let highestExpense = { amount: 0, str: '' };
   stdout.split('\n').forEach((expense) => {
     if (!expense) return;
-    const amountField = expense.split('|')[1];
+    const [account, amountField] = expense.split('|');
     if (!amountField) return;
+    // `-X` conversion injects synthetic `<Adjustment>` / `<Revalued>` rows into
+    // the register; they are mark-to-market noise, not a spending category, and
+    // must never win "Highest Expense" (JOURNAL-AUDIT A5).
+    if (account.startsWith('<')) return;
     const amount = parseAmountParts(amountField).signed;
     if (Number.isFinite(amount) && amount > highestExpense.amount) {
       highestExpense = { amount, str: expense };

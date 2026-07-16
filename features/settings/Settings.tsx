@@ -1,5 +1,6 @@
 import BaseCurrencyForm from './BaseCurrencyForm';
 import DangerZone from './DangerZone';
+import DashboardWidgetsForm from './DashboardWidgetsForm';
 import EntryTabOrderForm from './EntryTabOrderForm';
 import SecuritySection from './SecuritySection';
 import { clearSessionBaseCurrencyAction } from './actions';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { AuditLog } from '@/db/schema/auditLog';
 import { ActivityCard } from '@/features/activity';
+import { type WidgetSetting } from '@/lib/dashboard/widgets';
 import { type TabId } from '@/lib/transactions/entryTabs';
 
 type Props = {
@@ -19,6 +21,7 @@ type Props = {
   encryptionEnabled: boolean;
   recentActivity: AuditLog[];
   entryTabOrder: TabId[];
+  dashboardWidgets: WidgetSetting[];
 };
 
 const Settings = ({
@@ -29,6 +32,7 @@ const Settings = ({
   encryptionEnabled,
   recentActivity,
   entryTabOrder,
+  dashboardWidgets,
 }: Props) => {
   const overrideActive =
     (savedDefault !== null && base !== savedDefault) ||
@@ -75,6 +79,18 @@ const Settings = ({
             the one that opens by default.
           </p>
           <EntryTabOrderForm initial={entryTabOrder} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dashboard widgets</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Reorder or hide the sections on your dashboard.
+          </p>
+          <DashboardWidgetsForm initial={dashboardWidgets} />
         </CardContent>
       </Card>
 

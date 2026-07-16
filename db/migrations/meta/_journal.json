@@ -99,6 +99,13 @@
       "when": 1783281475578,
       "tag": "0013_base_currency_usd",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784201928255,
+      "tag": "0014_tough_talos",
+      "breakpoints": true
     }
   ]
 }
