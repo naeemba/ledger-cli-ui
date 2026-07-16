@@ -73,7 +73,8 @@ export type WriteResult =
   | { ok: true }
   | {
       ok: false;
-      reason: 'not-found' | 'stale' | 'invalid' | 'parse-failed';
+      reason:
+        'not-found' | 'stale' | 'invalid' | 'parse-failed' | 'write-failed';
       message: string;
       fieldErrors?: Record<string, string>;
     };
@@ -505,27 +506,26 @@ export class JournalService {
             message: `This entry would exceed your ${journalQuotaMb()} MB journal limit.`,
           };
         }
-        await this.repo.appendFile(mainPath, block);
+        try {
+          await this.repo.appendFile(mainPath, block);
+        } catch (e) {
+          for (const [file, snapshot] of snapshots) {
+            await this.repo.writeFileAtomic(file, snapshot);
+          }
+          return {
+            ok: false,
+            reason: 'write-failed',
+            message: e instanceof Error ? e.message : 'Failed to write journal',
+          };
+        }
       }
 
-      // Re-read the rule's file: if it's the same file the transaction was
-      // just appended to, its content (and therefore the rule's line
-      // numbers) has changed since `rule` was parsed.
+      // Re-read the rule's file: appendFile only adds bytes at the very end
+      // of mainPath, so it can't shift any earlier line's position. When
+      // rule.file === mainPath the already-parsed startLine/endLine are still
+      // correct offsets into this text -- we only need the fresh content
+      // (which now includes the appended transaction), not a re-parse.
       const currentRuleFileText = await this.repo.readFile(rule.file);
-      const currentRule = parseRecurringFile(
-        rule.file,
-        currentRuleFileText
-      ).find((r) => r.uid === input.uid);
-      if (!currentRule) {
-        for (const [file, snapshot] of snapshots) {
-          await this.repo.writeFileAtomic(file, snapshot);
-        }
-        return {
-          ok: false,
-          reason: 'not-found',
-          message: 'Recurring entry not found.',
-        };
-      }
 
       const ruleDraft: RecurringDraft = {
         period: rule.period,
@@ -535,13 +535,24 @@ export class JournalService {
         postings: rule.postings,
       };
       const lines = currentRuleFileText.split('\n');
-      const before = lines.slice(0, currentRule.startLine - 1).join('\n');
-      const after = lines.slice(currentRule.endLine).join('\n');
+      const before = lines.slice(0, rule.startLine - 1).join('\n');
+      const after = lines.slice(rule.endLine).join('\n');
       const next =
         (before ? before + '\n' : '') +
         formatRecurring(ruleDraft) +
         (after ? '\n' + after : '');
-      await this.repo.writeFileAtomic(rule.file, next);
+      try {
+        await this.repo.writeFileAtomic(rule.file, next);
+      } catch (e) {
+        for (const [file, snapshot] of snapshots) {
+          await this.repo.writeFileAtomic(file, snapshot);
+        }
+        return {
+          ok: false,
+          reason: 'write-failed',
+          message: e instanceof Error ? e.message : 'Failed to write journal',
+        };
+      }
 
       const verify = await verifyJournalParseable(mainPath);
       if (!verify.ok) {

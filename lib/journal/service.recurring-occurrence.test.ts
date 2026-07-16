@@ -191,5 +191,58 @@ describe('JournalService.postRecurringOccurrence / skipRecurringOccurrence', () 
       expect(text).toContain('; :handled: 2026-07-05');
       expect(text).not.toContain('2026-07-05 Netflix');
     });
+
+    it('posting a rule defined in an included file leaves the include untouched', async () => {
+      const journalDir = getJournalDir('test-user');
+      const includeLine = 'include recurring.ledger';
+      await fs.writeFile(
+        path.join(journalDir, 'main.ledger'),
+        [
+          includeLine,
+          '',
+          '2026/07/01 Opening Balance',
+          '    Assets:Checking                             USD 100',
+          '    Equity:Opening Balances                    USD -100',
+          '',
+        ].join('\n')
+      );
+      await fs.writeFile(
+        path.join(journalDir, 'recurring.ledger'),
+        [
+          '~ every 1 months from 2026/01/05',
+          '    ; :uid: 01HZX5G5KJDS9HQRYK8E5T0DJD',
+          '    ; :handled: 2026-06-05',
+          '    ; Netflix',
+          '    Expenses:Netflix                            USD 15',
+          '    Assets:Checking                             USD -15',
+          '',
+        ].join('\n')
+      );
+      await push('test-user');
+      const rules = await service.listRecurring('test-user');
+      const rule = rules.find((r) => r.uid === '01HZX5G5KJDS9HQRYK8E5T0DJD')!;
+
+      const result = await service.postRecurringOccurrence('test-user', {
+        uid: rule.uid!,
+        expectedFingerprint: rule.fingerprint,
+        dueDate: '2026-07-05',
+        today: '2026-07-16',
+      });
+      expect(result.ok).toBe(true);
+
+      const mainText = await fs.readFile(
+        path.join(journalDir, 'main.ledger'),
+        'utf-8'
+      );
+      const recurringText = await fs.readFile(
+        path.join(journalDir, 'recurring.ledger'),
+        'utf-8'
+      );
+      expect(mainText).toContain('2026-07-05 Netflix');
+      expect(mainText.trim().startsWith(includeLine)).toBe(true);
+      expect(mainText).not.toContain(':handled:');
+      expect(recurringText).toContain('; :handled: 2026-07-05');
+      expect(recurringText).not.toContain('; :handled: 2026-06-05');
+    });
   });
 });
