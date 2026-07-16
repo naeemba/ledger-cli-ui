@@ -16,11 +16,12 @@ import { getJournalDirSize, journalQuotaBytes, journalQuotaMb } from './quota';
 import {
   formatRecurring,
   parseRecurringFile,
-  recurringDraftSchema,
+  recurringCreateSchema,
   type ParsedRecurring,
   type RecurringDraft,
 } from './recurring';
 import { JournalRepository } from './repository';
+import { lastOccurrenceBefore, serializeSchedule } from './schedule';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
 import { verifyJournalParseable } from './verify';
 import { encryptFile, isCiphertext } from '@/lib/crypto/fileCrypto';
@@ -244,9 +245,10 @@ export class JournalService {
 
   async addRecurring(
     userId: string,
-    rawDraft: unknown
+    rawDraft: unknown,
+    today: string
   ): Promise<AddTransactionResult> {
-    const parsed = recurringDraftSchema.safeParse(rawDraft);
+    const parsed = recurringCreateSchema.safeParse(rawDraft);
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -258,7 +260,13 @@ export class JournalService {
 
     return withUserLock(userId, async () => {
       const uid = generateUid();
-      const draft: RecurringDraft = { ...parsed.data, uid };
+      const { schedule, ...rest } = parsed.data;
+      const draft: RecurringDraft = {
+        ...rest,
+        period: serializeSchedule(schedule),
+        handled: lastOccurrenceBefore(schedule, today) ?? undefined,
+        uid,
+      };
       await pull(userId);
       const { mainPath } = await this.repo.ensureLayout(userId);
       const snapshot = await this.repo.readFile(mainPath);

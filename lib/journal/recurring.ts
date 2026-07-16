@@ -54,6 +54,21 @@ export const recurringDraftSchema = z.object({
 
 export type RecurringDraft = z.infer<typeof recurringDraftSchema>;
 
+export const recurringScheduleInputSchema = z.object({
+  unit: z.enum(['day', 'week', 'month', 'year']),
+  count: z.number().int().min(1).max(366),
+  anchor: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Anchor must be YYYY-MM-DD')
+    .refine((s) => !Number.isNaN(Date.parse(s)), 'Anchor is not a real date'),
+});
+
+export const recurringCreateSchema = recurringDraftSchema
+  .omit({ period: true, handled: true, uid: true })
+  .extend({ schedule: recurringScheduleInputSchema });
+
+export type RecurringCreateDraft = z.infer<typeof recurringCreateSchema>;
+
 export type ParsedRecurring = RecurringDraft & {
   file: string;
   startLine: number;
