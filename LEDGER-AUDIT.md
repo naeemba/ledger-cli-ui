@@ -174,3 +174,32 @@ with real ledger runs (none dropped by the verification cap).
 **Biggest single win: the transaction-balancing trio (#1–#3) — one root
 cause, three sites, and the only cluster where divergence corrupts what gets
 written rather than what gets displayed.**
+
+---
+
+## `--forecast` anchor-snapping — 2026-07-16
+
+Found while implementing recurring confirm-to-post (Task 9). Verified against
+ledger 3.4.1-20251025 on synthetic `~` periodic-transaction journals.
+
+1. **No past emission, even `--now` doesn't fill the anchor period.**
+   `--forecast` never emits an occurrence dated before "now" — a rules-only
+   journal with a rule anchored months ago produces zero rows on a plain run.
+   `--now <date>` backdates what ledger treats as "today" and lets earlier
+   occurrences appear, but the anchor period itself is still skipped: asking
+   for occurrences from the rule's own start date via `--now` on that exact
+   date does not emit the occurrence that starts there.
+2. **Date anchors are ignored — ledger snaps to calendar boundaries, not the
+   rule's stated anchor.** `~ Monthly from 2026/05/05` fires on the 1st of
+   each month, not the 5th. `~ every 2 weeks from <a Friday>` fires on
+   Sundays, not Fridays — the weekly cadence snaps to a fixed weekday
+   independent of the anchor's weekday. `~ every 30 days` is the exception:
+   day-count arithmetic is preserved, but it drifts across months of varying
+   length (not a calendar-boundary snap, but not stable either).
+3. **Consequence:** recurring occurrence dates are computed in JS
+   (`lib/journal/schedule.ts`), not by shelling out to `--forecast` — this is
+   dates only, no money; amounts and balance validation still go through
+   ledger. The `; :handled:` and `; :recurring:` comment tags used to track
+   confirm-to-post state are plain ledger comments — `ledger` ignores them
+   entirely (confirmed via `stats`/`bal` on a journal containing both), so
+   journals stay portable to any other ledger-reading tool.
