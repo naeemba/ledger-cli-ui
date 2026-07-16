@@ -24,50 +24,76 @@ closed, end conditions, visible next-due status.
 
 ### Data model — the journal is the only state
 
-A rule remains a `~` directive. Its `from` date doubles as "next unhandled
-occurrence"; there is no occurrence table, no database state.
+A rule remains a `~` directive. The period expression is immutable (it
+carries the schedule anchor); occurrence state is a single `:handled:`
+comment line recording the last handled occurrence date. There is no
+occurrence table, no database state.
 
 ```
-~ Monthly from 2026/08/05
+~ every 1 months from 2026/01/05
     ; :uid: 01ABC...
+    ; :handled: 2026-07-05
     ; Netflix
     Expenses:Subscriptions:Netflix  USD 15.00
     Assets:Checking
 ```
 
-- **Create**: normalize the stored `from` to the first occurrence on or after
-  today, preserving the user's anchor (input "Monthly from 2026/01/05", saved
-  "Monthly from 2026/08/05"). A rule with no `from` is stored as-is and treated
-  as `from = today` at expansion time. New rules therefore never show a
-  backlog.
+- **Expansion floor**: occurrences strictly after `:handled:` are unhandled.
+- **Create**: the anchor is stored as given; `:handled:` is initialized to
+  the last occurrence before today (or omitted when the anchor is in the
+  future), so new rules never show a backlog. The anchor never changes, so
+  "the 31st" survives February instead of being clamped away by a bump.
 - **Post**: write a real transaction dated on the due date through the
   existing add path, plus a provenance comment `; :recurring: <rule-uid>`
-  (no logic depends on it), then rewrite the rule's `from` to the day after
-  the posted occurrence. Both edits in one write, one `ledger stats` verify,
-  one push; rollback both on failure.
-- **Skip**: the `from` rewrite only, no transaction.
+  (no logic depends on it), then set the rule's `:handled:` line to the
+  posted occurrence date. Both edits in one write, one `ledger stats`
+  verify, one push; rollback both on failure.
+- **Skip**: the `:handled:` update only, no transaction.
+- Plain ledger CLI ignores the comment lines, so the journal stays fully
+  portable; its own `--forecast` remains approximate (boundary snapping),
+  which it already is today.
 - Concurrency: rule fingerprint (existing sha256 mechanism) is required by
   Post/Skip; the first successful action changes it, so double-clicks and
   replays fail as stale. Oldest-first is enforced server-side: an action whose
   due date is not the rule's oldest unhandled occurrence is rejected.
 
-### Due-list query — ledger expands, JS buckets
+### Due-list query — JS computes occurrence dates, ledger keeps all money
 
-`--forecast` on the real journal cannot emit past-due occurrences (it starts
-after the last real transaction), so expansion runs against a rules-only view:
+Empirical findings against ledger 3.4.1 (2026-07-16, synthetic journals):
 
-1. `listRecurring` parses all `~` blocks (exists today).
-2. Per rule, write its block to a temp journal inside the per-user journal
-   working directory (plaintext-safe location for encrypted journals; deleted
-   after the call) and run
-   `ledger reg --forecast 'd<[today+30]' -e <today+30>` with a `%D|quantity|
-   commodity|%A` format. Per-rule expansion avoids attributing rows when rules
-   share accounts; rules are few and calls run concurrently.
-3. Rows with date <= today are due/overdue (actionable); later rows are the
-   read-only upcoming preview. This replaces `getUpcomingBills` as the
-   widget's single source.
+- `--forecast` never emits occurrences before "now", even on a rules-only
+  journal; `--now <date>` backdates generation but the anchor period itself
+  is skipped.
+- Date anchors are ignored: `Monthly from 2026/05/05` fires on the 1st;
+  `every 2 weeks from <a Friday>` fires on Sundays (calendar-boundary
+  snapping); `every 30 days` keeps day arithmetic but drifts across months.
 
-All recurrence math is ledger's. JS parses rows, buckets by date, formats.
+Ledger therefore cannot produce "the 5th of every month" — the calendar
+behavior this feature exists to deliver. Occurrence **dates** are computed in
+JS instead. This is within the project's HARD RULE: CLAUDE.md's allowed list
+explicitly includes dates; recurrence scheduling contains no money. Amounts
+are the rule's postings verbatim (never summed or converted in JS), rule
+validity remains `ledger stats`, and every report stays ledger-computed.
+
+Consequences:
+
+1. The /recurring form replaces the freeform period input with a structured
+   schedule: interval unit (day/week/month/year), interval count N, anchor
+   date — serialized to `~ every N <unit>s from <anchor>` so the journal
+   stays valid and portable for plain ledger CLI (which will forecast it
+   with its own boundary quirks). Existing freeform rules that don't parse
+   into that grammar are listed and deletable but show "unsupported
+   schedule" instead of occurrences.
+2. A pure function `expandSchedule(schedule, fromDate, throughDate)` returns
+   occurrence dates: month arithmetic anchored to the anchor's day-of-month
+   (clamping to short months, e.g. the 31st in February → Feb 28/29),
+   week/day arithmetic as plain day steps, year arithmetic anchored to
+   month+day.
+3. Due list = per rule, occurrences from `expandSchedule(schedule, anchor,
+   today + 30 days)` that are strictly after `:handled:` (all of them when
+   no `:handled:` exists); dates <= today are due/overdue (actionable),
+   later dates are the read-only upcoming preview. This replaces
+   `getUpcomingBills` as the widget's single source.
 
 ### UI
 
@@ -91,35 +117,36 @@ column from the same expansion.
   check → mutate → verify → push/rollback. Errors surface as
   `{ ok: false, message }` with ledger's own message; no silent fallbacks.
 
-### Empirical preconditions (step 1 of implementation, before feature code)
+### Resolved empirical preconditions
 
-Verify on synthetic journals against ledger 3.4.1 and pin as tests:
-
-1. A rules-only journal plus `--forecast` emits occurrences starting at
-   `from`, including dates in the past.
-2. Rewriting `from` preserves anchor alignment for "every 2 weeks from a
-   Friday" and "monthly from the 5th". If it re-anchors, compute the bumped
-   `from` by asking ledger for the next occurrence rather than JS date math.
-
-If either fails, revisit the design at that point.
+The original design deferred two ledger 3.4.1 checks; both ran on 2026-07-16
+and both failed (see findings above). Two consequences: occurrence dates
+moved to JS, and the state mechanism changed from bumping the period's
+`from` (which would have destroyed the anchor day the JS expansion needs)
+to the immutable-anchor + `:handled:` comment model described in the data
+model section.
 
 ### Testing
 
 End-to-end against real ledger, existing test style:
 - The two gotcha-pinning tests above.
-- Service: post writes transaction + tag + bump atomically; skip bumps only;
+- Service: post writes transaction + tag + `:handled:` update atomically;
+  skip updates `:handled:` only;
   stale fingerprint rejected; non-oldest occurrence rejected; ledger-rejected
   rewrite rolls back both edits; quota respected.
 - Expansion: multi-currency, multiple rules, overdue vs upcoming bucketing,
-  creation-time `from` normalization.
+  creation-time `:handled:` initialization (no backlog on new rules).
 - Parser: the `:recurring:` comment line survives
   `parseJournalFile`/`formatTransaction` round-trips.
 
 ### Rollout
 
-No migration. Existing `from`-less rules show no backlog and gain an explicit
-`from` on first Post. Journals stay valid for plain ledger CLI; a user who
-never posts keeps today's forecast-only behavior.
+No migration. Existing structured-parseable rules without `:handled:` show
+no backlog (floor defaults to today at expansion time) and gain a
+`:handled:` line on first Post/Skip; freeform rules that don't parse into
+the structured grammar are listed as "unsupported schedule" (still
+deletable, still forecast by plain ledger CLI). A user who never posts
+keeps today's behavior.
 
 ### Out of scope
 
