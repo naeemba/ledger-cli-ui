@@ -21,7 +21,13 @@ import {
   type RecurringDraft,
 } from './recurring';
 import { JournalRepository } from './repository';
-import { lastOccurrenceBefore, serializeSchedule } from './schedule';
+import {
+  dayBefore,
+  expandSchedule,
+  lastOccurrenceBefore,
+  parseSchedule,
+  serializeSchedule,
+} from './schedule';
 import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
 import { verifyJournalParseable } from './verify';
 import { encryptFile, isCiphertext } from '@/lib/crypto/fileCrypto';
@@ -71,6 +77,13 @@ export type WriteResult =
       message: string;
       fieldErrors?: Record<string, string>;
     };
+
+export type RecurringOccurrenceInput = {
+  uid: string;
+  expectedFingerprint: string;
+  dueDate: string;
+  today: string;
+};
 
 export type BackfillFileResult = {
   uidsAdded: number;
@@ -382,6 +395,171 @@ export class JournalService {
         await push(userId);
       } catch (e) {
         await this.repo.writeFileAtomic(current.file, text);
+        return {
+          ok: false,
+          reason: 'stale',
+          message:
+            e instanceof StorageConflictError
+              ? e.message
+              : 'Failed to save journal to storage.',
+        };
+      }
+      invalidateCache(userId);
+      return { ok: true };
+    });
+  }
+
+  async postRecurringOccurrence(
+    userId: string,
+    input: RecurringOccurrenceInput
+  ): Promise<WriteResult> {
+    return this.handleRecurringOccurrence(userId, input, 'post');
+  }
+
+  async skipRecurringOccurrence(
+    userId: string,
+    input: RecurringOccurrenceInput
+  ): Promise<WriteResult> {
+    return this.handleRecurringOccurrence(userId, input, 'skip');
+  }
+
+  private async handleRecurringOccurrence(
+    userId: string,
+    input: RecurringOccurrenceInput,
+    mode: 'post' | 'skip'
+  ): Promise<WriteResult> {
+    return withUserLock(userId, async () => {
+      await pull(userId);
+      const { mainPath } = await this.repo.getLayout(userId);
+      const files = await resolveIncludes(mainPath);
+
+      let rule: ParsedRecurring | null = null;
+      let ruleFileText = '';
+      for (const file of files) {
+        const fileText = await this.repo.readFile(file);
+        const match = parseRecurringFile(file, fileText).find(
+          (r) => r.uid === input.uid
+        );
+        if (match) {
+          rule = match;
+          ruleFileText = fileText;
+          break;
+        }
+      }
+      if (!rule) {
+        return {
+          ok: false,
+          reason: 'not-found',
+          message: 'Recurring entry not found.',
+        };
+      }
+      if (rule.fingerprint !== input.expectedFingerprint) {
+        return {
+          ok: false,
+          reason: 'stale',
+          message: 'This recurring entry was modified somewhere else.',
+        };
+      }
+
+      const schedule = parseSchedule(rule.period);
+      if (!schedule) {
+        return {
+          ok: false,
+          reason: 'invalid',
+          message: 'This rule has an unsupported schedule.',
+        };
+      }
+
+      const floor = rule.handled ?? dayBefore(input.today);
+      const oldestDue = expandSchedule(schedule, floor, input.today)[0];
+      if (oldestDue === undefined || oldestDue !== input.dueDate) {
+        return {
+          ok: false,
+          reason: 'invalid',
+          message: 'This occurrence is not the oldest unhandled one.',
+        };
+      }
+
+      const snapshots = new Map<string, string>();
+      snapshots.set(rule.file, ruleFileText);
+
+      if (mode === 'post') {
+        const transactionDraft: TransactionDraft = {
+          date: input.dueDate,
+          payee: (rule.note ?? '').split('\n')[0] || 'Recurring',
+          status: 'none',
+          note: `:recurring: ${rule.uid}`,
+          uid: generateUid(),
+          postings: rule.postings,
+        };
+        if (!snapshots.has(mainPath)) {
+          snapshots.set(mainPath, await this.repo.readFile(mainPath));
+        }
+        const block = `\n\n${formatTransaction(transactionDraft)}\n`;
+        const projected =
+          (await getJournalDirSize(userId)) + Buffer.byteLength(block);
+        if (projected > journalQuotaBytes()) {
+          return {
+            ok: false,
+            reason: 'invalid',
+            message: `This entry would exceed your ${journalQuotaMb()} MB journal limit.`,
+          };
+        }
+        await this.repo.appendFile(mainPath, block);
+      }
+
+      // Re-read the rule's file: if it's the same file the transaction was
+      // just appended to, its content (and therefore the rule's line
+      // numbers) has changed since `rule` was parsed.
+      const currentRuleFileText = await this.repo.readFile(rule.file);
+      const currentRule = parseRecurringFile(
+        rule.file,
+        currentRuleFileText
+      ).find((r) => r.uid === input.uid);
+      if (!currentRule) {
+        for (const [file, snapshot] of snapshots) {
+          await this.repo.writeFileAtomic(file, snapshot);
+        }
+        return {
+          ok: false,
+          reason: 'not-found',
+          message: 'Recurring entry not found.',
+        };
+      }
+
+      const ruleDraft: RecurringDraft = {
+        period: rule.period,
+        note: rule.note,
+        uid: rule.uid,
+        handled: input.dueDate,
+        postings: rule.postings,
+      };
+      const lines = currentRuleFileText.split('\n');
+      const before = lines.slice(0, currentRule.startLine - 1).join('\n');
+      const after = lines.slice(currentRule.endLine).join('\n');
+      const next =
+        (before ? before + '\n' : '') +
+        formatRecurring(ruleDraft) +
+        (after ? '\n' + after : '');
+      await this.repo.writeFileAtomic(rule.file, next);
+
+      const verify = await verifyJournalParseable(mainPath);
+      if (!verify.ok) {
+        for (const [file, snapshot] of snapshots) {
+          await this.repo.writeFileAtomic(file, snapshot);
+        }
+        return {
+          ok: false,
+          reason: 'parse-failed',
+          message: `Ledger rejected the change: ${verify.message}`,
+        };
+      }
+      try {
+        await push(userId);
+      } catch (e) {
+        for (const [file, snapshot] of snapshots) {
+          await this.repo.writeFileAtomic(file, snapshot);
+        }
         return {
           ok: false,
           reason: 'stale',

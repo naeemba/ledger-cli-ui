@@ -102,6 +102,13 @@ export const expandSchedule = (
   }
 };
 
+/** ISO date minus one calendar day, computed in UTC. */
+export const dayBefore = (iso: string): string => {
+  const date = toUtc(iso);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return toIso(date);
+};
+
 export const lastOccurrenceBefore = (
   schedule: Schedule,
   date: string
