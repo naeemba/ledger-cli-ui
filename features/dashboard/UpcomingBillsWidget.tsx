@@ -9,7 +9,7 @@ import type {
 } from '../recurring/dueList';
 import { Button } from '@/components/ui/button';
 import { Card as ShadcnCard } from '@/components/ui/card';
-import formatDate, { Format } from '@/utils/formatDate';
+import { Format, formatDateWithLocale } from '@/utils/formatDateCore';
 import Link from 'next/link';
 
 type Props = { dueList: RecurringDueList };
@@ -89,7 +89,7 @@ const UpcomingBillsWidget = ({ dueList }: Props) => {
                     <span
                       className={`whitespace-nowrap ${occurrence.overdue ? 'text-destructive' : 'text-muted-foreground'}`}
                     >
-                      {formatDate(occurrence.date, Format.DATE)}
+                      {formatDateWithLocale(occurrence.date, Format.DATE)}
                     </span>
                     <span className="whitespace-nowrap font-medium tabular-nums">
                       {occurrenceAmount(occurrence)}
@@ -134,7 +134,7 @@ const UpcomingBillsWidget = ({ dueList }: Props) => {
                     {occurrence.label}
                   </span>
                   <span className="whitespace-nowrap text-muted-foreground">
-                    {formatDate(occurrence.date, Format.DATE)}
+                    {formatDateWithLocale(occurrence.date, Format.DATE)}
                   </span>
                   <span className="whitespace-nowrap font-medium tabular-nums">
                     {occurrenceAmount(occurrence)}
