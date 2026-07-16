@@ -6,10 +6,10 @@ import {
   getNetWorthChange,
   getNetWorthSeries,
   getSafeToSpend,
-  getUpcomingBills,
 } from './Dashboard.utils';
 import EmptyJournal from './EmptyJournal';
 import SavedViewsCard from './SavedViewsCard';
+import UpcomingBillsWidget from './UpcomingBillsWidget';
 import Card from '@/components/Card';
 import Chart from '@/components/Chart';
 import Help from '@/components/Help';
@@ -17,6 +17,7 @@ import PageContainer from '@/components/PageContainer';
 import { buttonVariants } from '@/components/ui/button';
 import { Card as ShadcnCard } from '@/components/ui/card';
 import { getCashFlow } from '@/features/monthlyComparison/MonthlyComparison.utils';
+import { buildDueList } from '@/features/recurring/dueList';
 import { loadJournalTransactions } from '@/features/transactions/loadJournalTransactions';
 import { pageTransactions } from '@/features/transactions/pageTransactions';
 import TransactionRow from '@/features/transactions/row/TransactionRow';
@@ -24,6 +25,7 @@ import { transactionRowToView } from '@/features/transactions/row/rowView';
 import { requireUser } from '@/lib/auth/require-user';
 import { type WidgetId } from '@/lib/dashboard/widgets';
 import { env } from '@/lib/env';
+import { journalService } from '@/lib/journal';
 import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency, getDashboardWidgets } from '@/lib/settings';
 import { endOfMonth, startOfMonth, toISODate } from '@/utils/date';
@@ -75,7 +77,7 @@ const Dashboard = async () => {
     recent,
     stats,
     savedViews,
-    upcomingBills,
+    dueList,
     netWorthSeries,
     netWorthChange,
     cashFlow,
@@ -118,7 +120,9 @@ const Dashboard = async () => {
     ),
     getJournalStats(),
     savedViewService.list(user.id),
-    getUpcomingBills(upcomingStart, upcomingEnd),
+    journalService
+      .listRecurring(user.id)
+      .then((rules) => buildDueList(rules, upcomingStart, upcomingEnd)),
     getNetWorthSeries(currency, sparklineCutoff),
     getNetWorthChange(currency, lastMonthStart, thisMonthStart),
     getCashFlow(currency),
@@ -316,54 +320,7 @@ const Dashboard = async () => {
         </ShadcnCard>
       </div>
     ),
-    upcomingBills: (
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold tracking-tight">
-              Upcoming bills
-            </h2>
-            <Help label="About upcoming bills">
-              Forecast for the next {UPCOMING_DAYS} days from your recurring
-              transactions, computed by <code>ledger --forecast</code>. Bills
-              already posted this period don&apos;t reappear.
-            </Help>
-          </div>
-          <Link
-            href="/recurring"
-            className={buttonVariants({ variant: 'link', size: 'sm' })}
-          >
-            Manage recurring →
-          </Link>
-        </div>
-        {upcomingBills.length === 0 ? (
-          <ShadcnCard className="p-6 text-center text-sm text-muted-foreground">
-            Nothing due in the next {UPCOMING_DAYS} days.{' '}
-            <Link href="/recurring" className="underline">
-              Add recurring bills
-            </Link>{' '}
-            to see them forecast here.
-          </ShadcnCard>
-        ) : (
-          <ShadcnCard className="divide-y px-6 py-2">
-            {upcomingBills.map((bill, i) => (
-              <div
-                key={`${bill.date}:${bill.account}:${i}`}
-                className="flex items-center justify-between gap-4 py-2 text-sm"
-              >
-                <span className="whitespace-nowrap text-muted-foreground">
-                  {formatDate(bill.date, Format.DATE)}
-                </span>
-                <span className="min-w-0 flex-1 truncate">{bill.account}</span>
-                <span className="whitespace-nowrap font-medium tabular-nums">
-                  {formatAmount(bill.amount, true)}
-                </span>
-              </div>
-            ))}
-          </ShadcnCard>
-        )}
-      </section>
-    ),
+    upcomingBills: <UpcomingBillsWidget dueList={dueList} />,
     savedViews: (
       <SavedViewsCard
         views={savedViews.map(({ id, name, targetPath }) => ({
