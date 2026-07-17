@@ -203,3 +203,52 @@ ledger 3.4.1-20251025 on synthetic `~` periodic-transaction journals.
    confirm-to-post state are plain ledger comments — `ledger` ignores them
    entirely (confirmed via `stats`/`bal` on a journal containing both), so
    journals stay portable to any other ledger-reading tool.
+
+---
+
+## Budget report `--format` and running-total gotchas — 2026-07-17
+
+Verified while finishing the budgets feature (Task 8) against a synthetic
+journal with a `:budget:`-tagged periodic transaction (`~ every 1 months from
+2026/07/01`), a recurring bill rule also tagged `:budget:` and carrying a
+`; :handled:` marker, and three real July transactions on
+`Expenses:Groceries` / `Expenses:Rent`.
+
+1. **`budget`'s `--format` needs `get_at(display_total, 0|1)`, and element 1
+   is the *negated* allowance.** `ledger budget ^Expenses --flat --format
+   '%A|%(get_at(display_total, 0))|%(get_at(display_total, 1))\n'` returns
+   the actual in slot 0 and the allowance as a negative amount in slot 1 (a
+   `$ 400.00` budget line renders as `$ -400.00` in slot 1) — `report.ts`'s
+   `BUDGET_ROW_FORMAT` negates it back with `0 - get_at(display_total, 1)`
+   before treating it as a positive allowance.
+2. **`neg()` is not a valid identifier in this format context.** Swapping the
+   working `0 - get_at(display_total, 1)` for `neg(get_at(display_total, 1))`
+   fails outright:
+   ```
+   Error: Unknown identifier 'neg'
+   ```
+   confirmed on the synthetic journal above — `0 - …` is the only form that
+   works inside a `--format` value expression here.
+3. **`reg --budget`'s `%T` running total is global across the whole register,
+   not per account.** On the synthetic journal, `ledger reg ^Expenses
+   --budget -p 'jul 2026' --format '%A|%T\n'` interleaves `Expenses:Groceries`
+   and `Expenses:Rent` postings and accumulates one running total across both
+   accounts (`-$400 → -$1,600 → -$1,450 → -$250 → -$130`), never resetting
+   per account. This is why the year-to-date column in `getBudgetReport`
+   re-runs the `budget` command over the Jan-1-to-month-end span instead of
+   trying to read a cumulative total off `reg --budget` — `budget` totals
+   each account independently over the requested period.
+4. **Recurring bill rules count as budget allowances by design.** The
+   synthetic journal's `Expenses:Rent` bill (`~ ... ; :budget: ... ;
+   :handled: 2026-07-01`) showed up in the `budget` report's allowance column
+   exactly like the plain `:budget:`-tagged Groceries line — both rows
+   appeared in the same `budget ^Expenses -p 'jul 2026' --flat --format
+   BUDGET_ROW_FORMAT` output:
+   ```
+   Expenses:Groceries|$ 270.00|$ 400.00|$ -130.00|270|400
+   Expenses:Rent|$ 1,200.00|$ 1,200.00|0|1200|1200
+   ```
+   This is the "bills are budget lines" decision (spec 2026-07-17): any `~`
+   rule tagged `:budget:` — whether an explicit budget line or a recurring
+   bill — is an allowance ledger's `budget` command will honor, with no
+   special-casing needed in `report.ts` to distinguish the two.

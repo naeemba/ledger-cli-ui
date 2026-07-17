@@ -46,6 +46,7 @@ export const recurringDraftSchema = z.object({
   note: noteSchema,
   uid: uidSchema,
   handled: handledSchema,
+  budget: z.boolean().optional(),
   postings: z
     .array(postingSchema)
     .min(2, 'At least 2 postings are required')
@@ -80,6 +81,7 @@ export type ParsedRecurring = RecurringDraft & {
 export const formatRecurring = (draft: RecurringDraft): string => {
   const header = `~ ${draft.period}`;
   const uidLines = draft.uid ? [`    ; :uid: ${draft.uid}`] : [];
+  const budgetLines = draft.budget ? ['    ; :budget:'] : [];
   const handledLines = draft.handled
     ? [`    ; :handled: ${draft.handled}`]
     : [];
@@ -89,9 +91,14 @@ export const formatRecurring = (draft: RecurringDraft): string => {
     .filter(Boolean)
     .map((line) => `    ; ${line}`);
   const postings = draft.postings.map(formatPosting);
-  return [header, ...uidLines, ...handledLines, ...noteLines, ...postings].join(
-    '\n'
-  );
+  return [
+    header,
+    ...uidLines,
+    ...budgetLines,
+    ...handledLines,
+    ...noteLines,
+    ...postings,
+  ].join('\n');
 };
 
 export const fingerprintRecurring = (draft: RecurringDraft): string =>
@@ -99,6 +106,7 @@ export const fingerprintRecurring = (draft: RecurringDraft): string =>
 
 const RECURRING_HEADER_REGEX = /^~\s+(\S.*)$/;
 const HANDLED_LINE_REGEX = /^\s*;\s*:handled:\s*(\d{4}-\d{2}-\d{2})\s*$/;
+const BUDGET_LINE_REGEX = /^\s*;\s*:budget:\s*$/;
 const COMMENT_LINE_REGEX = /^\s*;\s?(.*)$/;
 
 const parseRecurringBlock = (
@@ -113,6 +121,7 @@ const parseRecurringBlock = (
 
   let uid: string | undefined;
   let handled: string | undefined;
+  let budget: boolean | undefined;
   const noteLines: string[] = [];
   const postings: ParsedPosting[] = [];
 
@@ -122,6 +131,10 @@ const parseRecurringBlock = (
     const uidMatch = line.match(UID_LINE_REGEX);
     if (uidMatch) {
       uid = uidMatch[1];
+      continue;
+    }
+    if (BUDGET_LINE_REGEX.test(line)) {
+      budget = true;
       continue;
     }
     const handledMatch = line.match(HANDLED_LINE_REGEX);
@@ -143,6 +156,7 @@ const parseRecurringBlock = (
     period: header[1].trim(),
     uid,
     handled,
+    budget,
     note: noteLines.length > 0 ? noteLines.join('\n') : undefined,
     postings,
   };

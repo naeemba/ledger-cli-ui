@@ -18,7 +18,7 @@ describe('parseDashboardWidgets', () => {
     expect(parsed[1]).toEqual({ id: 'journalHealth', hidden: false });
     expect(parsed[2]).toEqual({ id: 'stats', hidden: false });
     expect(serializeDashboardWidgets(parsed)).toBe(
-      '-savedViews,journalHealth,stats,trends,upcomingBills,recentTransactions'
+      '-savedViews,journalHealth,stats,trends,upcomingBills,recentTransactions,budgets'
     );
   });
 

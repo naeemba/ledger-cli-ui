@@ -114,3 +114,35 @@ describe(':handled: state line', () => {
     );
   });
 });
+
+describe(':budget: tag', () => {
+  const draft = {
+    period: 'every 1 months from 2026/07/01',
+    note: 'Groceries budget',
+    uid: '01HZX5G5KJDS9HQRYK8E5T0DJC',
+    budget: true,
+    postings: [
+      { account: 'Expenses:Food', amount: '400', currency: 'USD' },
+      { account: 'Assets:Checking', amount: '', currency: '' },
+    ],
+  };
+
+  it('round-trips through format and parse without polluting note', () => {
+    const block = formatRecurring(draft);
+    expect(block).toContain('; :budget:');
+    const parsed = parseRecurringFile('main.ledger', block + '\n');
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].budget).toBe(true);
+    expect(parsed[0].note).toBe('Groceries budget');
+  });
+
+  it('is absent by default and changes the fingerprint when set', () => {
+    const { budget: _budget, ...plain } = draft;
+    const block = formatRecurring(plain);
+    expect(block).not.toContain(':budget:');
+    expect(
+      parseRecurringFile('main.ledger', block + '\n')[0].budget
+    ).toBeUndefined();
+    expect(fingerprintRecurring(plain)).not.toBe(fingerprintRecurring(draft));
+  });
+});

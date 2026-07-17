@@ -23,6 +23,8 @@ const COPY: Record<string, [string, string]> = {
     'Skipped a recurring occurrence',
     'Failed to skip a recurring occurrence',
   ],
+  'budget.add': ['Created a budget', 'Failed to create a budget'],
+  'budget.delete': ['Deleted a budget', 'Failed to delete a budget'],
   'journal.import': ['Imported journal', 'Import failed'],
   'price.add': ['Recorded a price', 'Failed to record a price'],
   'price.delete': ['Deleted a price', 'Failed to delete a price'],

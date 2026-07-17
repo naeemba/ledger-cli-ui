@@ -65,6 +65,7 @@ export type WriteDeleteInput = {
   kind: 'delete';
   uid: string;
   expectedFingerprint: string;
+  ruleKind?: 'budget' | 'recurring';
 };
 
 export type WriteInput = WriteEditInput | WriteDeleteInput;
@@ -257,30 +258,15 @@ export class JournalService {
     return result;
   }
 
-  async addRecurring(
+  // Shared write body for periodic (`~`) directives: quota check, append,
+  // ledger-verify, push, rollback on failure. Used by both addRecurring
+  // (bills, tracks :handled:) and addBudget (budget lines, no :handled:).
+  private async appendPeriodicDirective(
     userId: string,
-    rawDraft: unknown,
-    today: string
+    draft: RecurringDraft,
+    uid: string
   ): Promise<AddTransactionResult> {
-    const parsed = recurringCreateSchema.safeParse(rawDraft);
-    if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = issue.path.join('.') || 'form';
-        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
-      return { ok: false, reason: 'invalid', fieldErrors };
-    }
-
     return withUserLock(userId, async () => {
-      const uid = generateUid();
-      const { schedule, ...rest } = parsed.data;
-      const draft: RecurringDraft = {
-        ...rest,
-        period: serializeSchedule(schedule),
-        handled: lastOccurrenceBefore(schedule, today) ?? undefined,
-        uid,
-      };
       await pull(userId);
       const { mainPath } = await this.repo.ensureLayout(userId);
       const snapshot = await this.repo.readFile(mainPath);
@@ -332,6 +318,74 @@ export class JournalService {
     });
   }
 
+  async addRecurring(
+    userId: string,
+    rawDraft: unknown,
+    today: string
+  ): Promise<AddTransactionResult> {
+    const parsed = recurringCreateSchema.safeParse(rawDraft);
+    if (!parsed.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path.join('.') || 'form';
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      return { ok: false, reason: 'invalid', fieldErrors };
+    }
+
+    const uid = generateUid();
+    const { schedule, ...rest } = parsed.data;
+    const draft: RecurringDraft = {
+      ...rest,
+      period: serializeSchedule(schedule),
+      handled: lastOccurrenceBefore(schedule, today) ?? undefined,
+      uid,
+    };
+    return this.appendPeriodicDirective(userId, draft, uid);
+  }
+
+  async addBudget(
+    userId: string,
+    rawDraft: unknown
+  ): Promise<AddTransactionResult> {
+    const parsed = recurringCreateSchema.safeParse(rawDraft);
+    if (!parsed.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path.join('.') || 'form';
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      return { ok: false, reason: 'invalid', fieldErrors };
+    }
+
+    const hasExpensesAccount = parsed.data.postings.some(
+      (p) => p.account === 'Expenses' || p.account.startsWith('Expenses:')
+    );
+    if (!hasExpensesAccount) {
+      return {
+        ok: false,
+        reason: 'invalid',
+        fieldErrors: {
+          postings: 'Budget lines must target an Expenses account.',
+        },
+      };
+    }
+
+    const uid = generateUid();
+    const { schedule, ...rest } = parsed.data;
+    const draft: RecurringDraft = {
+      ...rest,
+      period: serializeSchedule(schedule),
+      budget: true,
+      uid,
+    };
+    return this.appendPeriodicDirective(userId, draft, uid);
+  }
+
+  async listBudgets(userId: string): Promise<ParsedRecurring[]> {
+    return (await this.listRecurring(userId)).filter((rule) => rule.budget);
+  }
+
   async deleteRecurring(
     userId: string,
     input: WriteDeleteInput
@@ -366,6 +420,20 @@ export class JournalService {
           ok: false,
           reason: 'stale',
           message: 'This recurring entry was modified somewhere else.',
+        };
+      }
+      if (input.ruleKind === 'budget' && !current.budget) {
+        return {
+          ok: false,
+          reason: 'invalid',
+          message: 'This entry is not a budget line.',
+        };
+      }
+      if (input.ruleKind === 'recurring' && current.budget) {
+        return {
+          ok: false,
+          reason: 'invalid',
+          message: 'This entry is not a recurring transaction.',
         };
       }
 
@@ -452,6 +520,13 @@ export class JournalService {
           ok: false,
           reason: 'not-found',
           message: 'Recurring entry not found.',
+        };
+      }
+      if (rule.budget) {
+        return {
+          ok: false,
+          reason: 'invalid',
+          message: 'Budget lines cannot be posted.',
         };
       }
       if (rule.fingerprint !== input.expectedFingerprint) {

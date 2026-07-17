@@ -7,13 +7,12 @@ import { getJournalDirSize } from '@/lib/journal/quota';
 import { rateLimit, WRITE, RATE_LIMIT_MESSAGE } from '@/lib/rate-limit';
 import { revalidatePath } from 'next/cache';
 
-export type DeleteRecurringResult =
-  { ok: true } | { ok: false; message: string };
+export type DeleteBudgetResult = { ok: true } | { ok: false; message: string };
 
-export async function deleteRecurringAction(
+export async function deleteBudgetAction(
   uid: string,
   expectedFingerprint: string
-): Promise<DeleteRecurringResult> {
+): Promise<DeleteBudgetResult> {
   const user = await requireUser();
   if (!rateLimit(WRITE, user.id).allowed) {
     return { ok: false, message: RATE_LIMIT_MESSAGE };
@@ -23,11 +22,11 @@ export async function deleteRecurringAction(
     kind: 'delete',
     uid,
     expectedFingerprint,
-    ruleKind: 'recurring',
+    ruleKind: 'budget',
   });
   const bytesAfter = await getJournalDirSize(user.id);
   await auditService.record(user.id, {
-    action: 'recurring.delete',
+    action: 'budget.delete',
     result: result.ok ? 'success' : 'failure',
     targetUid: uid,
     bytesBefore,

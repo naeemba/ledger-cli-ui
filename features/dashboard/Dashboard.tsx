@@ -16,6 +16,8 @@ import Help from '@/components/Help';
 import PageContainer from '@/components/PageContainer';
 import { buttonVariants } from '@/components/ui/button';
 import { Card as ShadcnCard } from '@/components/ui/card';
+import BudgetsWidget from '@/features/budgets/BudgetsWidget';
+import { getBudgetReport } from '@/features/budgets/report';
 import { getCashFlow } from '@/features/monthlyComparison/MonthlyComparison.utils';
 import { buildDueList } from '@/features/recurring/dueList';
 import { loadJournalTransactions } from '@/features/transactions/loadJournalTransactions';
@@ -82,6 +84,7 @@ const Dashboard = async () => {
     netWorthChange,
     cashFlow,
     widgets,
+    budgetReport,
   ] = await Promise.all([
     // `bal --collapse` folds the whole period into one rollup row, so the
     // total comes straight from ledger's `%T` instead of guessing which line
@@ -129,6 +132,7 @@ const Dashboard = async () => {
     // ponytail: data for hidden widgets is still fetched; skip the fetches if
     // the ledger calls ever get slow enough to matter.
     getDashboardWidgets(),
+    getBudgetReport(currency, upcomingStart),
   ]);
 
   const lastMonthReview =
@@ -393,6 +397,7 @@ const Dashboard = async () => {
         </ShadcnCard>
       </section>
     ),
+    budgets: <BudgetsWidget month={budgetReport.month} />,
   };
 
   return (
