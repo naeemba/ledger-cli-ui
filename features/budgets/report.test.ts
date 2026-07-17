@@ -73,11 +73,11 @@ describe('ledger 3.4.1 budget report contract', () => {
       file,
       [
         '2026/07/01 Rent',
-        '    Expenses:Rent  USD 1850.00',
+        '    Expenses:Rent  $1850.00',
         '    Assets:Checking',
         '',
         '~ Monthly',
-        '    Expenses:Rent  USD 2000.00',
+        '    Expenses:Rent  $2000.00',
         '    Assets:Checking',
         '',
       ].join('\n')
@@ -115,15 +115,15 @@ describe('ledger 3.4.1 budget report contract', () => {
       file,
       [
         '2026/07/01 Fun spending',
-        '    Expenses:Fun  USD 40.00',
+        '    Expenses:Fun  $40.00',
         '    Assets:Checking',
         '',
         '2026/07/05 Misc spending',
-        '    Expenses:Misc  USD 15.00',
+        '    Expenses:Misc  $15.00',
         '    Assets:Checking',
         '',
         '~ Monthly',
-        '    Expenses:Rent  USD 2000.00',
+        '    Expenses:Rent  $2000.00',
         '    Assets:Checking',
         '',
       ].join('\n')
