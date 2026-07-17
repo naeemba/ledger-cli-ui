@@ -358,6 +358,19 @@ export class JournalService {
       return { ok: false, reason: 'invalid', fieldErrors };
     }
 
+    const hasExpensesAccount = parsed.data.postings.some(
+      (p) => p.account === 'Expenses' || p.account.startsWith('Expenses:')
+    );
+    if (!hasExpensesAccount) {
+      return {
+        ok: false,
+        reason: 'invalid',
+        fieldErrors: {
+          postings: 'Budget lines must target an Expenses account.',
+        },
+      };
+    }
+
     const uid = generateUid();
     const { schedule, ...rest } = parsed.data;
     const draft: RecurringDraft = {

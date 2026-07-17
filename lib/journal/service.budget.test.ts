@@ -47,6 +47,27 @@ describe('JournalService.addBudget / listBudgets', () => {
     expect(text).not.toContain(':handled:');
   });
 
+  it('rejects a budget line with no Expenses account and writes nothing', async () => {
+    const result = await service.addBudget('test-user', {
+      schedule: { unit: 'month', count: 1, anchor: '2026-07-01' },
+      postings: [
+        { account: 'Personal:Care', amount: '50', currency: 'USD' },
+        { account: 'Assets:Checking', amount: '', currency: '' },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.fieldErrors.postings).toBe(
+        'Budget lines must target an Expenses account.'
+      );
+    }
+    const mainLedgerExists = await fs
+      .access(path.join(getJournalDir('test-user'), 'main.ledger'))
+      .then(() => true)
+      .catch(() => false);
+    expect(mainLedgerExists).toBe(false);
+  });
+
   it('listBudgets returns only budget rules; listRecurring still returns both', async () => {
     await service.addBudget('test-user', {
       schedule: { unit: 'month', count: 1, anchor: '2026-07-01' },
