@@ -98,15 +98,23 @@ describe('ledger 3.4.1 budget report contract', () => {
     ]);
 
     const rows = parseBudgetRows(stdout);
-    expect(rows).toEqual([
-      {
-        account: 'Expenses:Rent',
-        actual: '$ 1,850.00',
-        budgeted: '$ 2,000.00',
-        difference: '$ -150.00',
-        usedRatio: 1850 / 2000,
-      },
-    ]);
+    // Symbol-amount spacing is inferred per ledger build and varies (some
+    // render "$ 1,850.00", others "$1,850.00"); normalize it out and pin the
+    // structural contract this parser actually relies on.
+    const normalize = (amount: string) => amount.replace(/\s+/g, '');
+    expect(rows).toHaveLength(1);
+    expect({
+      ...rows[0],
+      actual: normalize(rows[0].actual),
+      budgeted: normalize(rows[0].budgeted),
+      difference: normalize(rows[0].difference),
+    }).toEqual({
+      account: 'Expenses:Rent',
+      actual: '$1,850.00',
+      budgeted: '$2,000.00',
+      difference: '$-150.00',
+      usedRatio: 1850 / 2000,
+    });
   });
 
   it('parseUnbudgetedRows filters grand-total from real ledger output', async () => {
@@ -150,7 +158,8 @@ describe('ledger 3.4.1 budget report contract', () => {
       'Expenses:Fun',
       'Expenses:Misc',
     ]);
-    expect(rows[0].amount).toBe('$ 40.00');
-    expect(rows[1].amount).toBe('$ 15.00');
+    // Symbol-amount spacing varies per ledger build; normalize it out.
+    expect(rows[0].amount.replace(/\s+/g, '')).toBe('$40.00');
+    expect(rows[1].amount.replace(/\s+/g, '')).toBe('$15.00');
   });
 });
