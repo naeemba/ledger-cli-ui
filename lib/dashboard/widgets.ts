@@ -7,6 +7,7 @@ export const WIDGET_IDS = [
   'savedViews',
   'recentTransactions',
   'journalHealth',
+  'budgets',
 ] as const;
 export type WidgetId = (typeof WIDGET_IDS)[number];
 
@@ -26,6 +27,7 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   savedViews: 'Saved views',
   recentTransactions: 'Recent transactions',
   journalHealth: 'Journal health',
+  budgets: 'Budgets',
 };
 
 export const dashboardWidgetsSchema = z.array(
