@@ -53,19 +53,21 @@ const RecurringPage = async () => {
       </div>
       <RecurringView
         baseCurrency={baseCurrency}
-        rows={recurring.map(({ uid, period, note, fingerprint, postings }) => ({
-          uid,
-          period,
-          note,
-          fingerprint,
-          postings: postings.map(({ account, amount, currency }) => ({
-            account,
-            amount,
-            currency,
-          })),
-          nextDue: uid ? nextDueByUid.get(uid) : undefined,
-          unsupported: !uid || unsupportedUids.has(uid),
-        }))}
+        rows={recurring
+          .filter((rule) => !rule.budget)
+          .map(({ uid, period, note, fingerprint, postings }) => ({
+            uid,
+            period,
+            note,
+            fingerprint,
+            postings: postings.map(({ account, amount, currency }) => ({
+              account,
+              amount,
+              currency,
+            })),
+            nextDue: uid ? nextDueByUid.get(uid) : undefined,
+            unsupported: !uid || unsupportedUids.has(uid),
+          }))}
       />
     </PageContainer>
   );

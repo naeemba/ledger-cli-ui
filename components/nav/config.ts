@@ -12,6 +12,7 @@ import {
   GitCompareArrows,
   ListChecks,
   PiggyBank,
+  Wallet,
   PlusCircle,
   Repeat,
   Settings,
@@ -172,6 +173,15 @@ export const getNavSections = (): NavSection[] => {
           description: 'Bills and subscriptions that repeat on a schedule.',
           icon: Repeat,
           keywords: ['bills', 'subscriptions', 'periodic', 'schedule'],
+        },
+        {
+          id: 'budgets',
+          title: 'Budgets',
+          href: '/budgets',
+          match: 'exact',
+          description: 'Allowances compared against actual spending.',
+          icon: Wallet,
+          keywords: ['allowance', 'spending', 'limit'],
         },
         {
           id: 'templates',
