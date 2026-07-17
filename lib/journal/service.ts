@@ -257,30 +257,15 @@ export class JournalService {
     return result;
   }
 
-  async addRecurring(
+  // Shared write body for periodic (`~`) directives: quota check, append,
+  // ledger-verify, push, rollback on failure. Used by both addRecurring
+  // (bills, tracks :handled:) and addBudget (budget lines, no :handled:).
+  private async appendPeriodicDirective(
     userId: string,
-    rawDraft: unknown,
-    today: string
+    draft: RecurringDraft,
+    uid: string
   ): Promise<AddTransactionResult> {
-    const parsed = recurringCreateSchema.safeParse(rawDraft);
-    if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = issue.path.join('.') || 'form';
-        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
-      return { ok: false, reason: 'invalid', fieldErrors };
-    }
-
     return withUserLock(userId, async () => {
-      const uid = generateUid();
-      const { schedule, ...rest } = parsed.data;
-      const draft: RecurringDraft = {
-        ...rest,
-        period: serializeSchedule(schedule),
-        handled: lastOccurrenceBefore(schedule, today) ?? undefined,
-        uid,
-      };
       await pull(userId);
       const { mainPath } = await this.repo.ensureLayout(userId);
       const snapshot = await this.repo.readFile(mainPath);
@@ -330,6 +315,61 @@ export class JournalService {
       invalidateCache(userId);
       return { ok: true, uid };
     });
+  }
+
+  async addRecurring(
+    userId: string,
+    rawDraft: unknown,
+    today: string
+  ): Promise<AddTransactionResult> {
+    const parsed = recurringCreateSchema.safeParse(rawDraft);
+    if (!parsed.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path.join('.') || 'form';
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      return { ok: false, reason: 'invalid', fieldErrors };
+    }
+
+    const uid = generateUid();
+    const { schedule, ...rest } = parsed.data;
+    const draft: RecurringDraft = {
+      ...rest,
+      period: serializeSchedule(schedule),
+      handled: lastOccurrenceBefore(schedule, today) ?? undefined,
+      uid,
+    };
+    return this.appendPeriodicDirective(userId, draft, uid);
+  }
+
+  async addBudget(
+    userId: string,
+    rawDraft: unknown
+  ): Promise<AddTransactionResult> {
+    const parsed = recurringCreateSchema.safeParse(rawDraft);
+    if (!parsed.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path.join('.') || 'form';
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      return { ok: false, reason: 'invalid', fieldErrors };
+    }
+
+    const uid = generateUid();
+    const { schedule, ...rest } = parsed.data;
+    const draft: RecurringDraft = {
+      ...rest,
+      period: serializeSchedule(schedule),
+      budget: true,
+      uid,
+    };
+    return this.appendPeriodicDirective(userId, draft, uid);
+  }
+
+  async listBudgets(userId: string): Promise<ParsedRecurring[]> {
+    return (await this.listRecurring(userId)).filter((rule) => rule.budget);
   }
 
   async deleteRecurring(
