@@ -21,6 +21,8 @@ type PostingRow = {
 export type BudgetLineView = {
   uid?: string;
   fingerprint: string;
+  period: string;
+  note?: string;
   postings: PostingRow[];
 };
 
@@ -95,8 +97,8 @@ const BudgetsView = ({ report, lines, baseCurrency }: Props) => {
       })),
   });
 
-  const linesByAccount = new Map(
-    lines.map((line) => [line.postings[0]?.account, line])
+  const accountsWithBudgetLines = new Set(
+    lines.map((line) => line.postings[0]?.account)
   );
   const yearToDateByAccount = new Map(
     report.yearToDate.map((row) => [row.account, row])
@@ -229,6 +231,68 @@ const BudgetsView = ({ report, lines, baseCurrency }: Props) => {
     </form>
   );
 
+  const linesSection = (
+    <section className="space-y-2">
+      <h2 className="text-lg font-medium">Your budget lines</h2>
+      {deleteError && <p className="text-destructive text-sm">{deleteError}</p>}
+      {lines.length === 0 ? (
+        <p className="text-muted-foreground text-sm">
+          No budget lines yet. Add one above.
+        </p>
+      ) : (
+        <TableScroll>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-muted-foreground text-left">
+                <th className="py-1 whitespace-nowrap">Repeats</th>
+                <th>Note</th>
+                <th>Postings</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((line, i) => (
+                <tr key={line.uid ?? `nouid:${i}`} className="border-t">
+                  <td className="py-1 whitespace-nowrap">{line.period}</td>
+                  <td>{line.note ?? ''}</td>
+                  <td>
+                    {line.postings
+                      .map((p) =>
+                        p.amount
+                          ? `${p.account} ${p.currency} ${p.amount}`
+                          : p.account
+                      )
+                      .join(' → ')}
+                  </td>
+                  <td className="text-right">
+                    {line.uid ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Delete budget line ${line.uid}`}
+                        disabled={isDeleting && deletingUid === line.uid}
+                        onClick={() =>
+                          handleDelete(line.uid!, line.fingerprint)
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">
+                        no uid
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
+      )}
+    </section>
+  );
+
   if (report.month.length === 0) {
     return (
       <div className="space-y-8">
@@ -237,6 +301,7 @@ const BudgetsView = ({ report, lines, baseCurrency }: Props) => {
           compare it against actual spending from ledger.
         </p>
         {form}
+        {linesSection}
       </div>
     );
   }
@@ -247,9 +312,6 @@ const BudgetsView = ({ report, lines, baseCurrency }: Props) => {
 
       <section className="space-y-2">
         <h2 className="text-lg font-medium">This month</h2>
-        {deleteError && (
-          <p className="text-destructive text-sm">{deleteError}</p>
-        )}
         <TableScroll>
           <table className="w-full text-sm">
             <thead>
@@ -265,7 +327,6 @@ const BudgetsView = ({ report, lines, baseCurrency }: Props) => {
             </thead>
             <tbody>
               {report.month.map((row) => {
-                const line = linesByAccount.get(row.account);
                 const ytd = yearToDateByAccount.get(row.account);
                 const widthPercent =
                   row.usedRatio === null
@@ -287,20 +348,7 @@ const BudgetsView = ({ report, lines, baseCurrency }: Props) => {
                     <td>{row.difference}</td>
                     <td>{ytd?.difference ?? ''}</td>
                     <td className="text-right">
-                      {line?.uid ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Delete budget ${row.account}`}
-                          disabled={isDeleting && deletingUid === line.uid}
-                          onClick={() =>
-                            handleDelete(line.uid!, line.fingerprint)
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      ) : (
+                      {!accountsWithBudgetLines.has(row.account) && (
                         <span className="text-muted-foreground text-xs">
                           from your bills
                         </span>
@@ -313,6 +361,8 @@ const BudgetsView = ({ report, lines, baseCurrency }: Props) => {
           </table>
         </TableScroll>
       </section>
+
+      {linesSection}
 
       {report.unbudgeted.length > 0 && (
         <section className="space-y-2">

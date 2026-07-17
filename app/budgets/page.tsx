@@ -34,9 +34,11 @@ const BudgetsPage = async () => {
       <BudgetsView
         baseCurrency={baseCurrency}
         report={report}
-        lines={lines.map(({ uid, fingerprint, postings }) => ({
+        lines={lines.map(({ uid, fingerprint, period, note, postings }) => ({
           uid,
           fingerprint,
+          period,
+          note,
           postings: postings.map(({ account, amount, currency }) => ({
             account,
             amount,
