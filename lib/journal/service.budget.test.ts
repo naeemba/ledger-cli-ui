@@ -75,4 +75,69 @@ describe('JournalService.addBudget / listBudgets', () => {
     const result = await service.addBudget('test-user', { postings: [] });
     expect(result.ok).toBe(false);
   });
+
+  it('deletes a budget rule when ruleKind is budget', async () => {
+    await service.addBudget('test-user', {
+      schedule: { unit: 'month', count: 1, anchor: '2026-07-01' },
+      postings: [
+        { account: 'Expenses:Food', amount: '400', currency: 'USD' },
+        { account: 'Assets:Checking', amount: '', currency: '' },
+      ],
+    });
+    const [rule] = await service.listBudgets('test-user');
+    const result = await service.deleteRecurring('test-user', {
+      kind: 'delete',
+      uid: rule!.uid!,
+      expectedFingerprint: rule!.fingerprint,
+      ruleKind: 'budget',
+    });
+    expect(result.ok).toBe(true);
+    expect(await service.listBudgets('test-user')).toHaveLength(0);
+  });
+
+  it('refuses to delete a recurring rule as a budget', async () => {
+    await service.addRecurring(
+      'test-user',
+      {
+        schedule: { unit: 'month', count: 1, anchor: '2026-01-05' },
+        note: 'Netflix',
+        postings: [
+          { account: 'Expenses:Subscriptions', amount: '15', currency: 'USD' },
+          { account: 'Assets:Checking', amount: '', currency: '' },
+        ],
+      },
+      '2026-07-17'
+    );
+    const [rule] = await service.listRecurring('test-user');
+    const result = await service.deleteRecurring('test-user', {
+      kind: 'delete',
+      uid: rule!.uid!,
+      expectedFingerprint: rule!.fingerprint,
+      ruleKind: 'budget',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toBe('This entry is not a budget line.');
+    }
+    expect(await service.listRecurring('test-user')).toHaveLength(1);
+  });
+
+  it('refuses to delete a budget rule as recurring', async () => {
+    await service.addBudget('test-user', {
+      schedule: { unit: 'month', count: 1, anchor: '2026-07-01' },
+      postings: [
+        { account: 'Expenses:Food', amount: '400', currency: 'USD' },
+        { account: 'Assets:Checking', amount: '', currency: '' },
+      ],
+    });
+    const [rule] = await service.listBudgets('test-user');
+    const result = await service.deleteRecurring('test-user', {
+      kind: 'delete',
+      uid: rule!.uid!,
+      expectedFingerprint: rule!.fingerprint,
+      ruleKind: 'recurring',
+    });
+    expect(result.ok).toBe(false);
+    expect(await service.listBudgets('test-user')).toHaveLength(1);
+  });
 });

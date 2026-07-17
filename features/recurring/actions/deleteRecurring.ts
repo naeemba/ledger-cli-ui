@@ -23,6 +23,7 @@ export async function deleteRecurringAction(
     kind: 'delete',
     uid,
     expectedFingerprint,
+    ruleKind: 'recurring',
   });
   const bytesAfter = await getJournalDirSize(user.id);
   await auditService.record(user.id, {

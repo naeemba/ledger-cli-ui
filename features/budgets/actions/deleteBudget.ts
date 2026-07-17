@@ -22,6 +22,7 @@ export async function deleteBudgetAction(
     kind: 'delete',
     uid,
     expectedFingerprint,
+    ruleKind: 'budget',
   });
   const bytesAfter = await getJournalDirSize(user.id);
   await auditService.record(user.id, {

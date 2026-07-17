@@ -65,6 +65,7 @@ export type WriteDeleteInput = {
   kind: 'delete';
   uid: string;
   expectedFingerprint: string;
+  ruleKind?: 'budget' | 'recurring';
 };
 
 export type WriteInput = WriteEditInput | WriteDeleteInput;
@@ -406,6 +407,20 @@ export class JournalService {
           ok: false,
           reason: 'stale',
           message: 'This recurring entry was modified somewhere else.',
+        };
+      }
+      if (input.ruleKind === 'budget' && !current.budget) {
+        return {
+          ok: false,
+          reason: 'invalid',
+          message: 'This entry is not a budget line.',
+        };
+      }
+      if (input.ruleKind === 'recurring' && current.budget) {
+        return {
+          ok: false,
+          reason: 'invalid',
+          message: 'This entry is not a recurring transaction.',
         };
       }
 
