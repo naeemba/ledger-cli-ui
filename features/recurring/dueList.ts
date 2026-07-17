@@ -30,6 +30,8 @@ export const buildDueList = (
   const unsupported: { ruleUid: string | undefined; period: string }[] = [];
 
   for (const rule of rules) {
+    if (rule.budget) continue;
+
     const schedule = rule.uid ? parseSchedule(rule.period) : null;
     if (!rule.uid || !schedule) {
       unsupported.push({ ruleUid: rule.uid, period: rule.period });

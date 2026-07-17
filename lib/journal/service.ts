@@ -454,6 +454,13 @@ export class JournalService {
           message: 'Recurring entry not found.',
         };
       }
+      if (rule.budget) {
+        return {
+          ok: false,
+          reason: 'invalid',
+          message: 'Budget lines cannot be posted.',
+        };
+      }
       if (rule.fingerprint !== input.expectedFingerprint) {
         return {
           ok: false,

@@ -46,4 +46,22 @@ describe('buildDueList', () => {
     const list = buildDueList(fresh, '2026-07-16', '2026-08-15');
     expect(list.due.map((o) => o.date)).toEqual(['2026-07-16']); // today only
   });
+
+  it('skips budget-tagged rules entirely', () => {
+    const withBudget = parseRecurringFile(
+      'main.ledger',
+      [
+        '~ every 1 months from 2026/01/01',
+        '    ; :uid: 01HZX5G5KJDS9HQRYK8E5T0DBB',
+        '    ; :budget:',
+        '    Expenses:Food                            USD 400',
+        '    Assets:Checking                          USD -400',
+        '',
+      ].join('\n')
+    );
+    const list = buildDueList(withBudget, '2026-07-17', '2026-08-16');
+    expect(list.due).toEqual([]);
+    expect(list.upcoming).toEqual([]);
+    expect(list.unsupported).toEqual([]);
+  });
 });

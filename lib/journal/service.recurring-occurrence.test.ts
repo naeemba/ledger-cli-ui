@@ -172,6 +172,31 @@ describe('JournalService.postRecurringOccurrence / skipRecurringOccurrence', () 
       });
       expect(result.ok).toBe(false); // oldest unhandled is 2026-08-05 (> today) — nothing due
     });
+
+    it('rejects posting a budget-tagged rule', async () => {
+      const block = [
+        '~ every 1 months from 2026/01/01',
+        '    ; :uid: 01HZX5G5KJDS9HQRYK8E5T0DBB',
+        '    ; :budget:',
+        '    Expenses:Food                            USD 400',
+        '    Assets:Checking                          USD -400',
+        '',
+      ].join('\n');
+      await fs.writeFile(
+        path.join(getJournalDir('test-user'), 'main.ledger'),
+        block
+      );
+      await push('test-user');
+      const rules = await service.listRecurring('test-user');
+      const result = await service.postRecurringOccurrence('test-user', {
+        uid: rules[0].uid!,
+        expectedFingerprint: rules[0].fingerprint,
+        dueDate: '2026-07-01',
+        today: '2026-07-17',
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.message).toContain('Budget');
+    });
   });
 
   describe('skipRecurringOccurrence', () => {
@@ -190,6 +215,31 @@ describe('JournalService.postRecurringOccurrence / skipRecurringOccurrence', () 
       );
       expect(text).toContain('; :handled: 2026-07-05');
       expect(text).not.toContain('2026-07-05 Netflix');
+    });
+
+    it('rejects skipping a budget-tagged rule', async () => {
+      const block = [
+        '~ every 1 months from 2026/01/01',
+        '    ; :uid: 01HZX5G5KJDS9HQRYK8E5T0DBB',
+        '    ; :budget:',
+        '    Expenses:Food                            USD 400',
+        '    Assets:Checking                          USD -400',
+        '',
+      ].join('\n');
+      await fs.writeFile(
+        path.join(getJournalDir('test-user'), 'main.ledger'),
+        block
+      );
+      await push('test-user');
+      const rules = await service.listRecurring('test-user');
+      const result = await service.skipRecurringOccurrence('test-user', {
+        uid: rules[0].uid!,
+        expectedFingerprint: rules[0].fingerprint,
+        dueDate: '2026-07-01',
+        today: '2026-07-17',
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.message).toContain('Budget');
     });
 
     it('posting a rule defined in an included file leaves the include untouched', async () => {
