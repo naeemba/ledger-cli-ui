@@ -52,10 +52,9 @@ export const parseUnbudgetedRows = (stdout: string): UnbudgetedRow[] =>
   stdout
     .split('\n')
     .filter((line) => line.trim() !== '')
-    .map((line) => {
-      const [account, amount] = line.split('|');
-      return { account, amount };
-    });
+    .map((line) => line.split('|'))
+    .filter((fields) => fields.length === 2 && fields[0] !== '')
+    .map(([account, amount]) => ({ account, amount }));
 
 // UTC string arithmetic (same style as lib/journal/schedule.ts) — no local
 // timezone Date parsing.

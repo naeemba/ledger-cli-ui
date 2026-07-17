@@ -43,6 +43,17 @@ describe('parseUnbudgetedRows', () => {
     const rows = parseUnbudgetedRows('Expenses:Fun|$ 40.00\n\n');
     expect(rows).toEqual([{ account: 'Expenses:Fun', amount: '$ 40.00' }]);
   });
+
+  it('drops grand-total rows and malformed lines', () => {
+    const stdout =
+      'Expenses:Fun|$ 40.00\nExpenses:Misc|$ 15.00\n|$ 55.00\nno-pipe-line\n\n';
+    const rows = parseUnbudgetedRows(stdout);
+    expect(rows).toHaveLength(2);
+    expect(rows).toEqual([
+      { account: 'Expenses:Fun', amount: '$ 40.00' },
+      { account: 'Expenses:Misc', amount: '$ 15.00' },
+    ]);
+  });
 });
 
 describe('ledger 3.4.1 budget report contract', () => {
@@ -96,5 +107,50 @@ describe('ledger 3.4.1 budget report contract', () => {
         usedRatio: 1850 / 2000,
       },
     ]);
+  });
+
+  it('parseUnbudgetedRows filters grand-total from real ledger output', async () => {
+    const file = path.join(tmp, 'main.ledger');
+    await fs.writeFile(
+      file,
+      [
+        '2026/07/01 Fun spending',
+        '    Expenses:Fun  USD 40.00',
+        '    Assets:Checking',
+        '',
+        '2026/07/05 Misc spending',
+        '    Expenses:Misc  USD 15.00',
+        '    Assets:Checking',
+        '',
+        '~ Monthly',
+        '    Expenses:Rent  USD 2000.00',
+        '    Assets:Checking',
+        '',
+      ].join('\n')
+    );
+
+    const { stdout } = await execFilePromise('ledger', [
+      '--init-file',
+      '/dev/null',
+      '--file',
+      file,
+      'bal',
+      '^Expenses',
+      '--unbudgeted',
+      '-p',
+      'jul 2026',
+      '--flat',
+      '--format',
+      '%A|%T\n',
+    ]);
+
+    const rows = parseUnbudgetedRows(stdout);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.account)).toEqual([
+      'Expenses:Fun',
+      'Expenses:Misc',
+    ]);
+    expect(rows[0].amount).toBe('$ 40.00');
+    expect(rows[1].amount).toBe('$ 15.00');
   });
 });
