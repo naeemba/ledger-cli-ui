@@ -11,16 +11,16 @@ import { uidFromNote } from '@/lib/journal/uid';
 export const RECORD_SEP = '\x1e';
 export const FIELD_SEP = '\x1f';
 
-// Row separator `RECORD_SEP`; fields joined by `FIELD_SEP`. `%T` (total) may
-// span multiple commodities (embedded newlines, no field sep); `%(note)` is
-// taken as the rejoined remainder after the four fixed leading fields.
-export const REGISTER_FORMAT = `${RECORD_SEP}%D${FIELD_SEP}%P${FIELD_SEP}%t${FIELD_SEP}%T${FIELD_SEP}%(note)`;
-
 // Compose a register format from a field list, e.g. `['%D', '%P', '%A', '%t']`
 // followed by `%(note)`. Keeps every splitRegisterRows caller on the same
 // separators so the split below stays correct.
 export const registerFormat = (leadingFields: string[]): string =>
   `${RECORD_SEP}${[...leadingFields, '%(note)'].join(FIELD_SEP)}\n`;
+
+// Row separator `RECORD_SEP`; fields joined by `FIELD_SEP`. `%T` (total) may
+// span multiple commodities (embedded newlines, no field sep); `%(note)` is
+// taken as the rejoined remainder after the four fixed leading fields.
+export const REGISTER_FORMAT = registerFormat(['%D', '%P', '%t', '%T']);
 
 export type RegisterRow = {
   /** Trimmed leading fixed fields, positional per surface. */
