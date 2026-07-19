@@ -25,7 +25,7 @@ const Account = async ({
   if (!isValidAccount(account)) notFound();
 
   const stdout = await runLedger(
-    ['register', account, '--format', REGISTER_FORMAT],
+    ['register', account, '--sort', 'date', '--format', REGISTER_FORMAT],
     { sortByDate: false }
   );
   const balance = await runLedger(
