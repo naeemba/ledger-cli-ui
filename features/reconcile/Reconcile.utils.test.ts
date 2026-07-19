@@ -1,17 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { parseReconcileRows } from './Reconcile.utils';
+import {
+  FIELD_SEP,
+  RECORD_SEP,
+} from '@/features/transactions/row/registerRows';
 
 const NOW = Date.UTC(2026, 4, 22);
+
+// Build a reconcile register line with the real separators, trailing newline
+// as ledger emits it.
+const row = (...fields: string[]) => `${RECORD_SEP}${fields.join(FIELD_SEP)}\n`;
 
 describe('parseReconcileRows', () => {
   it('returns an empty array for empty stdout', () => {
     expect(parseReconcileRows('', NOW)).toEqual([]);
   });
 
-  it('parses NNN-delimited rows into typed records', () => {
+  it('parses delimited rows into typed records', () => {
     const stdout =
-      "NNN2026-05-01|Trader Joe's|Expenses:Food|USD 42\n" +
-      'NNN2026-05-15|Landlord|Expenses:Rent|USD 1500\n';
+      row('2026-05-01', "Trader Joe's", 'Expenses:Food', 'USD 42') +
+      row('2026-05-15', 'Landlord', 'Expenses:Rent', 'USD 1500');
     const rows = parseReconcileRows(stdout, NOW);
     expect(rows).toHaveLength(2);
     expect(rows[0].account).toBe('Expenses:Food');
@@ -19,10 +27,9 @@ describe('parseReconcileRows', () => {
   });
 
   it('preserves ledger order (which is oldest-first via --sort date)', () => {
-    // ledger emits oldest-first; the parser must not reorder.
     const stdout =
-      'NNN2026-01-01|old|Expenses:Rent|USD 1500\n' +
-      'NNN2026-05-15|recent|Expenses:Coffee|USD 5\n';
+      row('2026-01-01', 'old', 'Expenses:Rent', 'USD 1500') +
+      row('2026-05-15', 'recent', 'Expenses:Coffee', 'USD 5');
     const rows = parseReconcileRows(stdout, NOW);
     expect(rows[0].account).toBe('Expenses:Rent');
     expect(rows[1].account).toBe('Expenses:Coffee');
@@ -30,23 +37,22 @@ describe('parseReconcileRows', () => {
   });
 
   it('computes days since the row date', () => {
-    const stdout = 'NNN2026-05-15|x|Expenses:Coffee|USD 5\n';
+    const stdout = row('2026-05-15', 'x', 'Expenses:Coffee', 'USD 5');
     const rows = parseReconcileRows(stdout, NOW);
     expect(rows[0].days).toBe(7);
   });
 
   it('skips malformed rows', () => {
     const stdout =
-      'NNN\n' + // empty date column
-      'NNN2026-05-15|||\n' + // valid (empty payee/account/amount but date present)
-      'NNN2026-05-01|p|a|amt\n';
+      row('') + // empty date column
+      row('2026-05-15', '', '', '') + // valid (empty fields but date present)
+      row('2026-05-01', 'p', 'a', 'amt');
     const rows = parseReconcileRows(stdout, NOW);
-    // The fully empty entry is filtered; the others keep going.
     expect(rows.every((r) => r.date)).toBe(true);
   });
 
   it('trims whitespace from columns', () => {
-    const stdout = 'NNN 2026-05-01 |  payee  | account | amount\n';
+    const stdout = row(' 2026-05-01 ', '  payee  ', ' account ', ' amount ');
     const rows = parseReconcileRows(stdout, NOW);
     expect(rows[0].payee).toBe('payee');
     expect(rows[0].account).toBe('account');
@@ -54,22 +60,34 @@ describe('parseReconcileRows', () => {
   });
 
   it('extracts uid from a 5th %(note) column', () => {
-    const stdout =
-      'NNN2026-05-01|Coffee|Expenses:Food|USD 5| :uid: 01HZY0Z9QK8G7F6E5D4C3B2A1Z\n';
-    const [row] = parseReconcileRows(stdout, NOW);
-    expect(row.uid).toBe('01HZY0Z9QK8G7F6E5D4C3B2A1Z');
+    const stdout = row(
+      '2026-05-01',
+      'Coffee',
+      'Expenses:Food',
+      'USD 5',
+      ' :uid: 01HZY0Z9QK8G7F6E5D4C3B2A1Z'
+    );
+    const [r] = parseReconcileRows(stdout, NOW);
+    expect(r.uid).toBe('01HZY0Z9QK8G7F6E5D4C3B2A1Z');
   });
 
   it('leaves uid undefined when the note has no uid tag', () => {
-    const stdout = 'NNN2026-05-01|Coffee|Expenses:Food|USD 5|\n';
-    const [row] = parseReconcileRows(stdout, NOW);
-    expect(row.uid).toBeUndefined();
+    const stdout = row('2026-05-01', 'Coffee', 'Expenses:Food', 'USD 5', '');
+    const [r] = parseReconcileRows(stdout, NOW);
+    expect(r.uid).toBeUndefined();
   });
 
-  it('rejoins note columns so a pipe inside the note cannot drop the uid', () => {
-    const stdout =
-      'NNN2026-05-01|Coffee|Expenses:Food|USD 5|a|b| :uid: 01HZY0Z9QK8G7F6E5D4C3B2A1Z\n';
-    const [row] = parseReconcileRows(stdout, NOW);
-    expect(row.uid).toBe('01HZY0Z9QK8G7F6E5D4C3B2A1Z');
+  it('rejoins note columns so a separator inside the note cannot drop the uid', () => {
+    const stdout = row(
+      '2026-05-01',
+      'Coffee',
+      'Expenses:Food',
+      'USD 5',
+      'a',
+      'b',
+      ' :uid: 01HZY0Z9QK8G7F6E5D4C3B2A1Z'
+    );
+    const [r] = parseReconcileRows(stdout, NOW);
+    expect(r.uid).toBe('01HZY0Z9QK8G7F6E5D4C3B2A1Z');
   });
 });
