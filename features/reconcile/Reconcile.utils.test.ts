@@ -1,15 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { parseReconcileRows } from './Reconcile.utils';
 import {
-  FIELD_SEP,
-  RECORD_SEP,
+  FIELD_SEPARATOR,
+  RECORD_SEPARATOR,
 } from '@/features/transactions/row/registerRows';
 
 const NOW = Date.UTC(2026, 4, 22);
 
 // Build a reconcile register line with the real separators, trailing newline
 // as ledger emits it.
-const row = (...fields: string[]) => `${RECORD_SEP}${fields.join(FIELD_SEP)}\n`;
+const row = (...fields: string[]) =>
+  `${RECORD_SEPARATOR}${fields.join(FIELD_SEPARATOR)}\n`;
 
 describe('parseReconcileRows', () => {
   it('returns an empty array for empty stdout', () => {

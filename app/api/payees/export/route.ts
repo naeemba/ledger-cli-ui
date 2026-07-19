@@ -2,7 +2,7 @@ import { requireUser } from '@/lib/auth/require-user';
 import { csvDownload } from '@/lib/csv';
 import { createLogger } from '@/lib/log';
 import { payeeRowsToCsv } from '@/lib/payees/csv';
-import { parsePayeeRows } from '@/lib/payees/parse';
+import { PAYEE_REGISTER_FORMAT, parsePayeeRows } from '@/lib/payees/parse';
 import { getBaseCurrency } from '@/lib/settings';
 import { parseISODateStrict } from '@/utils/date';
 import runLedger from '@/utils/runLedger';
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       '--sort',
       '-display_amount',
       '--format',
-      'NNN%P|%t\n',
+      PAYEE_REGISTER_FORMAT,
     ];
     if (start) args.push('-b', start);
     if (end) args.push('-e', end);

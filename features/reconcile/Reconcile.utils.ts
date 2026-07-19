@@ -11,7 +11,7 @@ export type ReconcileRow = {
 };
 
 /**
- * Parses the `NNN%D|%P|%A|%t|%(note)\n` output of
+ * Parses the `registerFormat(['%D', '%P', '%A', '%t'])` output of
  * `ledger reg --uncleared --sort date` into typed rows, dropping malformed
  * lines. Row order is ledger's (oldest-first) — no JS re-sort. `now` is
  * injected so the `days` field is deterministic in tests.

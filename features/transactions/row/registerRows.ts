@@ -8,16 +8,16 @@ import { uidFromNote } from '@/lib/journal/uid';
 // like "NNN" appears inside a uid such as `01HZXNNN…`, splitting mid-record and
 // rendering the next chunk as an "Invalid Date" row. Control chars can never
 // occur in a date, amount, ULID, or a normally-typed note.
-export const RECORD_SEP = '\x1e';
-export const FIELD_SEP = '\x1f';
+export const RECORD_SEPARATOR = '\x1e';
+export const FIELD_SEPARATOR = '\x1f';
 
 // Compose a register format from a field list, e.g. `['%D', '%P', '%A', '%t']`
 // followed by `%(note)`. Keeps every splitRegisterRows caller on the same
 // separators so the split below stays correct.
 export const registerFormat = (leadingFields: string[]): string =>
-  `${RECORD_SEP}${[...leadingFields, '%(note)'].join(FIELD_SEP)}\n`;
+  `${RECORD_SEPARATOR}${[...leadingFields, '%(note)'].join(FIELD_SEPARATOR)}\n`;
 
-// Row separator `RECORD_SEP`; fields joined by `FIELD_SEP`. `%T` (total) may
+// Row separator `RECORD_SEPARATOR`; fields joined by `FIELD_SEPARATOR`. `%T` (total) may
 // span multiple commodities (embedded newlines, no field sep); `%(note)` is
 // taken as the rejoined remainder after the four fixed leading fields.
 export const REGISTER_FORMAT = registerFormat(['%D', '%P', '%t', '%T']);
@@ -37,12 +37,12 @@ export type RegisterRow = {
  */
 export const splitRegisterRows = (stdout: string): RegisterRow[] =>
   stdout
-    .split(RECORD_SEP)
-    .map((line) => line.split(FIELD_SEP))
+    .split(RECORD_SEPARATOR)
+    .map((line) => line.split(FIELD_SEPARATOR))
     .filter((cols) => cols.length >= 4 && cols[0].trim())
     .map((cols) => ({
       cols: cols.map((s) => s.trim()),
-      uid: uidFromNote(cols.slice(4).join(FIELD_SEP)) ?? undefined,
+      uid: uidFromNote(cols.slice(4).join(FIELD_SEPARATOR)) ?? undefined,
     }));
 
 export const parseAccountRegister = (stdout: string): TransactionRowView[] =>

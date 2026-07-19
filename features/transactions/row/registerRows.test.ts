@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { FIELD_SEP, RECORD_SEP, parseAccountRegister } from './registerRows';
+import {
+  FIELD_SEPARATOR,
+  RECORD_SEPARATOR,
+  parseAccountRegister,
+} from './registerRows';
 
 // Build a register line the way ledger would, using the real separators.
-const row = (...fields: string[]) => `${RECORD_SEP}${fields.join(FIELD_SEP)}`;
+const row = (...fields: string[]) =>
+  `${RECORD_SEPARATOR}${fields.join(FIELD_SEPARATOR)}\n`;
 
 describe('parseAccountRegister', () => {
   it('parses date/payee/amount/total and extracts the uid from the note', () => {
