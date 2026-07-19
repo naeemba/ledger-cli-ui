@@ -20,6 +20,7 @@ import BudgetsWidget from '@/features/budgets/BudgetsWidget';
 import { getBudgetReport } from '@/features/budgets/report';
 import { getCashFlow } from '@/features/monthlyComparison/MonthlyComparison.utils';
 import { buildDueList } from '@/features/recurring/dueList';
+import AddTransactionButton from '@/features/transactions/AddTransactionButton';
 import { loadJournalTransactions } from '@/features/transactions/loadJournalTransactions';
 import { pageTransactions } from '@/features/transactions/pageTransactions';
 import TransactionRow from '@/features/transactions/row/TransactionRow';
@@ -354,12 +355,7 @@ const Dashboard = async () => {
             >
               View all →
             </Link>
-            <Link
-              href="/transactions/new"
-              className={buttonVariants({ size: 'sm' })}
-            >
-              Add transaction
-            </Link>
+            <AddTransactionButton />
           </div>
         </div>
         {recent.length === 0 ? (

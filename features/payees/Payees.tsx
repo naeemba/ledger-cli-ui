@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { TableScroll } from '@/components/ui/table';
 import SaveViewButton from '@/features/savedViews/SaveViewButton';
 import { requireUser } from '@/lib/auth/require-user';
-import { parsePayeeRows } from '@/lib/payees/parse';
+import { PAYEE_REGISTER_FORMAT, parsePayeeRows } from '@/lib/payees/parse';
 import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency } from '@/lib/settings';
 import { parseISODate, toISODate } from '@/utils/date';
@@ -53,7 +53,7 @@ const Payees = async ({ from: fromParam, to: toParam }: Props) => {
       '--sort',
       '-display_amount',
       '--format',
-      'NNN%P|%t\n',
+      PAYEE_REGISTER_FORMAT,
     ],
     { sortByDate: false }
   );

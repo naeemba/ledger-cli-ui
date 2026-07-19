@@ -1,4 +1,5 @@
 import { parseReconcileRows } from '@/features/reconcile/Reconcile.utils';
+import { registerFormat } from '@/features/transactions/row/registerRows';
 import { requireUser } from '@/lib/auth/require-user';
 import { csvDownload } from '@/lib/csv';
 import { createLogger } from '@/lib/log';
@@ -25,7 +26,7 @@ export async function GET(): Promise<Response> {
         '--sort',
         'date',
         '--format',
-        'NNN%D|%P|%A|%t\n',
+        registerFormat(['%D', '%P', '%A', '%t']),
       ],
       { sortByDate: false }
     );

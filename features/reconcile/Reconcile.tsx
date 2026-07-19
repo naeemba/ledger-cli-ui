@@ -3,6 +3,7 @@ import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import PageContainer from '@/components/PageContainer';
 import TransactionRow from '@/features/transactions/row/TransactionRow';
+import { registerFormat } from '@/features/transactions/row/registerRows';
 import { getBaseCurrency } from '@/lib/settings';
 import runLedger from '@/utils/runLedger';
 
@@ -22,7 +23,7 @@ const Reconcile = async () => {
       '--sort',
       'date',
       '--format',
-      'NNN%D|%P|%A|%t|%(note)\n',
+      registerFormat(['%D', '%P', '%A', '%t']),
     ],
     { sortByDate: false }
   );
