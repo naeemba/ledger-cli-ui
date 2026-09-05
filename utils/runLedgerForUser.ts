@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import 'server-only';
+import { hermeticLedgerInvocation } from './hermeticLedger';
 import { journalRepository } from '@/lib/journal';
 import type { JournalRepository } from '@/lib/journal/repository';
 
@@ -26,19 +27,10 @@ export const runLedgerForUser = async (
   { includePriceDb = true }: { includePriceDb?: boolean } = {}
 ): Promise<string> => {
   const { mainPath, priceDbPath } = await repo.ensureLayout(userId);
-  // Run hermetically: ignore any `~/.ledgerrc` (--init-file /dev/null) and the
-  // ambient LEDGER_* env. A stray LEDGER_PRICE_DB would otherwise be loaded on
-  // top of the journal — declaring commodities that collide with the journal's
-  // own and aborting an otherwise valid parse (e.g. when `includePriceDb` is
-  // false precisely to avoid a broken price DB). Mirrors lib/journal/verify.ts.
-  const {
-    LEDGER_PRICE_DB: _priceDb,
-    LEDGER_FILE: _file,
-    LEDGER_INIT: _init,
-    ...env
-  } = process.env;
-  const baseArgs: string[] = ['--init-file', '/dev/null', '--file', mainPath];
-  if (priceDbPath && includePriceDb) baseArgs.push('--price-db', priceDbPath);
+  const { args: baseArgs, env } = hermeticLedgerInvocation(
+    mainPath,
+    includePriceDb ? priceDbPath : null
+  );
   const { stdout } = await execFilePromise('ledger', [...baseArgs, ...args], {
     env,
   });

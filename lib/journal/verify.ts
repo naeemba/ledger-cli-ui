@@ -1,5 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { hermeticLedgerInvocation } from '@/utils/hermeticLedger';
 
 const execFileP = promisify(execFile);
 
@@ -12,7 +13,9 @@ export type VerifyResult = { ok: true } | { ok: false; message: string };
 const PATH_REDACT = /\/[^:\s",]+/g;
 const MAX_LEN = 500;
 
-const redact = (line: string): string => line.replace(PATH_REDACT, '<journal>');
+/** Replace absolute paths in a ledger diagnostic with `<journal>`. */
+export const redactLedgerPaths = (line: string): string =>
+  line.replace(PATH_REDACT, '<journal>');
 
 /**
  * Turn ledger's multi-line stderr into one safe, *useful* message.
@@ -27,7 +30,7 @@ const redact = (line: string): string => line.replace(PATH_REDACT, '<journal>');
  * `Error:` marker.
  */
 const sanitize = (stderr: string): string => {
-  const lines = stderr.split('\n').map(redact);
+  const lines = stderr.split('\n').map(redactLedgerPaths);
   const nonEmpty = lines.filter((l) => l.trim());
   if (nonEmpty.length === 0) return 'unknown error';
 
@@ -69,18 +72,7 @@ export const verifyJournalParseable = async (
   priceDbPath?: string
 ): Promise<VerifyResult> => {
   try {
-    // Run hermetically: ignore the server's `~/.ledgerrc` (--init-file) and its
-    // ambient LEDGER_* env (a personal LEDGER_PRICE_DB can declare commodities
-    // that collide with the journal's own, failing an otherwise valid parse).
-    // An explicit --price-db still overrides the env, so passing one is safe.
-    const {
-      LEDGER_PRICE_DB: _priceDb,
-      LEDGER_FILE: _file,
-      LEDGER_INIT: _init,
-      ...env
-    } = process.env;
-    const args = ['--init-file', '/dev/null', '-f', mainPath];
-    if (priceDbPath) args.push('--price-db', priceDbPath);
+    const { args, env } = hermeticLedgerInvocation(mainPath, priceDbPath);
     args.push('stats');
     await execFileP('ledger', args, { env });
     return { ok: true };
