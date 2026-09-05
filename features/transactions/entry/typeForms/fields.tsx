@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useTransition } from 'react';
+import AmountInput from '../../AmountInput';
 import { accountsForRole, type AccountRole } from '../types/accountRole';
 import Combobox from '@/components/Combobox';
 import CommodityCombobox from '@/components/CommodityCombobox';
@@ -129,3 +130,35 @@ export const CurrencyCombobox = ({
     />
   );
 };
+
+/** An amount input paired with its currency picker — the row every money form
+ * opens with. */
+export const AmountRow = ({
+  label,
+  amount,
+  currency,
+  onAmount,
+  onCurrency,
+}: {
+  label: string;
+  amount: string;
+  currency: string;
+  onAmount: (value: string) => void;
+  onCurrency: (value: string) => void;
+}) => (
+  <Field label={label}>
+    <div className="flex gap-2">
+      <AmountInput
+        value={amount}
+        onChange={onAmount}
+        placeholder="0.00"
+        className="flex-1 text-right tabular-nums"
+      />
+      <CurrencyCombobox
+        value={currency}
+        onChange={onCurrency}
+        className="w-24"
+      />
+    </div>
+  </Field>
+);

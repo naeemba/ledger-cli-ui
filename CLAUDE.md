@@ -61,3 +61,12 @@ The JS is a hint; ledger is the verdict.
 `LEDGER-AUDIT.md` at the repo root is the full audit of where this rule was
 violated, the verified ledger replacements, and ledger 3.4.1 gotchas. Consult
 and prune it when working in these areas.
+
+## Naming: `f` is the accepted adapter/spec parameter name
+
+Transaction type adapters (`entry/types/*.ts`) and quick-entry specs
+(`quickEntry*Specs.tsx`) take their field bag as `f` — `compile: (f, ctx)`,
+`validate: (f)`. It is the house style across every adapter, it always means the
+same thing in that position, and renaming it is a churn commit that touches
+every entry form. Spell out every other identifier as usual; do not flag `f`
+here in review.

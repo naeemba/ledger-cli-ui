@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ExtraItemsField } from './entry/typeForms/ExtraItemsField';
-import { AccountField } from './entry/typeForms/fields';
+import { AccountField, AmountRow } from './entry/typeForms/fields';
 import type { HeaderFields } from './entry/types/adapter';
 import { exchangeAdapter, type ExchangeFields } from './entry/types/exchange';
 import { expenseAdapter, type ExpenseFields } from './entry/types/expense';
@@ -13,7 +13,6 @@ import {
 import { incomeAdapter, type IncomeFields } from './entry/types/income';
 import { transferAdapter, type TransferFields } from './entry/types/transfer';
 import {
-  AmountRow,
   firstMoneyAccount,
   isNumber,
   isPositive,

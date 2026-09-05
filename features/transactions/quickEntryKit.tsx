@@ -1,18 +1,14 @@
 'use client';
 
 import React from 'react';
-import AmountInput from './AmountInput';
 import type { DraftState } from './entry/draftReducer';
-import {
-  CurrencyCombobox,
-  Field,
-  optionsForRoles,
-} from './entry/typeForms/fields';
+import { optionsForRoles } from './entry/typeForms/fields';
 import type {
   HeaderFields,
   TransactionTypeAdapter,
   TypeContext,
 } from './entry/types/adapter';
+import type { TransferFields } from './entry/types/transfer';
 
 export type QuickEntryContext = { accounts: string[]; defaultCurrency: string };
 
@@ -56,32 +52,20 @@ export const seed = <F extends HeaderFields>(
   ctx: TypeContext
 ): F => ({ ...adapter.emptyFields(ctx), payee: '', date: todayLocal() });
 
-export const AmountRow = ({
-  label,
-  amount,
-  currency,
-  onAmount,
-  onCurrency,
-}: {
-  label: string;
-  amount: string;
-  currency: string;
-  onAmount: (v: string) => void;
-  onCurrency: (v: string) => void;
-}) => (
-  <Field label={label}>
-    <div className="flex gap-2">
-      <AmountInput
-        value={amount}
-        onChange={onAmount}
-        placeholder="0.00"
-        className="flex-1 text-right tabular-nums"
-      />
-      <CurrencyCombobox
-        value={currency}
-        onChange={onCurrency}
-        className="w-24"
-      />
-    </div>
-  </Field>
-);
+// A two-account entry (debt, settle-up) is mechanically a transfer: the header
+// and amount carry over unchanged and only the account pair differs.
+export const asTransfer = (
+  fields: HeaderFields & { amount: string; currency: string },
+  [to, from]: [to: string, from: string]
+): TransferFields => ({
+  date: fields.date,
+  payee: fields.payee,
+  status: fields.status,
+  note: fields.note,
+  uid: fields.uid,
+  amount: fields.amount,
+  currency: fields.currency,
+  from,
+  to,
+  extraItems: [],
+});

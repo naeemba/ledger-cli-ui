@@ -1,19 +1,19 @@
 'use client';
 
 import React from 'react';
-import { AccountField, Field } from './entry/typeForms/fields';
+import { AccountField, AmountRow, Field } from './entry/typeForms/fields';
 import type { AccountRole } from './entry/types/accountRole';
 import type { HeaderFields } from './entry/types/adapter';
-import { transferAdapter, type TransferFields } from './entry/types/transfer';
+import { transferAdapter } from './entry/types/transfer';
 import {
-  AmountRow,
+  asTransfer,
   firstMoneyAccount,
   isPositive,
   todayLocal,
   type QuickEntrySpec,
 } from './quickEntryKit';
 import Combobox from '@/components/Combobox';
-import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 // --- Debt (money owed) -----------------------------------------------------
 // Not a registry adapter: a debt is mechanically a two-posting transfer, so it
@@ -33,14 +33,46 @@ const PAYABLE_ROOT = 'Liabilities:Payable';
 // The non-person side is wherever the debt came from. Owed to you it is
 // credited: cash you handed over, income you earned but haven't been paid, or
 // an expense you covered that turned out to be someone else's share.
-const OWED_TO_YOU_ROLES: AccountRole[] = [
+export const OWED_TO_YOU_ROLES: AccountRole[] = [
   'asset',
   'liability',
   'expense',
   'income',
 ];
 // You owe them it is debited: cash they handed you, or the expense they paid.
-const YOU_OWE_ROLES: AccountRole[] = ['asset', 'liability', 'expense'];
+export const YOU_OWE_ROLES: AccountRole[] = ['asset', 'liability', 'expense'];
+
+// Both specs pick a side the same way: two mutually exclusive buttons whose
+// pressed state a screen reader can announce.
+const DirectionToggle = <D extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: D;
+  onChange: (direction: D) => void;
+  options: { value: D; label: string }[];
+}) => (
+  <ToggleGroup
+    value={[value]}
+    onValueChange={(values) => {
+      if (values.length > 0) onChange(values[0] as D);
+    }}
+    spacing={0}
+    variant="outline"
+    className="w-full"
+  >
+    {options.map((option) => (
+      <ToggleGroupItem
+        key={option.value}
+        value={option.value}
+        className="flex-1"
+      >
+        {option.label}
+      </ToggleGroupItem>
+    ))}
+  </ToggleGroup>
+);
 
 type DebtDirection = 'owed-to-you' | 'you-owe';
 
@@ -117,41 +149,20 @@ export const debtSpec: QuickEntrySpec<DebtFields> = {
     // cash you handed over, or the income you earned but haven't been paid.
     // You owe them: the account you picked rises — cash they handed you, or the
     // expense they paid for — and your payable falls (a liability you owe).
-    const [to, from] = debtAccounts(person, f);
-    const transferFields: TransferFields = {
-      date: f.date,
-      payee: f.payee,
-      status: f.status,
-      note: f.note,
-      uid: f.uid,
-      amount: f.amount,
-      currency: f.currency,
-      from,
-      to,
-      extraItems: [],
-    };
-    return transferAdapter.compile(transferFields, ctx);
+    return transferAdapter.compile(asTransfer(f, debtAccounts(person, f)), ctx);
   },
   Fields: ({ fields, update, accounts, defaultCurrency }) => {
     const owedToYou = fields.direction === 'owed-to-you';
     return (
       <>
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            type="button"
-            variant={owedToYou ? 'default' : 'outline'}
-            onClick={() => update({ direction: 'owed-to-you' })}
-          >
-            They owe you
-          </Button>
-          <Button
-            type="button"
-            variant={owedToYou ? 'outline' : 'default'}
-            onClick={() => update({ direction: 'you-owe' })}
-          >
-            You owe them
-          </Button>
-        </div>
+        <DirectionToggle
+          value={fields.direction}
+          onChange={(direction) => update({ direction })}
+          options={[
+            { value: 'owed-to-you', label: 'They owe you' },
+            { value: 'you-owe', label: 'You owe them' },
+          ]}
+        />
 
         <Field label="Name">
           <Combobox
@@ -172,7 +183,9 @@ export const debtSpec: QuickEntrySpec<DebtFields> = {
 
         <AccountField
           label={
-            owedToYou ? 'Paid from or earned as' : 'Received into or spent on'
+            owedToYou
+              ? 'Paid from, earned as, or spent on'
+              : 'Received into or spent on'
           }
           role={owedToYou ? OWED_TO_YOU_ROLES : YOU_OWE_ROLES}
           accounts={accounts}
@@ -245,41 +258,23 @@ export const settleSpec: QuickEntrySpec<SettleFields> = {
     // Swap of debtAccounts: `to` gets +amount, `from` gets −amount.
     // They paid you back: your cash rises, their receivable falls toward zero.
     // You paid them back: your payable rises toward zero, your cash falls.
-    const [to, from] = settleAccounts(person, f);
-    const transferFields: TransferFields = {
-      date: f.date,
-      payee: f.payee,
-      status: f.status,
-      note: f.note,
-      uid: f.uid,
-      amount: f.amount,
-      currency: f.currency,
-      from,
-      to,
-      extraItems: [],
-    };
-    return transferAdapter.compile(transferFields, ctx);
+    return transferAdapter.compile(
+      asTransfer(f, settleAccounts(person, f)),
+      ctx
+    );
   },
   Fields: ({ fields, update, accounts, defaultCurrency }) => {
     const theyPaid = fields.direction === 'they-paid-you';
     return (
       <>
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            type="button"
-            variant={theyPaid ? 'default' : 'outline'}
-            onClick={() => update({ direction: 'they-paid-you' })}
-          >
-            They paid you back
-          </Button>
-          <Button
-            type="button"
-            variant={theyPaid ? 'outline' : 'default'}
-            onClick={() => update({ direction: 'you-paid-them' })}
-          >
-            You paid them back
-          </Button>
-        </div>
+        <DirectionToggle
+          value={fields.direction}
+          onChange={(direction) => update({ direction })}
+          options={[
+            { value: 'they-paid-you', label: 'They paid you back' },
+            { value: 'you-paid-them', label: 'You paid them back' },
+          ]}
+        />
 
         <Field label="Name">
           <Combobox
