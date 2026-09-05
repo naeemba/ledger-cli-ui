@@ -144,6 +144,11 @@ query. Verified by attempting (and failing) the candidate replacements.
 - `ledger print` does **not** materialize elided amounts (with or without
   `--explicit`); only register formats expose the generated postings.
 - `--invert --collapse` double-counts on grouped registers.
+- A `register -X <ccy>` inserts its own `Commodities revalued` entry whenever
+  a held commodity changes price — a row nobody entered, rendered like a real
+  transaction. Pass `--no-revalued` unless you want it: every figure stays
+  identical (the revaluation still lands in the running total), the row just
+  stops being printed.
 
 ---
 

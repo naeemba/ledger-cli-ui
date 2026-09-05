@@ -1,21 +1,14 @@
-import {
-  PAYABLE_ROOT,
-  RECEIVABLE_ROOT,
-  directionClass,
-  personAccountPatterns,
-} from './parse';
+import { netForPerson, personRegister } from './getPersonDebts';
+import { PAYABLE_ROOT, RECEIVABLE_ROOT, directionClass } from './parse';
 import Help from '@/components/Help';
 import PageContainer from '@/components/PageContainer';
-import { netForPerson } from '@/features/debts/getPersonDebts';
 import { isSafeLedgerArg } from '@/features/transactions/entry/typeForms/fixBalancePreview';
 import RegisterList from '@/features/transactions/row/RegisterList';
-import {
-  REGISTER_FORMAT,
-  parseAccountRegister,
-} from '@/features/transactions/row/registerRows';
+import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
-import runLedger from '@/utils/runLedger';
 import { notFound } from 'next/navigation';
+
+const log = createLogger('debts');
 
 /**
  * Every transaction that touched one person's receivable/payable accounts,
@@ -25,29 +18,21 @@ import { notFound } from 'next/navigation';
 const PersonDebts = async ({ person }: { person: string }) => {
   if (!isSafeLedgerArg(person)) notFound();
   const base = await getBaseCurrency();
-  const patterns = [
-    ...personAccountPatterns(RECEIVABLE_ROOT, person),
-    ...personAccountPatterns(PAYABLE_ROOT, person),
-  ];
 
-  const [stdout, net] = await Promise.all([
-    runLedger(
-      [
-        'register',
-        '-X',
-        base,
-        '--sort',
-        'date',
-        '--format',
-        REGISTER_FORMAT,
-        '--',
-        ...patterns,
-      ],
-      { sortByDate: false }
-    ),
-    netForPerson(base, person),
-  ]);
-  const views = parseAccountRegister(stdout).reverse(); // newest first
+  let views, net;
+  try {
+    [views, net] = await Promise.all([
+      personRegister(base, person),
+      netForPerson(base, person),
+    ]);
+  } catch (e) {
+    log.error({ err: e, person }, 'failed to load person debts');
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-negative shadow-sm">
+        Failed to load debts from ledger.
+      </div>
+    );
+  }
 
   return (
     <PageContainer>

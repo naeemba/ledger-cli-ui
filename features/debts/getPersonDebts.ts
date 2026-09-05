@@ -8,6 +8,8 @@ import {
   personAccountPatterns,
 } from './parse';
 import { isSafeLedgerArg } from '@/features/transactions/entry/typeForms/fixBalancePreview';
+import { registerViews } from '@/features/transactions/row/registerViews';
+import type { TransactionRowView } from '@/features/transactions/row/rowView';
 import { parseBalanceRows } from '@/lib/balance/parse';
 import runLedger from '@/utils/runLedger';
 
@@ -15,6 +17,36 @@ import runLedger from '@/utils/runLedger';
 // magnitude so the view can show "owes you $30" rather than "$-30".
 const NET_FORMAT =
   '%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))|%(scrub(abs(display_total)))\n';
+
+// Both sides of one person's ledger: what they owe and what you owe them.
+const personPatterns = (person: string): string[] => [
+  ...personAccountPatterns(RECEIVABLE_ROOT, person),
+  ...personAccountPatterns(PAYABLE_ROOT, person),
+];
+
+/**
+ * Every transaction touching a person's two accounts, newest first, converted
+ * to `base`. `--no-revalued` drops the `Commodities revalued` pseudo-entry
+ * `-X` inserts when a held commodity changes price — it is not a transaction
+ * anyone entered, and every figure is identical without it (the revaluation
+ * still lands in the running total). `--` stops option parsing so a person
+ * name can't smuggle a flag.
+ */
+export const personRegister = async (
+  base: string,
+  person: string
+): Promise<TransactionRowView[]> => {
+  if (!isSafeLedgerArg(person)) return [];
+  return registerViews([
+    '-X',
+    base,
+    '--no-revalued',
+    '--sort',
+    'date',
+    '--',
+    ...personPatterns(person),
+  ]);
+};
 
 export const netForPerson = async (
   base: string,
@@ -32,8 +64,7 @@ export const netForPerson = async (
     '--format',
     NET_FORMAT,
     '--',
-    ...personAccountPatterns(RECEIVABLE_ROOT, person),
-    ...personAccountPatterns(PAYABLE_ROOT, person),
+    ...personPatterns(person),
   ]);
   return parseNet(person, stdout);
 };

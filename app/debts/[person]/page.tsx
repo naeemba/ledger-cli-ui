@@ -1,4 +1,4 @@
-import PersonDebts from '@/features/debts/PersonDebts';
+import { PersonDebts } from '@/features/debts';
 
 const Report = async ({ params }: { params: Promise<{ person: string }> }) => {
   const { person } = await params;
