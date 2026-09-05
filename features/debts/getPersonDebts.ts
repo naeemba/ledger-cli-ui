@@ -16,7 +16,7 @@ import runLedger from '@/utils/runLedger';
 const NET_FORMAT =
   '%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))|%(scrub(abs(display_total)))\n';
 
-const netForPerson = async (
+export const netForPerson = async (
   base: string,
   person: string
 ): Promise<PersonDebt | null> => {

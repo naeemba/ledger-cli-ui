@@ -1,10 +1,12 @@
 import { getPersonDebts } from './getPersonDebts';
+import { directionClass } from './parse';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import PageContainer from '@/components/PageContainer';
 import { TableScroll } from '@/components/ui/table';
 import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
+import Link from 'next/link';
 
 const log = createLogger('debts');
 
@@ -64,23 +66,20 @@ const Debts = async () => {
                 debts.map((debt) => (
                   <tr key={debt.person}>
                     <td>
-                      <span className="text-fg">{debt.person}</span>
+                      <Link
+                        href={`/debts/${encodeURIComponent(debt.person)}`}
+                        className="text-fg hover:underline"
+                      >
+                        {debt.person}
+                      </Link>
                       <span
-                        className={`ml-2 text-xs ${
-                          debt.direction === 'owes-you'
-                            ? 'text-positive'
-                            : 'text-negative'
-                        }`}
+                        className={`ml-2 text-xs ${directionClass(debt.direction)}`}
                       >
                         {debt.direction === 'owes-you' ? 'owes you' : 'you owe'}
                       </span>
                     </td>
                     <td
-                      className={`whitespace-nowrap text-right tabular-nums ${
-                        debt.direction === 'owes-you'
-                          ? 'text-positive'
-                          : 'text-negative'
-                      }`}
+                      className={`whitespace-nowrap text-right tabular-nums ${directionClass(debt.direction)}`}
                     >
                       {debt.amount}
                     </td>

@@ -31,6 +31,10 @@ const PERSON_ACCOUNT = /^(?:Assets:Receivable|Liabilities:Payable):([^:]+)/;
 const escapeLedgerRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&');
 
+/** Text color for a debt direction — money owed to you reads positive. */
+export const directionClass = (direction: PersonDebt['direction']): string =>
+  direction === 'owes-you' ? 'text-positive' : 'text-negative';
+
 /** Two anchored register patterns matching exactly one person's account tree. */
 export const personAccountPatterns = (
   root: string,
