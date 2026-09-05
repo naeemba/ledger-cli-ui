@@ -1,5 +1,7 @@
 import { execFile } from 'child_process';
+import path from 'path';
 import { promisify } from 'util';
+import { hermeticLedgerInvocation } from '@/utils/hermeticLedger';
 
 const execFileP = promisify(execFile);
 
@@ -12,7 +14,30 @@ export type VerifyResult = { ok: true } | { ok: false; message: string };
 const PATH_REDACT = /\/[^:\s",]+/g;
 const MAX_LEN = 500;
 
-const redact = (line: string): string => line.replace(PATH_REDACT, '<journal>');
+/** Replace absolute paths in a ledger diagnostic with `<journal>`. */
+export const redactLedgerPaths = (line: string): string =>
+  line.replace(PATH_REDACT, '<journal>');
+
+/**
+ * Hide the user's journal directory in raw ledger output.
+ *
+ * Unlike {@link redactLedgerPaths}, this is safe on output the user reads
+ * verbatim: it swaps one known directory instead of every slash-led run, so a
+ * date (`2024/01/01`) and an account name survive untouched. `stats` and
+ * `emacs` print the journal path, and every parse error quotes it, so both
+ * stdout and stderr need it.
+ *
+ * The directory arrives relative (`data/journals/<userId>` with the default
+ * `DATA_DIR`) while ledger always prints it absolute, so both spellings are
+ * swapped; `path.resolve` matches because ledger inherits this process's cwd.
+ */
+export const maskJournalDirectory = (text: string, dir: string): string =>
+  // Absolute first — it contains the relative form, so swapping that one first
+  // would leave the deploy directory behind as `/srv/app/<journal>/main.ledger`.
+  [path.resolve(dir), dir].reduce(
+    (masked, directory) => masked.split(directory).join('<journal>'),
+    text
+  );
 
 /**
  * Turn ledger's multi-line stderr into one safe, *useful* message.
@@ -27,7 +52,7 @@ const redact = (line: string): string => line.replace(PATH_REDACT, '<journal>');
  * `Error:` marker.
  */
 const sanitize = (stderr: string): string => {
-  const lines = stderr.split('\n').map(redact);
+  const lines = stderr.split('\n').map(redactLedgerPaths);
   const nonEmpty = lines.filter((l) => l.trim());
   if (nonEmpty.length === 0) return 'unknown error';
 
@@ -69,18 +94,7 @@ export const verifyJournalParseable = async (
   priceDbPath?: string
 ): Promise<VerifyResult> => {
   try {
-    // Run hermetically: ignore the server's `~/.ledgerrc` (--init-file) and its
-    // ambient LEDGER_* env (a personal LEDGER_PRICE_DB can declare commodities
-    // that collide with the journal's own, failing an otherwise valid parse).
-    // An explicit --price-db still overrides the env, so passing one is safe.
-    const {
-      LEDGER_PRICE_DB: _priceDb,
-      LEDGER_FILE: _file,
-      LEDGER_INIT: _init,
-      ...env
-    } = process.env;
-    const args = ['--init-file', '/dev/null', '-f', mainPath];
-    if (priceDbPath) args.push('--price-db', priceDbPath);
+    const { args, env } = hermeticLedgerInvocation(mainPath, priceDbPath);
     args.push('stats');
     await execFileP('ledger', args, { env });
     return { ok: true };

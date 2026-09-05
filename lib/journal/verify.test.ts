@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { verifyJournalParseable } from './verify';
+import { maskJournalDirectory, verifyJournalParseable } from './verify';
 
 let tmp: string;
 
@@ -102,5 +102,39 @@ describe('verifyJournalParseable', () => {
       path.join(tmp, 'missing.ledger')
     );
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('maskJournalDirectory', () => {
+  const dir = 'data/journals/u1';
+
+  it('hides the journal directory in both its relative and absolute form', () => {
+    const absolute = path.resolve(dir);
+    expect(maskJournalDirectory(`    ${absolute}/main.ledger\n`, dir)).toBe(
+      '    <journal>/main.ledger\n'
+    );
+    expect(maskJournalDirectory(`${dir}/main.ledger`, dir)).toBe(
+      '<journal>/main.ledger'
+    );
+  });
+
+  it('leaves dates and accounts alone', () => {
+    const register = '2024/01/01 Opening  Assets:Cash    $100';
+    expect(maskJournalDirectory(register, dir)).toBe(register);
+  });
+
+  it('keeps the source lines of an error block readable', () => {
+    const block = [
+      `While parsing file "${path.resolve(dir)}/main.ledger", line 3:`,
+      '> 2024/01/01 Opening',
+      'Error: Transaction does not balance',
+    ].join('\n');
+    expect(maskJournalDirectory(block, dir)).toBe(
+      [
+        'While parsing file "<journal>/main.ledger", line 3:',
+        '> 2024/01/01 Opening',
+        'Error: Transaction does not balance',
+      ].join('\n')
+    );
   });
 });

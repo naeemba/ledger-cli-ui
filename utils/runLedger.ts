@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalRepository } from '@/lib/journal';
 import { getJournalCacheTag } from '@/lib/journal/layout';
+import { hermeticLedgerInvocation } from '@/utils/hermeticLedger';
 import { unstable_cache } from 'next/cache';
 import { connection } from 'next/server';
 
@@ -10,10 +11,14 @@ const execFilePromise = promisify(execFile);
 
 const LEDGER_CACHE_TTL_SECONDS = 60;
 
-const buildExecLedger = (tag: string, fingerprint: string) =>
+const buildExecLedger = (
+  tag: string,
+  fingerprint: string,
+  env: NodeJS.ProcessEnv
+) =>
   unstable_cache(
     async (allArgs: string[]): Promise<string> => {
-      const { stdout } = await execFilePromise('ledger', allArgs);
+      const { stdout } = await execFilePromise('ledger', allArgs, { env });
       return stdout;
     },
     ['ledger-cli-exec', tag, fingerprint],
@@ -39,11 +44,19 @@ const runLedger = async (
     user.id
   );
 
-  const baseArgs: string[] = ['--file', mainPath];
-  if (priceDbPath) baseArgs.push('--price-db', priceDbPath);
+  // Same hermetic args/env the command console uses, so a page and the console
+  // never report different totals for the same journal.
+  const { args: baseArgs, env } = hermeticLedgerInvocation(
+    mainPath,
+    priceDbPath
+  );
   if (options?.sortByDate ?? true) baseArgs.push('--sort', '-date');
 
-  const execLedger = buildExecLedger(getJournalCacheTag(user.id), fingerprint);
+  const execLedger = buildExecLedger(
+    getJournalCacheTag(user.id),
+    fingerprint,
+    env
+  );
   return execLedger([...baseArgs, ...args]);
 };
 

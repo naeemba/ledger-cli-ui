@@ -7,6 +7,17 @@ export const UPLOAD: RateLimitPolicy = {
   windowMs: 60_000,
 };
 
+/**
+ * Free-text ledger commands. Read-only, but each one spawns a `ledger` process
+ * allowed to live for 20 seconds, so this is upload-shaped work, not a
+ * typeahead: 120/min would let one signed-in user hold 120 concurrent parses.
+ */
+export const CONSOLE: RateLimitPolicy = {
+  name: 'console',
+  max: 10,
+  windowMs: 60_000,
+};
+
 /** Read-only search/typeahead — generous, debounced by the client. */
 export const READ: RateLimitPolicy = {
   name: 'read',

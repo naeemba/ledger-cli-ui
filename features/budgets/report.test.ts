@@ -9,8 +9,16 @@ import {
   parseUnbudgetedRows,
   BUDGET_ROW_FORMAT,
 } from './report';
+import { hermeticLedgerInvocation } from '@/utils/hermeticLedger';
 
 const execFilePromise = promisify(execFile);
+
+// The invocation production uses, so a stray LEDGER_* in a developer's shell
+// can't fail a test that would pass on the server.
+const runLedger = (file: string, rest: string[]) => {
+  const { args, env } = hermeticLedgerInvocation(file);
+  return execFilePromise('ledger', [...args, ...rest], { env });
+};
 
 describe('parseBudgetRows', () => {
   it('parses rows and drops the grand-total row', () => {
@@ -83,11 +91,7 @@ describe('ledger 3.4.1 budget report contract', () => {
       ].join('\n')
     );
 
-    const { stdout } = await execFilePromise('ledger', [
-      '--init-file',
-      '/dev/null',
-      '--file',
-      file,
+    const { stdout } = await runLedger(file, [
       'budget',
       '^Expenses',
       '-p',
@@ -132,11 +136,7 @@ describe('ledger 3.4.1 budget report contract', () => {
       ].join('\n')
     );
 
-    const { stdout } = await execFilePromise('ledger', [
-      '--init-file',
-      '/dev/null',
-      '--file',
-      file,
+    const { stdout } = await runLedger(file, [
       'bal',
       '^Expenses',
       '--unbudgeted',
