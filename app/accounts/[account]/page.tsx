@@ -1,10 +1,7 @@
 import PageContainer from '@/components/PageContainer';
 import AccountHeader from '@/features/accounts/AccountHeader';
-import TransactionRow from '@/features/transactions/row/TransactionRow';
-import {
-  REGISTER_FORMAT,
-  parseAccountRegister,
-} from '@/features/transactions/row/registerRows';
+import RegisterList from '@/features/transactions/row/RegisterList';
+import { registerViews } from '@/features/transactions/row/registerViews';
 import { requireUser } from '@/lib/auth/require-user';
 import { savedViewService } from '@/lib/savedViews';
 import { getBaseCurrency } from '@/lib/settings';
@@ -24,15 +21,11 @@ const Account = async ({
   const account = decodeURIComponent(accountParam);
   if (!isValidAccount(account)) notFound();
 
-  const stdout = await runLedger(
-    ['register', account, '--sort', 'date', '--format', REGISTER_FORMAT],
-    { sortByDate: false }
-  );
+  const views = await registerViews([account]);
   const balance = await runLedger(
     ['balance', account, '-X', defaultCurrency, '--format', '%T'],
     { sortByDate: false }
   );
-  const views = parseAccountRegister(stdout).reverse(); // newest first, as before
 
   return (
     <PageContainer>
@@ -42,17 +35,7 @@ const Account = async ({
         existingViewNames={existingViewNames}
       />
 
-      {views.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
-          No transactions
-        </div>
-      ) : (
-        <div className="flex flex-col">
-          {views.map((view, i) => (
-            <TransactionRow key={`${view.uid ?? 'nouid'}:${i}`} view={view} />
-          ))}
-        </div>
-      )}
+      <RegisterList views={views} />
     </PageContainer>
   );
 };

@@ -144,6 +144,19 @@ query. Verified by attempting (and failing) the candidate replacements.
 - `ledger print` does **not** materialize elided amounts (with or without
   `--explicit`); only register formats expose the generated postings.
 - `--invert --collapse` double-counts on grouped registers.
+- A `register -X <ccy>` inserts its own `Commodities revalued` entry whenever
+  a held commodity changes price — a row nobody entered, rendered like a real
+  transaction. **`--no-revalued` is not cosmetic**: it removes the price move
+  from the running total too, so the register ends at the last transaction's
+  prices while a collapsed `register -X` (no flag) ends at today's. Verified on
+  3.4.1-20251025 with a EUR loan and a price directive dated after the last
+  transaction: the list ends `$ 23.00`, the collapsed net says `$ 38.00`. Show
+  the row and style it as generated; only pass `--no-revalued` where nothing on
+  the same screen reports the revalued total. Mind the order: `--exchange`
+  implies `--revalued`, so a `--no-revalued` placed **before** `-X` is silently
+  ignored — exit 0, revaluation rows still there. Same journal on
+  3.4.1-20251025: `register --format F --no-revalued -X $` prints 2 revaluation
+  rows, `register --format F -X $ --no-revalued` prints 0.
 
 ---
 

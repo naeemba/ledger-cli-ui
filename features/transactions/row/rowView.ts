@@ -18,6 +18,9 @@ export type TransactionRowView = {
   account?: string; // dashboard / reconcile single-account context
   runningTotal?: string; // account register (same '\n' shape as amount)
   age?: number; // reconcile (days)
+  // Ledger produced this row itself (a "Commodities revalued" price move); no
+  // one entered it, so it renders greyed out.
+  generated?: boolean;
 
   // Save-as-template needs full postings; only the main list supplies this.
   templateDraft?: TemplateDraft;

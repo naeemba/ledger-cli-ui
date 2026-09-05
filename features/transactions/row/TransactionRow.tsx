@@ -64,10 +64,17 @@ const descriptor = (view: TransactionRowView): React.ReactNode => {
   return '';
 };
 
+// Rows ledger generated itself (a price revaluation) read as the
+// non-transactions they are.
+const tone = (view: TransactionRowView) =>
+  view.generated ? 'italic text-muted-foreground' : '';
+
 const TransactionRow = ({ view }: { view: TransactionRowView }) => (
   <>
     {/* Mobile: stacked card. */}
-    <div className="rounded-lg border border-border p-3 text-sm md:hidden">
+    <div
+      className={`rounded-lg border border-border p-3 text-sm md:hidden ${tone(view)}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 font-medium break-words">
@@ -103,7 +110,9 @@ const TransactionRow = ({ view }: { view: TransactionRowView }) => (
     {view.runningTotal ? (
       // ponytail: two grid templates (6-col vs 7-col) must stay in sync;
       // duplication is deliberate to preserve layout isolation per surface.
-      <div className="hidden grid-cols-[7rem_1.5rem_1fr_1fr_8rem_8rem_6rem] items-center gap-2 border-t border-border py-2 text-sm md:grid">
+      <div
+        className={`hidden grid-cols-[7rem_1.5rem_1fr_1fr_8rem_8rem_6rem] items-center gap-2 border-t border-border py-2 text-sm md:grid ${tone(view)}`}
+      >
         <span className="whitespace-nowrap tabular-nums">
           {formatDateWithLocale(view.date, Format.DATE)}
           {view.age !== undefined ? ` · ${view.age}d` : ''}

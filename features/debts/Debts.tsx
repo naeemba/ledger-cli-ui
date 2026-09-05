@@ -1,10 +1,14 @@
 import { getPersonDebts } from './getPersonDebts';
+import { directionClass } from './parse';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import LedgerErrorCard from '@/components/LedgerErrorCard';
 import PageContainer from '@/components/PageContainer';
 import { TableScroll } from '@/components/ui/table';
 import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
+import Link from 'next/link';
+import { unstable_rethrow } from 'next/navigation';
 
 const log = createLogger('debts');
 
@@ -14,12 +18,11 @@ const Debts = async () => {
   try {
     debts = await getPersonDebts(base);
   } catch (e) {
+    // redirect() and the prerender bailout signal by throwing; re-throw those
+    // so a signed-out user reaches /sign-in instead of a "ledger broke" card.
+    unstable_rethrow(e);
     log.error({ err: e }, 'failed to load debts');
-    return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-negative shadow-sm">
-        Failed to load debts from ledger.
-      </div>
-    );
+    return <LedgerErrorCard what="debts" />;
   }
 
   return (
@@ -64,23 +67,20 @@ const Debts = async () => {
                 debts.map((debt) => (
                   <tr key={debt.person}>
                     <td>
-                      <span className="text-fg">{debt.person}</span>
+                      <Link
+                        href={`/debts/${encodeURIComponent(debt.person)}`}
+                        className="text-fg hover:underline"
+                      >
+                        {debt.person}
+                      </Link>
                       <span
-                        className={`ml-2 text-xs ${
-                          debt.direction === 'owes-you'
-                            ? 'text-positive'
-                            : 'text-negative'
-                        }`}
+                        className={`ml-2 text-xs ${directionClass(debt.direction)}`}
                       >
                         {debt.direction === 'owes-you' ? 'owes you' : 'you owe'}
                       </span>
                     </td>
                     <td
-                      className={`whitespace-nowrap text-right tabular-nums ${
-                        debt.direction === 'owes-you'
-                          ? 'text-positive'
-                          : 'text-negative'
-                      }`}
+                      className={`whitespace-nowrap text-right tabular-nums ${directionClass(debt.direction)}`}
                     >
                       {debt.amount}
                     </td>

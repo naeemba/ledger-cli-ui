@@ -47,7 +47,13 @@ not itself an accounting decision.
    not bridge; ledger inherits an input price's decimal count when it inverts).
 2. Shell out via the existing `runLedger` / `runLedgerForUser` helpers.
 3. Keep JS to parsing the output and non-accounting concerns.
-4. Add a test that asserts the value comes out right end-to-end.
+4. Add a test that asserts the value comes out right end-to-end. When it has
+   to run the real binary, use `withLedgerJournal` from
+   `lib/test-utils/ledger.ts` — it writes a throwaway journal and runs
+   `ledger` in the same hermetic shape `runLedger` uses, so the test cannot
+   pick up the developer's own `~/.ledgerrc`. Note it does not add
+   `runLedger`'s default `--sort -date`; pass it when reproducing a call
+   that keeps it.
 
 ### Client-side exception
 

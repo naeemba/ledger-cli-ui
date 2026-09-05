@@ -8,15 +8,40 @@ import {
   personAccountPatterns,
 } from './parse';
 import { isSafeLedgerArg } from '@/features/transactions/entry/typeForms/fixBalancePreview';
+import { registerViews } from '@/features/transactions/row/registerViews';
+import type { TransactionRowView } from '@/features/transactions/row/rowView';
 import { parseBalanceRows } from '@/lib/balance/parse';
 import runLedger from '@/utils/runLedger';
 
 // quantity keeps the sign (direction); the third column is the absolute
 // magnitude so the view can show "owes you $30" rather than "$-30".
-const NET_FORMAT =
+export const NET_FORMAT =
   '%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))|%(scrub(abs(display_total)))\n';
 
-const netForPerson = async (
+// Both sides of one person's ledger: what they owe and what you owe them.
+const personPatterns = (person: string): string[] => [
+  ...personAccountPatterns(RECEIVABLE_ROOT, person),
+  ...personAccountPatterns(PAYABLE_ROOT, person),
+];
+
+/**
+ * Every transaction touching a person's two accounts, newest first, converted
+ * to `base`, with ledger's revaluation rows kept in place (parseAccountRegister
+ * flags them `generated` so they render greyed out). Dropping them
+ * (`--no-revalued`) would end the running total at the last transaction's
+ * prices while `netForPerson` still reports today's — the same page showing
+ * two different debts. `--` stops option parsing so a person name can't
+ * smuggle a flag.
+ */
+export const personRegister = async (
+  base: string,
+  person: string
+): Promise<TransactionRowView[]> => {
+  if (!isSafeLedgerArg(person)) return [];
+  return registerViews(['-X', base, '--', ...personPatterns(person)]);
+};
+
+export const netForPerson = async (
   base: string,
   person: string
 ): Promise<PersonDebt | null> => {
@@ -32,8 +57,7 @@ const netForPerson = async (
     '--format',
     NET_FORMAT,
     '--',
-    ...personAccountPatterns(RECEIVABLE_ROOT, person),
-    ...personAccountPatterns(PAYABLE_ROOT, person),
+    ...personPatterns(person),
   ]);
   return parseNet(person, stdout);
 };
