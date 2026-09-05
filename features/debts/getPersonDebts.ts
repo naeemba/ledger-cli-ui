@@ -41,8 +41,6 @@ export const personRegister = async (
     '-X',
     base,
     '--no-revalued',
-    '--sort',
-    'date',
     '--',
     ...personPatterns(person),
   ]);

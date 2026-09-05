@@ -21,7 +21,7 @@ const Account = async ({
   const account = decodeURIComponent(accountParam);
   if (!isValidAccount(account)) notFound();
 
-  const views = await registerViews([account, '--sort', 'date']);
+  const views = await registerViews([account]);
   const balance = await runLedger(
     ['balance', account, '-X', defaultCurrency, '--format', '%T'],
     { sortByDate: false }

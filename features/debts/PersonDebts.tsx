@@ -1,12 +1,13 @@
 import { netForPerson, personRegister } from './getPersonDebts';
 import { PAYABLE_ROOT, RECEIVABLE_ROOT, directionClass } from './parse';
 import Help from '@/components/Help';
+import LedgerErrorCard from '@/components/LedgerErrorCard';
 import PageContainer from '@/components/PageContainer';
 import { isSafeLedgerArg } from '@/features/transactions/entry/typeForms/fixBalancePreview';
 import RegisterList from '@/features/transactions/row/RegisterList';
 import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
-import { notFound } from 'next/navigation';
+import { notFound, unstable_rethrow } from 'next/navigation';
 
 const log = createLogger('debts');
 
@@ -26,12 +27,11 @@ const PersonDebts = async ({ person }: { person: string }) => {
       netForPerson(base, person),
     ]);
   } catch (e) {
+    // redirect() and the prerender bailout signal by throwing; re-throw those
+    // so a signed-out user reaches /sign-in instead of a "ledger broke" card.
+    unstable_rethrow(e);
     log.error({ err: e, person }, 'failed to load person debts');
-    return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-negative shadow-sm">
-        Failed to load debts from ledger.
-      </div>
-    );
+    return <LedgerErrorCard what="debts" />;
   }
 
   return (
@@ -52,7 +52,9 @@ const PersonDebts = async ({ person }: { person: string }) => {
                 {PAYABLE_ROOT}:{person}
               </code>
               , most recent first. Amounts are converted to {base.toUpperCase()}
-              ; the Total column is the running net after each transaction.
+              ; the Total column is the running net after each transaction,
+              revalued at today&apos;s prices — so it can move between rows
+              without a transaction.
             </Help>
           </div>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight break-all">

@@ -21,8 +21,12 @@ describe('personRegister', () => {
     await personRegister('usd', 'Bob');
     const [args] = runLedger.mock.calls[0];
 
-    expect(args.slice(0, 2)).toEqual(['register', '--format']);
+    expect(args[0]).toBe('register');
     expect(args).toContain('--no-revalued'); // no "Commodities revalued" row
+    // The reverse() in registerViews only means "newest first" if ledger sorted.
+    expect(
+      args.slice(args.indexOf('--sort'), args.indexOf('--sort') + 2)
+    ).toEqual(['--sort', 'date']);
     expect(args.slice(args.indexOf('-X'), args.indexOf('-X') + 2)).toEqual([
       '-X',
       'usd',

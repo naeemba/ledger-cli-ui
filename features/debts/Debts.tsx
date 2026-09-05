@@ -2,11 +2,13 @@ import { getPersonDebts } from './getPersonDebts';
 import { directionClass } from './parse';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
+import LedgerErrorCard from '@/components/LedgerErrorCard';
 import PageContainer from '@/components/PageContainer';
 import { TableScroll } from '@/components/ui/table';
 import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
 import Link from 'next/link';
+import { unstable_rethrow } from 'next/navigation';
 
 const log = createLogger('debts');
 
@@ -16,12 +18,11 @@ const Debts = async () => {
   try {
     debts = await getPersonDebts(base);
   } catch (e) {
+    // redirect() and the prerender bailout signal by throwing; re-throw those
+    // so a signed-out user reaches /sign-in instead of a "ledger broke" card.
+    unstable_rethrow(e);
     log.error({ err: e }, 'failed to load debts');
-    return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-negative shadow-sm">
-        Failed to load debts from ledger.
-      </div>
-    );
+    return <LedgerErrorCard what="debts" />;
   }
 
   return (
