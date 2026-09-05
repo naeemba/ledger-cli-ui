@@ -3,6 +3,7 @@
 import React from 'react';
 import type { DraftState } from './entry/draftReducer';
 import { optionsForRoles } from './entry/typeForms/fields';
+import type { AccountRole } from './entry/types/accountRole';
 import type {
   HeaderFields,
   TransactionTypeAdapter,
@@ -38,11 +39,14 @@ export type QuickEntrySpec<F extends HeaderFields> = {
 export const todayLocal = () => new Date().toLocaleDateString('en-CA');
 export const leafOf = (account: string) =>
   account.split(':').pop()?.trim() ?? '';
+// The accounts money actually sits in — what a picker offers when the entry
+// moves cash rather than booking it against income or an expense.
+export const MONEY_ROLES: AccountRole[] = ['asset', 'liability'];
 export const firstMoneyAccount = (accounts: string[]) =>
-  optionsForRoles(accounts, ['asset', 'liability'])[0] ?? '';
-export const isPositive = (s: string) => Number(s) > 0;
-export const isNumber = (s: string) =>
-  s.trim() !== '' && !Number.isNaN(Number(s));
+  optionsForRoles(accounts, MONEY_ROLES)[0] ?? '';
+export const isPositive = (raw: string) => Number(raw) > 0;
+export const isNumber = (raw: string) =>
+  raw.trim() !== '' && !Number.isNaN(Number(raw));
 
 // Every quick entry starts with a blank description so the "(optional)" field
 // is consistently empty across types; when left blank, save() derives the payee

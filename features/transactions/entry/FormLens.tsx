@@ -2,18 +2,18 @@
 
 import React from 'react';
 import AmountInput from '../AmountInput';
-import type {
-  DraftAction,
-  DraftPosting,
-  DraftState,
-  DraftStatus,
-} from './draftReducer';
-import { CurrencyCombobox, Field, SectionLabel } from './typeForms/fields';
+import type { DraftAction, DraftPosting, DraftState } from './draftReducer';
+import {
+  ChoiceToggle,
+  CurrencyCombobox,
+  Field,
+  STATUS_OPTIONS,
+  SectionLabel,
+} from './typeForms/fields';
 import Combobox from '@/components/Combobox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { Balance } from '@/lib/transactions/model';
 
 type Props = {
@@ -59,31 +59,14 @@ export function FormLens({
         </Field>
 
         <Field label="Status">
-          <ToggleGroup
-            value={[draft.status]}
-            onValueChange={(values) => {
-              if (values.length > 0)
-                dispatch({
-                  type: 'setField',
-                  field: 'status',
-                  value: values[0] as DraftStatus,
-                });
-            }}
-            spacing={0}
-            variant="outline"
+          <ChoiceToggle
+            value={draft.status}
+            onChange={(status) =>
+              dispatch({ type: 'setField', field: 'status', value: status })
+            }
+            options={STATUS_OPTIONS}
             size="sm"
-            className="w-full"
-          >
-            <ToggleGroupItem value="none" className="flex-1">
-              Unmarked
-            </ToggleGroupItem>
-            <ToggleGroupItem value="pending" className="flex-1">
-              Pending (!)
-            </ToggleGroupItem>
-            <ToggleGroupItem value="cleared" className="flex-1">
-              Cleared (*)
-            </ToggleGroupItem>
-          </ToggleGroup>
+          />
         </Field>
 
         <Field label="Payee" error={fieldErrors?.['payee']}>

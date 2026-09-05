@@ -1,13 +1,11 @@
 'use client';
 
 import React from 'react';
-import type { DraftStatus } from '../draftReducer';
 import type { HeaderFields } from '../types/adapter';
-import { Field, SectionLabel } from './fields';
+import { ChoiceToggle, Field, STATUS_OPTIONS, SectionLabel } from './fields';
 import Combobox from '@/components/Combobox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export const HeaderFieldsEditor = ({
   header,
@@ -32,26 +30,12 @@ export const HeaderFieldsEditor = ({
     </Field>
 
     <Field label="Status">
-      <ToggleGroup
-        value={[header.status]}
-        onValueChange={(values) => {
-          if (values.length > 0) onChange({ status: values[0] as DraftStatus });
-        }}
-        spacing={0}
-        variant="outline"
+      <ChoiceToggle
+        value={header.status}
+        onChange={(status) => onChange({ status })}
+        options={STATUS_OPTIONS}
         size="sm"
-        className="w-full"
-      >
-        <ToggleGroupItem value="none" className="flex-1">
-          Unmarked
-        </ToggleGroupItem>
-        <ToggleGroupItem value="pending" className="flex-1">
-          Pending (!)
-        </ToggleGroupItem>
-        <ToggleGroupItem value="cleared" className="flex-1">
-          Cleared (*)
-        </ToggleGroupItem>
-      </ToggleGroup>
+      />
     </Field>
 
     <Field label="Payee">

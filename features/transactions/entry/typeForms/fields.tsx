@@ -2,10 +2,12 @@
 
 import React, { useTransition } from 'react';
 import AmountInput from '../../AmountInput';
+import type { DraftStatus } from '../draftReducer';
 import { accountsForRole, type AccountRole } from '../types/accountRole';
 import Combobox from '@/components/Combobox';
 import CommodityCombobox from '@/components/CommodityCombobox';
 import { Label } from '@/components/ui/label';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { upsertMappingAction } from '@/features/currencies/actions';
 
 export const SectionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -34,12 +36,12 @@ export const Field = ({
 
 export const optionsForRoles = (
   accounts: string[],
-  role: AccountRole | AccountRole[]
+  roleOrRoles: AccountRole | AccountRole[]
 ): string[] => {
-  const roles = Array.isArray(role) ? role : [role];
+  const roles = Array.isArray(roleOrRoles) ? roleOrRoles : [roleOrRoles];
   const seen = new Set<string>();
-  for (const r of roles)
-    for (const a of accountsForRole(accounts, r)) seen.add(a);
+  for (const role of roles)
+    for (const account of accountsForRole(accounts, role)) seen.add(account);
   return [...seen];
 };
 
@@ -77,7 +79,7 @@ export const AccountField = ({
   role: AccountRole | AccountRole[];
   accounts: string[];
   value: string;
-  onChange: (v: string) => void;
+  onChange: (value: string) => void;
   placeholder?: string;
   error?: string;
 }) => {
@@ -106,7 +108,7 @@ export const CurrencyCombobox = ({
   className,
 }: {
   value: string;
-  onChange: (v: string) => void;
+  onChange: (value: string) => void;
   className?: string;
 }) => {
   const [, startPersist] = useTransition();
@@ -162,3 +164,46 @@ export const AmountRow = ({
     </div>
   </Field>
 );
+
+/** One-of-N picker: mutually exclusive options whose pressed state a screen
+ * reader can announce. Every entry form that offers a choice (status, debt
+ * direction) renders it through here. */
+export const ChoiceToggle = <C extends string>({
+  value,
+  onChange,
+  options,
+  size,
+}: {
+  value: C;
+  onChange: (choice: C) => void;
+  options: { value: C; label: string }[];
+  size?: React.ComponentProps<typeof ToggleGroup>['size'];
+}) => (
+  <ToggleGroup
+    value={[value]}
+    onValueChange={(values) => {
+      if (values.length > 0) onChange(values[0] as C);
+    }}
+    spacing={0}
+    variant="outline"
+    size={size}
+    className="w-full"
+  >
+    {options.map((option) => (
+      <ToggleGroupItem
+        key={option.value}
+        value={option.value}
+        className="flex-1"
+      >
+        {option.label}
+      </ToggleGroupItem>
+    ))}
+  </ToggleGroup>
+);
+
+/** The journal's three transaction states, worded as the form shows them. */
+export const STATUS_OPTIONS: { value: DraftStatus; label: string }[] = [
+  { value: 'none', label: 'Unmarked' },
+  { value: 'pending', label: 'Pending (!)' },
+  { value: 'cleared', label: 'Cleared (*)' },
+];

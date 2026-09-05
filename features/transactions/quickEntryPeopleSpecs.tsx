@@ -1,11 +1,17 @@
 'use client';
 
 import React from 'react';
-import { AccountField, AmountRow, Field } from './entry/typeForms/fields';
+import {
+  AccountField,
+  AmountRow,
+  ChoiceToggle,
+  Field,
+} from './entry/typeForms/fields';
 import type { AccountRole } from './entry/types/accountRole';
 import type { HeaderFields } from './entry/types/adapter';
 import { transferAdapter } from './entry/types/transfer';
 import {
+  MONEY_ROLES,
   asTransfer,
   firstMoneyAccount,
   isPositive,
@@ -13,7 +19,6 @@ import {
   type QuickEntrySpec,
 } from './quickEntryKit';
 import Combobox from '@/components/Combobox';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 // --- Debt (money owed) -----------------------------------------------------
 // Not a registry adapter: a debt is mechanically a two-posting transfer, so it
@@ -41,38 +46,6 @@ export const OWED_TO_YOU_ROLES: AccountRole[] = [
 ];
 // You owe them it is debited: cash they handed you, or the expense they paid.
 export const YOU_OWE_ROLES: AccountRole[] = ['asset', 'liability', 'expense'];
-
-// Both specs pick a side the same way: two mutually exclusive buttons whose
-// pressed state a screen reader can announce.
-const DirectionToggle = <D extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: D;
-  onChange: (direction: D) => void;
-  options: { value: D; label: string }[];
-}) => (
-  <ToggleGroup
-    value={[value]}
-    onValueChange={(values) => {
-      if (values.length > 0) onChange(values[0] as D);
-    }}
-    spacing={0}
-    variant="outline"
-    className="w-full"
-  >
-    {options.map((option) => (
-      <ToggleGroupItem
-        key={option.value}
-        value={option.value}
-        className="flex-1"
-      >
-        {option.label}
-      </ToggleGroupItem>
-    ))}
-  </ToggleGroup>
-);
 
 type DebtDirection = 'owed-to-you' | 'you-owe';
 
@@ -155,7 +128,7 @@ export const debtSpec: QuickEntrySpec<DebtFields> = {
     const owedToYou = fields.direction === 'owed-to-you';
     return (
       <>
-        <DirectionToggle
+        <ChoiceToggle
           value={fields.direction}
           onChange={(direction) => update({ direction })}
           options={[
@@ -206,7 +179,7 @@ export const debtSpec: QuickEntrySpec<DebtFields> = {
 // under-settling is the user's call and ledger records whatever remains.
 //
 // Unlike creating a debt, settling one always moves cash, so this picker stays
-// on asset and liability accounts.
+// on the money accounts.
 type SettleDirection = 'they-paid-you' | 'you-paid-them';
 
 type SettleFields = HeaderFields & {
@@ -267,7 +240,7 @@ export const settleSpec: QuickEntrySpec<SettleFields> = {
     const theyPaid = fields.direction === 'they-paid-you';
     return (
       <>
-        <DirectionToggle
+        <ChoiceToggle
           value={fields.direction}
           onChange={(direction) => update({ direction })}
           options={[
@@ -295,7 +268,7 @@ export const settleSpec: QuickEntrySpec<SettleFields> = {
 
         <AccountField
           label={theyPaid ? 'Received into' : 'Paid from'}
-          role={['asset', 'liability']}
+          role={MONEY_ROLES}
           accounts={accounts}
           value={fields.cashAccount}
           onChange={(cashAccount) => update({ cashAccount })}

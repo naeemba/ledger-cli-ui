@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { optionsForRoles } from './entry/typeForms/fields';
-import type { QuickEntryContext } from './quickEntryKit';
+import { MONEY_ROLES, type QuickEntryContext } from './quickEntryKit';
 import {
   OWED_TO_YOU_ROLES,
   YOU_OWE_ROLES,
@@ -36,7 +36,7 @@ describe('the debt picker offers whatever the debt came from', () => {
   });
 
   it('settling up stays on cash accounts', () => {
-    const options = optionsForRoles(ctx.accounts, ['asset', 'liability']);
+    const options = optionsForRoles(ctx.accounts, MONEY_ROLES);
     expect(options).not.toContain('Income:Salary');
     expect(options).not.toContain('Expenses:Groceries');
   });
