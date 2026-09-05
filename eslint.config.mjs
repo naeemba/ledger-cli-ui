@@ -28,6 +28,16 @@ const config = [
     rules: { 'no-console': 'off' },
   },
   {
+    // Hard navigations past the crypto gate: a client-side route transition
+    // keeps the old session state, so the gate would not re-evaluate.
+    files: [
+      'features/crypto/SetupWizard.tsx',
+      'features/crypto/LockButton.tsx',
+      'features/settings/ResetEncryptionCard.tsx',
+    ],
+    rules: { '@next/next/no-location-assign-relative-destination': 'off' },
+  },
+  {
     ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', '.claude/**'],
   },
 ];
