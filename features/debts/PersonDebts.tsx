@@ -52,9 +52,11 @@ const PersonDebts = async ({ person }: { person: string }) => {
                 {PAYABLE_ROOT}:{person}
               </code>
               , most recent first. Amounts are converted to {base.toUpperCase()}
-              ; the Total column is the running net after each transaction,
-              revalued at today&apos;s prices — so it can move between rows
-              without a transaction.
+              , each at the price in effect on its own date; the Total column is
+              the running net after each row. A greyed-out{' '}
+              <em>Commodities revalued</em> row is ledger&apos;s, not yours — it
+              is a price move, and it is what carries the total up to the net
+              shown here.
             </Help>
           </div>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight break-all">

@@ -15,7 +15,7 @@ import runLedger from '@/utils/runLedger';
 
 // quantity keeps the sign (direction); the third column is the absolute
 // magnitude so the view can show "owes you $30" rather than "$-30".
-const NET_FORMAT =
+export const NET_FORMAT =
   '%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))|%(scrub(abs(display_total)))\n';
 
 // Both sides of one person's ledger: what they owe and what you owe them.
@@ -24,26 +24,35 @@ const personPatterns = (person: string): string[] => [
   ...personAccountPatterns(PAYABLE_ROOT, person),
 ];
 
+// Ledger's own payee for the pseudo-entry `-X` inserts when a held commodity
+// changes price. Nobody entered it, so the view greys it out — but it must
+// stay in the list: it carries the price move that takes the running total
+// from the last transaction's value to today's, which is the figure the header
+// and /debts show.
+const REVALUATION_PAYEE = 'Commodities revalued';
+
 /**
  * Every transaction touching a person's two accounts, newest first, converted
- * to `base`. `--no-revalued` drops the `Commodities revalued` pseudo-entry
- * `-X` inserts when a held commodity changes price — it is not a transaction
- * anyone entered, and every figure is identical without it (the revaluation
- * still lands in the running total). `--` stops option parsing so a person
- * name can't smuggle a flag.
+ * to `base`, with ledger's revaluation rows kept in place. Dropping them
+ * (`--no-revalued`) would end the running total at the last transaction's
+ * prices while `netForPerson` still reports today's — the same page showing
+ * two different debts. `--` stops option parsing so a person name can't
+ * smuggle a flag.
  */
 export const personRegister = async (
   base: string,
   person: string
 ): Promise<TransactionRowView[]> => {
   if (!isSafeLedgerArg(person)) return [];
-  return registerViews([
+  const views = await registerViews([
     '-X',
     base,
-    '--no-revalued',
     '--',
     ...personPatterns(person),
   ]);
+  return views.map((view) =>
+    view.payee === REVALUATION_PAYEE ? { ...view, generated: true } : view
+  );
 };
 
 export const netForPerson = async (

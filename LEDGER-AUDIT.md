@@ -146,9 +146,13 @@ query. Verified by attempting (and failing) the candidate replacements.
 - `--invert --collapse` double-counts on grouped registers.
 - A `register -X <ccy>` inserts its own `Commodities revalued` entry whenever
   a held commodity changes price — a row nobody entered, rendered like a real
-  transaction. Pass `--no-revalued` unless you want it: every figure stays
-  identical (the revaluation still lands in the running total), the row just
-  stops being printed.
+  transaction. **`--no-revalued` is not cosmetic**: it removes the price move
+  from the running total too, so the register ends at the last transaction's
+  prices while a collapsed `register -X` (no flag) ends at today's. Verified on
+  3.4.1-20251025 with a EUR loan and a price directive dated after the last
+  transaction: the list ends `$ 23.00`, the collapsed net says `$ 38.00`. Show
+  the row and style it as generated; only pass `--no-revalued` where nothing on
+  the same screen reports the revalued total.
 
 ---
 
