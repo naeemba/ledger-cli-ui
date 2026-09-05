@@ -32,14 +32,12 @@ export const redactLedgerPaths = (line: string): string =>
  * swapped; `path.resolve` matches because ledger inherits this process's cwd.
  */
 export const maskJournalDirectory = (text: string, dir: string): string =>
-  // Longest first: swapping the relative form first would leave the deploy
-  // directory behind as `/srv/app/<journal>/main.ledger`.
-  [path.resolve(dir), dir]
-    .sort((a, b) => b.length - a.length)
-    .reduce(
-      (masked, directory) => masked.split(directory).join('<journal>'),
-      text
-    );
+  // Absolute first — it contains the relative form, so swapping that one first
+  // would leave the deploy directory behind as `/srv/app/<journal>/main.ledger`.
+  [path.resolve(dir), dir].reduce(
+    (masked, directory) => masked.split(directory).join('<journal>'),
+    text
+  );
 
 /**
  * Turn ledger's multi-line stderr into one safe, *useful* message.
