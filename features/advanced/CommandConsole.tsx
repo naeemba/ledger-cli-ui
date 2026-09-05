@@ -46,22 +46,39 @@ const CommandConsole = () => {
           HISTORY_LIMIT
         )
       );
+    } catch {
+      // The action answers every *ledger* failure with a result, so a rejection
+      // here means the session expired or the network dropped. Without this the
+      // panel would keep showing the previous run's output under an "ok" badge.
+      setResult({
+        ok: false,
+        command: trimmed,
+        stdout: '',
+        stderr: 'Could not reach the server. Try again.',
+        durationMilliseconds: 0,
+      });
     } finally {
       setRunning(false);
     }
   };
 
   const recall = (offset: number) => {
+    if (history.length === 0) return;
     const next = Math.min(
       Math.max(historyIndex + offset, -1),
       history.length - 1
     );
     setHistoryIndex(next);
-    setCommand(next === -1 ? '' : history[next]);
+    // Never write '' back: at index -1 the box holds whatever you were typing,
+    // the way a shell keeps your draft at the bottom of the history.
+    if (next >= 0) setCommand(history[next]);
   };
 
-  const use = (value: string) => {
+  const fillCommand = (value: string) => {
     setCommand(value);
+    // Back to "typing", or the next ArrowDown would walk off an index that no
+    // longer matches what is in the box.
+    setHistoryIndex(-1);
     inputRef.current?.focus();
   };
 
@@ -117,7 +134,7 @@ const CommandConsole = () => {
           <button
             key={example}
             type="button"
-            onClick={() => use(example)}
+            onClick={() => fillCommand(example)}
             className="border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-full border px-3 py-1 font-mono text-xs"
           >
             {example}

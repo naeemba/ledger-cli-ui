@@ -30,7 +30,6 @@ export const REPORT_COMMANDS = [
   'emacs',
   'entry',
   'equity',
-  'org',
   'payees',
   'pricedb',
   'pricemap',
@@ -50,7 +49,7 @@ const COMMANDS = new Set<string>(REPORT_COMMANDS);
 
 /**
  * Long options that read a file, write a file, or execute a program. Audited
- * against `ledger --help` for 3.4.1; `console-command.ledger.test.ts` re-runs
+ * against `ledger --help` for 3.4.1; `console-command.test.ts` re-runs
  * that audit against the installed binary so a version that grows a new
  * FILE-taking option fails the build instead of quietly opening a hole.
  */
@@ -113,7 +112,20 @@ export const tokenize = (input: string): string[] =>
     token.replace(/"([^"]*)"|'([^']*)'/g, '$1$2')
   );
 
+/**
+ * True when a quote character survives the removal of every closed pair, i.e.
+ * the user opened a quote and never shut it. {@link tokenize} would otherwise
+ * drop it silently and hand ledger a truncated value, which comes back as a
+ * complaint about a word the user never typed.
+ */
+const hasUnclosedQuote = (input: string): boolean =>
+  /["']/.test(input.replace(/"[^"]*"|'[^']*'/g, ''));
+
 export const parseLedgerCommand = (input: string): ParsedCommand => {
+  if (hasUnclosedQuote(input)) {
+    return { ok: false, message: 'Unclosed quote.' };
+  }
+
   const tokens = tokenize(input);
   if (tokens.length === 0) return { ok: false, message: 'Enter a command.' };
 

@@ -6,7 +6,7 @@ import { requireUser } from '@/lib/auth/require-user';
 import { journalRepository } from '@/lib/journal';
 import { redactLedgerPaths } from '@/lib/journal/verify';
 import { parseLedgerCommand } from '@/lib/ledger/console-command';
-import { RATE_LIMIT_MESSAGE, rateLimit, READ } from '@/lib/rate-limit';
+import { CONSOLE, RATE_LIMIT_MESSAGE, rateLimit } from '@/lib/rate-limit';
 import { hermeticLedgerInvocation } from '@/utils/hermeticLedger';
 
 const execFilePromise = promisify(execFile);
@@ -36,7 +36,7 @@ export const runLedgerCommandAction = async (
   input: string
 ): Promise<LedgerCommandResult> => {
   const user = await requireUser();
-  if (!rateLimit(READ, user.id).allowed) return rejected(RATE_LIMIT_MESSAGE);
+  if (!rateLimit(CONSOLE, user.id).allowed) return rejected(RATE_LIMIT_MESSAGE);
 
   const parsed = parseLedgerCommand(input);
   if (!parsed.ok) return rejected(parsed.message);
@@ -45,13 +45,18 @@ export const runLedgerCommandAction = async (
   // and must finish before the layout is read: the pull is what puts the
   // generated price DB on disk for ensureLayout to find.
   await journalRepository.getFingerprint(user.id);
-  const { mainPath, priceDbPath } = await journalRepository.ensureLayoutCached(
-    user.id
-  );
+  const { dir, mainPath, priceDbPath } =
+    await journalRepository.ensureLayoutCached(user.id);
 
   const { args, env } = hermeticLedgerInvocation(mainPath, priceDbPath);
   args.push(...parsed.args);
   const command = parsed.args.join(' ');
+
+  // `stats` prints the cache path, which carries the layout and the user id.
+  // A substring swap of the one directory involved, not redactLedgerPaths:
+  // that regex eats every slash and would turn `2024/01/01` into
+  // `2024<journal>` in every `print` and `reg` line.
+  const hidePaths = (text: string) => text.split(dir).join('<journal>');
 
   const startedAt = Date.now();
   try {
@@ -63,21 +68,23 @@ export const runLedgerCommandAction = async (
     return {
       ok: true,
       command,
-      stdout,
+      stdout: hidePaths(stdout),
       stderr: redactLedgerPaths(stderr),
       durationMilliseconds: Date.now() - startedAt,
     };
-  } catch (e) {
+  } catch (error) {
     // ledger exits non-zero on a bad query and explains itself on stderr; that
     // message is the whole point of a console, so show it instead of throwing.
-    const error = e as { stdout?: string; stderr?: string; message?: string };
+    const { stdout, stderr, message } = error as {
+      stdout?: string;
+      stderr?: string;
+      message?: string;
+    };
     return {
       ok: false,
       command,
-      stdout: error.stdout ?? '',
-      stderr: redactLedgerPaths(
-        error.stderr || error.message || 'ledger failed'
-      ),
+      stdout: hidePaths(stdout ?? ''),
+      stderr: redactLedgerPaths(stderr || message || 'ledger failed'),
       durationMilliseconds: Date.now() - startedAt,
     };
   }

@@ -64,6 +64,16 @@ describe('parseLedgerCommand', () => {
     expect(parseLedgerCommand('bal -Ef /etc/passwd').ok).toBe(false);
   });
 
+  it('rejects an unclosed quote instead of silently truncating it', () => {
+    expect(parseLedgerCommand('reg --period "last 3 months').ok).toBe(false);
+  });
+
+  it('lets a value option swallow the token after it', () => {
+    // Safe only because ledger consumes it as --sort's expression. A boolean
+    // option in VALUE_OPTIONS would open a file read here.
+    expect(parseLedgerCommand('bal --sort --file /etc/passwd').ok).toBe(true);
+  });
+
   it('rejects an option that runs a program or writes a file', () => {
     expect(parseLedgerCommand('bal --pager "sh -c id"').ok).toBe(false);
     expect(parseLedgerCommand('bal --output /tmp/x').ok).toBe(false);
