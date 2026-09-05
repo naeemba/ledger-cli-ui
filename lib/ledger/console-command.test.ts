@@ -22,6 +22,24 @@ describe('tokenize', () => {
   it('keeps an empty quoted argument', () => {
     expect(tokenize('bal ""')).toEqual(['bal', '']);
   });
+
+  it('keeps an apostrophe inside a payee', () => {
+    expect(tokenize("reg Lowe's")).toEqual(['reg', "Lowe's"]);
+    expect(tokenize('reg "Lowe\'s"')).toEqual(['reg', "Lowe's"]);
+    expect(tokenize("reg Trader Joe's Bob's")).toEqual([
+      'reg',
+      'Trader',
+      "Joe's",
+      "Bob's",
+    ]);
+  });
+
+  it('keeps a quoted value glued to its option', () => {
+    expect(tokenize("reg --period='last 3 months'")).toEqual([
+      'reg',
+      '--period=last 3 months',
+    ]);
+  });
 });
 
 describe('parseLedgerCommand', () => {
@@ -66,6 +84,17 @@ describe('parseLedgerCommand', () => {
 
   it('rejects an unclosed quote instead of silently truncating it', () => {
     expect(parseLedgerCommand('reg --period "last 3 months').ok).toBe(false);
+    expect(parseLedgerCommand("reg --period='last 3 months").ok).toBe(false);
+    expect(parseLedgerCommand('reg it\'s "unclosed').ok).toBe(false);
+  });
+
+  it('accepts a payee with an apostrophe', () => {
+    expect(parseLedgerCommand("reg Lowe's")).toEqual({
+      ok: true,
+      args: ['reg', "Lowe's"],
+    });
+    expect(parseLedgerCommand("bal Expenses:Bob's").ok).toBe(true);
+    expect(parseLedgerCommand("bal --limit 'a\"b'").ok).toBe(true);
   });
 
   it('lets a value option swallow the token after it', () => {

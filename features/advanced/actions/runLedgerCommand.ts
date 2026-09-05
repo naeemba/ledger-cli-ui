@@ -4,7 +4,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { requireUser } from '@/lib/auth/require-user';
 import { journalRepository } from '@/lib/journal';
-import { redactLedgerPaths } from '@/lib/journal/verify';
+import { maskJournalDirectory } from '@/lib/journal/verify';
 import { parseLedgerCommand } from '@/lib/ledger/console-command';
 import { CONSOLE, RATE_LIMIT_MESSAGE, rateLimit } from '@/lib/rate-limit';
 import { hermeticLedgerInvocation } from '@/utils/hermeticLedger';
@@ -36,10 +36,14 @@ export const runLedgerCommandAction = async (
   input: string
 ): Promise<LedgerCommandResult> => {
   const user = await requireUser();
-  if (!rateLimit(CONSOLE, user.id).allowed) return rejected(RATE_LIMIT_MESSAGE);
 
+  // Parse first: a rejected command never spawns a process, so charging the
+  // bucket for it would spend the budget on typos on a page whose whole point
+  // is trying things.
   const parsed = parseLedgerCommand(input);
   if (!parsed.ok) return rejected(parsed.message);
+
+  if (!rateLimit(CONSOLE, user.id).allowed) return rejected(RATE_LIMIT_MESSAGE);
 
   // Pulls the canonical journal into the local cache so the CLI can read it,
   // and must finish before the layout is read: the pull is what puts the
@@ -52,11 +56,11 @@ export const runLedgerCommandAction = async (
   args.push(...parsed.args);
   const command = parsed.args.join(' ');
 
-  // `stats` prints the cache path, which carries the layout and the user id.
-  // A substring swap of the one directory involved, not redactLedgerPaths:
-  // that regex eats every slash and would turn `2024/01/01` into
-  // `2024<journal>` in every `print` and `reg` line.
-  const hidePaths = (text: string) => text.split(dir).join('<journal>');
+  // `stats` prints the cache path, which carries the layout and the user id,
+  // and parse errors quote it on stderr. Both streams are shown verbatim, so
+  // they get the directory swap rather than redactLedgerPaths: that regex eats
+  // every slash-led run and would turn `2024/01/01` into `2024<journal>`.
+  const hidePaths = (text: string) => maskJournalDirectory(text, dir);
 
   const startedAt = Date.now();
   try {
@@ -69,7 +73,7 @@ export const runLedgerCommandAction = async (
       ok: true,
       command,
       stdout: hidePaths(stdout),
-      stderr: redactLedgerPaths(stderr),
+      stderr: hidePaths(stderr),
       durationMilliseconds: Date.now() - startedAt,
     };
   } catch (error) {
@@ -84,7 +88,7 @@ export const runLedgerCommandAction = async (
       ok: false,
       command,
       stdout: hidePaths(stdout ?? ''),
-      stderr: redactLedgerPaths(stderr || message || 'ledger failed'),
+      stderr: hidePaths(stderr || message || 'ledger failed'),
       durationMilliseconds: Date.now() - startedAt,
     };
   }

@@ -1,4 +1,5 @@
 import { execFile } from 'child_process';
+import path from 'path';
 import { promisify } from 'util';
 import { hermeticLedgerInvocation } from '@/utils/hermeticLedger';
 
@@ -16,6 +17,29 @@ const MAX_LEN = 500;
 /** Replace absolute paths in a ledger diagnostic with `<journal>`. */
 export const redactLedgerPaths = (line: string): string =>
   line.replace(PATH_REDACT, '<journal>');
+
+/**
+ * Hide the user's journal directory in raw ledger output.
+ *
+ * Unlike {@link redactLedgerPaths}, this is safe on output the user reads
+ * verbatim: it swaps one known directory instead of every slash-led run, so a
+ * date (`2024/01/01`) and an account name survive untouched. `stats` and
+ * `emacs` print the journal path, and every parse error quotes it, so both
+ * stdout and stderr need it.
+ *
+ * The directory arrives relative (`data/journals/<userId>` with the default
+ * `DATA_DIR`) while ledger always prints it absolute, so both spellings are
+ * swapped; `path.resolve` matches because ledger inherits this process's cwd.
+ */
+export const maskJournalDirectory = (text: string, dir: string): string =>
+  // Longest first: swapping the relative form first would leave the deploy
+  // directory behind as `/srv/app/<journal>/main.ledger`.
+  [path.resolve(dir), dir]
+    .sort((a, b) => b.length - a.length)
+    .reduce(
+      (masked, directory) => masked.split(directory).join('<journal>'),
+      text
+    );
 
 /**
  * Turn ledger's multi-line stderr into one safe, *useful* message.

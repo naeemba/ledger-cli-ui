@@ -104,22 +104,32 @@ export type ParsedCommand =
 
 /**
  * Splits on whitespace, honouring single and double quotes so a quoted query
- * (`reg --period 'last 3 months'`) stays one argument. No shell is involved
- * downstream, so quotes are the only metacharacters that need meaning.
+ * (`reg --period 'last 3 months'`, `reg --period='last 3 months'`) stays one
+ * argument. No shell is involved downstream, so quotes are the only
+ * metacharacters that need meaning.
+ *
+ * A quote only opens a group where a value can start — at the beginning, after
+ * whitespace, or after `=`. Anywhere else it is an apostrophe inside a word, so
+ * `reg Lowe's` stays a single term instead of splitting into `Lowe` and `s`.
  */
+const TOKEN = /(?:(?<=^|[\s=])"[^"]*"|(?<=^|[\s=])'[^']*'|[^\s"']+|['"])+/g;
+
 export const tokenize = (input: string): string[] =>
-  (input.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? []).map((token) =>
+  (input.match(TOKEN) ?? []).map((token) =>
     token.replace(/"([^"]*)"|'([^']*)'/g, '$1$2')
   );
 
 /**
- * True when a quote character survives the removal of every closed pair, i.e.
- * the user opened a quote and never shut it. {@link tokenize} would otherwise
- * drop it silently and hand ledger a truncated value, which comes back as a
- * complaint about a word the user never typed.
+ * True when a quote *opens* a token and is never shut. {@link tokenize} would
+ * otherwise drop it silently and hand ledger a truncated value, which comes
+ * back as a complaint about a word the user never typed.
+ *
+ * Only a quote where a value can start opens one, so `reg Lowe's` is a payee
+ * and not an error. Closed pairs are replaced by a non-space filler so the
+ * token boundaries around them stay intact (`reg it's "unclosed`).
  */
 const hasUnclosedQuote = (input: string): boolean =>
-  /["']/.test(input.replace(/"[^"]*"|'[^']*'/g, ''));
+  /(?:^|[\s=])["']/.test(input.replace(/"[^"]*"|'[^']*'/g, 'x'));
 
 export const parseLedgerCommand = (input: string): ParsedCommand => {
   if (hasUnclosedQuote(input)) {

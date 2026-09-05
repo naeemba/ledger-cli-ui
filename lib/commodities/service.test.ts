@@ -10,6 +10,7 @@ import {
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
+import { hermeticLedgerInvocation } from '@/utils/hermeticLedger';
 
 const USER = 'test-user';
 
@@ -237,19 +238,12 @@ describe('CommodityDefinitionService', () => {
     const run = promisify(execFile);
     const mainPath = path.join(dir, 'main.ledger');
     const register = async () => {
-      const { LEDGER_PRICE_DB: _p, LEDGER_FILE: _f, ...env } = process.env;
+      // Same invocation production uses, so a stray LEDGER_* in a developer's
+      // shell can't fail a test that would pass on the server.
+      const { args, env } = hermeticLedgerInvocation(mainPath);
       const { stdout } = await run(
         'ledger',
-        [
-          '--init-file',
-          '/dev/null',
-          '-f',
-          mainPath,
-          'reg',
-          'Expenses:Wage',
-          '--format',
-          '%t\n',
-        ],
+        [...args, 'reg', 'Expenses:Wage', '--format', '%t\n'],
         { env }
       );
       return stdout.trim();
