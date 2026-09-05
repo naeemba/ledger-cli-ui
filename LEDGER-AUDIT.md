@@ -152,7 +152,11 @@ query. Verified by attempting (and failing) the candidate replacements.
   3.4.1-20251025 with a EUR loan and a price directive dated after the last
   transaction: the list ends `$ 23.00`, the collapsed net says `$ 38.00`. Show
   the row and style it as generated; only pass `--no-revalued` where nothing on
-  the same screen reports the revalued total.
+  the same screen reports the revalued total. Mind the order: `--exchange`
+  implies `--revalued`, so a `--no-revalued` placed **before** `-X` is silently
+  ignored — exit 0, revaluation rows still there. Same journal on
+  3.4.1-20251025: `register --format F --no-revalued -X $` prints 2 revaluation
+  rows, `register --format F -X $ --no-revalued` prints 0.
 
 ---
 

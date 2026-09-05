@@ -45,6 +45,16 @@ export const splitRegisterRows = (stdout: string): RegisterRow[] =>
       uid: uidFromNote(cols.slice(4).join(FIELD_SEPARATOR)) ?? undefined,
     }));
 
+/**
+ * A payee ledger invented rather than one anybody typed: the `Commodities
+ * revalued` entry `-X` inserts when a held commodity changes price, or any
+ * `<...>` pseudo-payee. Surfaces treat them differently — the payees report
+ * drops them, a register greys them out — but the two must agree on what
+ * counts as one, so the string lives here, next to the parser.
+ */
+export const isPseudoPayee = (payee: string): boolean =>
+  payee === 'Commodities revalued' || /^<.*>$/.test(payee);
+
 export const parseAccountRegister = (stdout: string): TransactionRowView[] =>
   splitRegisterRows(stdout).map(({ cols, uid }) => ({
     date: cols[0],
@@ -52,4 +62,5 @@ export const parseAccountRegister = (stdout: string): TransactionRowView[] =>
     amount: cols[2],
     runningTotal: cols[3],
     uid,
+    generated: isPseudoPayee(cols[1]) || undefined,
   }));

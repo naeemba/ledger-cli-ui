@@ -24,16 +24,10 @@ const personPatterns = (person: string): string[] => [
   ...personAccountPatterns(PAYABLE_ROOT, person),
 ];
 
-// Ledger's own payee for the pseudo-entry `-X` inserts when a held commodity
-// changes price. Nobody entered it, so the view greys it out — but it must
-// stay in the list: it carries the price move that takes the running total
-// from the last transaction's value to today's, which is the figure the header
-// and /debts show.
-const REVALUATION_PAYEE = 'Commodities revalued';
-
 /**
  * Every transaction touching a person's two accounts, newest first, converted
- * to `base`, with ledger's revaluation rows kept in place. Dropping them
+ * to `base`, with ledger's revaluation rows kept in place (parseAccountRegister
+ * flags them `generated` so they render greyed out). Dropping them
  * (`--no-revalued`) would end the running total at the last transaction's
  * prices while `netForPerson` still reports today's — the same page showing
  * two different debts. `--` stops option parsing so a person name can't
@@ -44,15 +38,7 @@ export const personRegister = async (
   person: string
 ): Promise<TransactionRowView[]> => {
   if (!isSafeLedgerArg(person)) return [];
-  const views = await registerViews([
-    '-X',
-    base,
-    '--',
-    ...personPatterns(person),
-  ]);
-  return views.map((view) =>
-    view.payee === REVALUATION_PAYEE ? { ...view, generated: true } : view
-  );
+  return registerViews(['-X', base, '--', ...personPatterns(person)]);
 };
 
 export const netForPerson = async (

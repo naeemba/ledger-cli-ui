@@ -94,6 +94,17 @@ describe('TransactionRow', () => {
     expect(out).toContain('42d');
   });
 
+  it('greys out a row ledger generated itself', () => {
+    const view = {
+      date: '2026-07-01',
+      payee: 'Commodities revalued',
+      amount: '$ 15.00',
+      generated: true,
+    };
+    expect(html(view)).toContain('italic');
+    expect(html({ ...view, generated: undefined })).not.toContain('italic');
+  });
+
   it('links the account to its register when the view has an account but no accountsSummary', () => {
     const view = {
       date: '2026-01-02',

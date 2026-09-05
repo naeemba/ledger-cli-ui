@@ -1,9 +1,4 @@
-import { execFile } from 'child_process';
-import { promises as fs } from 'fs';
-import os from 'os';
-import path from 'path';
-import { promisify } from 'util';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NET_FORMAT, personRegister } from './getPersonDebts';
 import { parseNet, personAccountPatterns, RECEIVABLE_ROOT } from './parse';
 import {
@@ -12,7 +7,7 @@ import {
   REGISTER_FORMAT,
   parseAccountRegister,
 } from '@/features/transactions/row/registerRows';
-import { hermeticLedgerInvocation } from '@/utils/hermeticLedger';
+import { withLedgerJournal } from '@/lib/test-utils/ledger';
 
 const runLedger = vi.hoisted(() => vi.fn());
 vi.mock('@/utils/runLedger', () => ({ default: runLedger }));
@@ -103,74 +98,64 @@ const JOURNAL = [
 ].join('\n');
 
 describe('ledger 3.4.1: the list total and the header net agree', () => {
-  const execFilePromise = promisify(execFile);
-  let journal: string;
-  let directory: string;
-
-  beforeEach(async () => {
-    directory = await fs.mkdtemp(path.join(os.tmpdir(), 'person-debts-'));
-    journal = path.join(directory, 'main.ledger');
-    await fs.writeFile(journal, JOURNAL);
-  });
-  afterEach(() => fs.rm(directory, { recursive: true, force: true }));
-
-  const ledger = async (rest: string[]) => {
-    const { args, env } = hermeticLedgerInvocation(journal);
-    const { stdout } = await execFilePromise('ledger', [...args, ...rest], {
-      env,
-    });
-    return stdout;
-  };
-
   const patterns = ['--', ...personAccountPatterns(RECEIVABLE_ROOT, 'Bob')];
 
-  it('ends the register on the same figure the collapsed net reports', async () => {
-    const rows = parseAccountRegister(
-      await ledger([
-        'register',
-        '--format',
-        REGISTER_FORMAT,
-        '--sort',
-        'date',
-        '-X',
-        '$',
-        ...patterns,
-      ])
-    );
-    const net = parseNet(
-      'Bob',
-      await ledger([
-        'register',
-        '-X',
-        '$',
-        '--collapse',
-        '--format',
-        NET_FORMAT,
-        ...patterns,
-      ])
-    );
+  it('ends the register on the same figure the collapsed net reports', () =>
+    withLedgerJournal(JOURNAL, async (ledger) => {
+      const rows = parseAccountRegister(
+        await ledger([
+          'register',
+          '--format',
+          REGISTER_FORMAT,
+          '--sort',
+          'date',
+          '-X',
+          '$',
+          ...patterns,
+        ])
+      );
+      const net = parseNet(
+        'Bob',
+        // runLedger pushes `--sort -date` in front of every caller that does
+        // not opt out, and netForPerson does not — under a revalued register
+        // the two orders walk different running totals to the same end, so
+        // reproducing production's order is the point of this assertion.
+        await ledger([
+          'register',
+          '--sort',
+          '-date',
+          '-X',
+          '$',
+          '--collapse',
+          '--format',
+          NET_FORMAT,
+          ...patterns,
+        ])
+      );
 
-    expect(net?.amount).toBe('$ 38.00');
-    expect(rows.at(-1)?.runningTotal).toBe(net?.amount);
-    expect(rows.at(-1)?.payee).toBe('Commodities revalued');
-  });
+      expect(net?.amount).toBe('$ 38.00');
+      expect(rows.at(-1)?.runningTotal).toBe(net?.amount);
+      expect(rows.at(-1)?.payee).toBe('Commodities revalued');
+    }));
 
-  it('drifts by the price move once --no-revalued hides those rows', async () => {
-    const rows = parseAccountRegister(
-      await ledger([
-        'register',
-        '--format',
-        REGISTER_FORMAT,
-        '--sort',
-        'date',
-        '-X',
-        '$',
-        '--no-revalued',
-        ...patterns,
-      ])
-    );
-    // Why personRegister must not pass --no-revalued: $23.00 under a $38.00
-    // header.
-    expect(rows.at(-1)?.runningTotal).toBe('$ 23.00');
-  });
+  it('drifts by the price move once --no-revalued hides those rows', () =>
+    withLedgerJournal(JOURNAL, async (ledger) => {
+      const rows = parseAccountRegister(
+        // `--exchange` implies `--revalued`, so the flag only bites after -X.
+        await ledger([
+          'register',
+          '--format',
+          REGISTER_FORMAT,
+          '--sort',
+          'date',
+          '-X',
+          '$',
+          '--no-revalued',
+          ...patterns,
+        ])
+      );
+      // Why personRegister must not pass --no-revalued: $23.00 under a $38.00
+      // header.
+      expect(rows.at(-1)?.runningTotal).toBe('$ 23.00');
+    }));
 });
