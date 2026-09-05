@@ -209,7 +209,7 @@ describe('debt spec compiles to the right accounts', () => {
     ...debt.makeEmpty(ctx),
     person: 'Alex',
     amount: '50',
-    cashAccount: 'Assets:Checking',
+    otherAccount: 'Assets:Checking',
     ...patch,
   });
   const postingsOf = (patch: Record<string, string>) =>
@@ -229,6 +229,24 @@ describe('debt spec compiles to the right accounts', () => {
     ]);
   });
 
+  it('you owe them for something they bought: the expense carries the debt', () => {
+    expect(
+      postingsOf({ direction: 'you-owe', otherAccount: 'Expenses:Electronics' })
+    ).toEqual([
+      { account: 'Expenses:Electronics', amount: '50', currency: 'USD' },
+      { account: 'Liabilities:Payable:Alex', amount: '-50', currency: 'USD' },
+    ]);
+  });
+
+  it('they owe you for something you earned: the income carries the debt', () => {
+    expect(
+      postingsOf({ direction: 'owed-to-you', otherAccount: 'Income:Rent' })
+    ).toEqual([
+      { account: 'Assets:Receivable:Alex', amount: '50', currency: 'USD' },
+      { account: 'Income:Rent', amount: '-50', currency: 'USD' },
+    ]);
+  });
+
   it('sanitizes a name into a single account segment', () => {
     expect(postingsOf({ person: 'Bob:  Smith' })[0].account).toBe(
       'Assets:Receivable:Bob Smith'
@@ -239,16 +257,16 @@ describe('debt spec compiles to the right accounts', () => {
     expect(debt.validate(fields({ person: '  ' }))).toBe('Enter a name.');
   });
 
-  it('validate rejects the cash account resolving to the person account', () => {
+  it('validate rejects the other account resolving to the person account', () => {
     expect(
       debt.validate(
         fields({
           direction: 'owed-to-you',
           person: 'Alex',
-          cashAccount: 'Assets:Receivable:Alex',
+          otherAccount: 'Assets:Receivable:Alex',
         })
       )
-    ).toBe('The cash account must differ from the person.');
+    ).toBe('The other account must differ from the person.');
   });
 });
 
