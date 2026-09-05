@@ -88,6 +88,18 @@ describe('parseLedgerCommand', () => {
     expect(parseLedgerCommand('reg it\'s "unclosed').ok).toBe(false);
   });
 
+  it('rejects a quote that shuts a group it never opened', () => {
+    expect(parseLedgerCommand("reg 'Lowe's'").ok).toBe(false);
+    expect(parseLedgerCommand('reg "a"b"').ok).toBe(false);
+  });
+
+  it('accepts two quoted groups glued together', () => {
+    expect(parseLedgerCommand('reg "a""b"')).toEqual({
+      ok: true,
+      args: ['reg', 'ab'],
+    });
+  });
+
   it('accepts a payee with an apostrophe', () => {
     expect(parseLedgerCommand("reg Lowe's")).toEqual({
       ok: true,

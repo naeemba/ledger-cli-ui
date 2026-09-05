@@ -79,16 +79,29 @@ export const runLedgerCommandAction = async (
   } catch (error) {
     // ledger exits non-zero on a bad query and explains itself on stderr; that
     // message is the whole point of a console, so show it instead of throwing.
-    const { stdout, stderr, message } = error as {
+    const { stdout, stderr, message, killed, code } = error as {
       stdout?: string;
       stderr?: string;
       message?: string;
+      killed?: boolean;
+      code?: string;
     };
+    // Hitting either limit leaves nothing useful on stderr — a timeout leaves
+    // it empty, and the buffer overflow explains itself as "stdout maxBuffer
+    // length exceeded" — so name the limit that was hit instead.
+    // Node kills the child for the buffer overflow too, so that is checked
+    // first — `killed` alone would report every overflow as a timeout.
+    const limitHit =
+      code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'
+        ? `Stopped: output passed ${MAX_OUTPUT_BYTES / 1024 / 1024}MB. Narrow the report.`
+        : killed
+          ? `Stopped after ${TIMEOUT_MILLISECONDS / 1000}s. Narrow the report.`
+          : null;
     return {
       ok: false,
       command,
       stdout: hidePaths(stdout ?? ''),
-      stderr: hidePaths(stderr || message || 'ledger failed'),
+      stderr: limitHit ?? hidePaths(stderr || message || 'ledger failed'),
       durationMilliseconds: Date.now() - startedAt,
     };
   }

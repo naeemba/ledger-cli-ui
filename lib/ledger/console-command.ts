@@ -114,22 +114,31 @@ export type ParsedCommand =
  */
 const TOKEN = /(?:(?<=^|[\s=])"[^"]*"|(?<=^|[\s=])'[^']*'|[^\s"']+|['"])+/g;
 
+/**
+ * A quoted group: a quote where a value can start, run to its partner. A value
+ * starts at the beginning, after whitespace, after `=`, and straight after a
+ * group that just closed, so `"a""b"` is two groups rather than a stray quote.
+ * Shared by {@link tokenize} and {@link hasUnclosedQuote} so the two can never
+ * disagree about which quotes are groups and which are apostrophes.
+ */
+const QUOTED_GROUP = /(?<=^|[\s="'])"([^"]*)"|(?<=^|[\s="'])'([^']*)'/g;
+
 export const tokenize = (input: string): string[] =>
   (input.match(TOKEN) ?? []).map((token) =>
-    token.replace(/"([^"]*)"|'([^']*)'/g, '$1$2')
+    token.replace(QUOTED_GROUP, '$1$2')
   );
 
 /**
- * True when a quote *opens* a token and is never shut. {@link tokenize} would
- * otherwise drop it silently and hand ledger a truncated value, which comes
- * back as a complaint about a word the user never typed.
- *
- * Only a quote where a value can start opens one, so `reg Lowe's` is a payee
- * and not an error. Closed pairs are replaced by a non-space filler so the
- * token boundaries around them stay intact (`reg it's "unclosed`).
+ * True when a quote opens nothing. Groups are replaced by a filler first, so
+ * what is left is the loose quotes; one of those is an apostrophe only when it
+ * sits inside a word (`reg Lowe's`). A loose quote at either end of a word
+ * either opened a group that was never shut (`--period "last 3`) or shut one
+ * that was never opened (`reg 'Lowe's'`, `reg "a"b"`) — the same two the shell
+ * refuses. Without this they reach ledger inside the search term and come back
+ * as an empty report under an `ok` badge.
  */
 const hasUnclosedQuote = (input: string): boolean =>
-  /(?:^|[\s=])["']/.test(input.replace(/"[^"]*"|'[^']*'/g, 'x'));
+  /(?:^|[\s="'])["']|["'](?=[\s"']|$)/.test(input.replace(QUOTED_GROUP, 'x'));
 
 export const parseLedgerCommand = (input: string): ParsedCommand => {
   if (hasUnclosedQuote(input)) {
