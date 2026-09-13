@@ -75,7 +75,7 @@
     "@types/node-cron": "^3.0.11",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.0",
     "commitlint": "^21.2.2",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",
@@ -92,7 +92,7 @@
     "shadcn": "^4.21.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   },
   "packageManager": "pnpm@9.15.4"
 }
