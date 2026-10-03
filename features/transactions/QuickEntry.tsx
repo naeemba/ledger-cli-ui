@@ -3,8 +3,7 @@
 import { ChevronDownIcon, PlusIcon, RepeatIcon } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { QuickTypeForm } from './QuickTypeForm';
-import { createTransactionAction } from './actions';
-import { serializeDraftJson, type DraftState } from './entry/draftReducer';
+import type { DraftState } from './entry/draftReducer';
 import { QUICK_ENTRY_SPECS, todayLocal } from './quickEntrySpecs';
 import { saveNewTransaction } from './saveNewTransaction';
 import { useDiscardGuard } from './useDiscardGuard';
@@ -56,12 +55,11 @@ function RepeatTemplate({
         template.draft,
         defaultCurrency
       ).withField('date', todayLocal());
-      const formData = new FormData();
-      formData.set('draft', serializeDraftJson(draft, 'create'));
-      const result = await createTransactionAction(null, formData);
+      const result = await saveNewTransaction(draft, template.name, () =>
+        router.refresh()
+      );
       if (result.ok) {
         onDone();
-        router.refresh();
       } else {
         const fieldError = result.fieldErrors
           ? Object.values(result.fieldErrors).flat()[0]
