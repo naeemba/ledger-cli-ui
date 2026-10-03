@@ -158,16 +158,16 @@ is a small delay on each save.
 On `/debts/[person]`:
 
 - **No share yet:** a **Share** button. It opens a dialog asking for your
-  display name (filled with your last one, or your account name), then creates
+  display name (filled with your account name), then creates
   the share, builds the first page and copies the link.
 - **Shared:** "Shared · updated 14:02", **Copy link**, and **Revoke**. Revoke
   asks for confirmation, because the old link cannot come back.
 
 On `/debts`: a small "Shared" marker next to each person who has a share.
 
-Server actions, one file each, all requiring an unlocked session:
-`createDebtShare(person, ownerName)`, `revokeDebtShare(shareId)`, and
-`getDebtShareLink(person)`, which returns the link with its key for Copy.
+Server actions, one file each: `createDebtShare(person, ownerName)` and
+`revokeDebtShare(shareId)`. The link for **Copy link** is rendered into your
+own page on the server while you are unlocked, so it needs no action.
 Code is split into a repository (CRUD) and a service (seal, unseal, rebuild),
 following the project's usual pattern.
 
