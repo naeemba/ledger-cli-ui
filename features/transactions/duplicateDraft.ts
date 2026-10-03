@@ -9,8 +9,9 @@ import { todayLocal } from './quickEntrySpecs';
  * A balance assertion described the balance on the original's date, so a copy
  * drops it. The exception is a Fix balance entry, where no posting has an
  * amount and the assertion is what sets one. When any posting has an amount,
- * an empty line just takes the rest, and an assertion left on it would set it
- * to zero on the copy's date and leave the entry unbalanced.
+ * an empty line just takes the rest. An assertion left on it would force that
+ * line to reach the old balance on the copy's date, which almost never
+ * balances the entry.
  */
 export const asDuplicate = (loaded: LoadedTransaction): LoadedTransaction => {
   const isFixBalance = loaded.draft.postings.every(
