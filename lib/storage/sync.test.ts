@@ -1,9 +1,14 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { resetObjectStore } from './client';
 import { pull, push, clearRemote } from './sync';
 import { getJournalDir } from '@/lib/journal/layout';
+
+const { refreshDebtShares } = vi.hoisted(() => ({
+  refreshDebtShares: vi.fn(async () => undefined),
+}));
+vi.mock('@/lib/debt-share/refresh', () => ({ refreshDebtShares }));
 
 const USER = 'sync-user';
 afterEach(async () => {
@@ -34,5 +39,13 @@ describe('sync (memory backend via env default)', () => {
       fs.access(path.join(getJournalDir(USER), 'main.ledger'))
     ).rejects.toThrow();
     expect(after.fingerprint).toHaveLength(64);
+  });
+
+  it('rebuilds shared debt pages after a successful push', async () => {
+    refreshDebtShares.mockClear();
+    await pull(USER);
+    await fs.writeFile(path.join(getJournalDir(USER), 'main.ledger'), 'd');
+    await push(USER);
+    expect(refreshDebtShares).toHaveBeenCalledWith(USER);
   });
 });

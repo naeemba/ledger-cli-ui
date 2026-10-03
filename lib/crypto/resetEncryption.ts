@@ -4,6 +4,7 @@ import 'server-only';
 import { dropSessionDek } from './sessionKeys';
 import { UserCryptoRepository } from './userCryptoRepository';
 import type { DbInstance } from '@/lib/db/connection';
+import { DebtShareRepository } from '@/lib/debt-share/repository';
 import { JournalRepository } from '@/lib/journal';
 import { getJournalDir } from '@/lib/journal/layout';
 import { clearRemote as clearRemoteDefault } from '@/lib/storage/sync';
@@ -27,6 +28,7 @@ export async function resetUserEncryption(
   await clearRemote(userId); // wipe encrypted objects in Garage
   await removeLocalJournal(userId); // wipe local working dir
   await new UserCryptoRepository(db).delete(userId); // remove crypto metadata → status 'unset'
+  await new DebtShareRepository(db).deleteByUser(userId); // keys derived from the old DEK; unrebuildable
   dropSessionDek(userId); // clear any in-RAM DEK
   await new JournalRepository(db).ensureLayout(userId); // recreate an empty plaintext stub
 }

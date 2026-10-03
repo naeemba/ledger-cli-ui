@@ -2,6 +2,7 @@ import { getObjectStore } from './client';
 import { pullToLocal } from './download';
 import { userPrefix } from './manifest';
 import { pushFromLocal } from './save';
+import { refreshDebtShares } from '@/lib/debt-share/refresh';
 import { withUserLock } from '@/lib/journal/mutex';
 
 /**
@@ -25,9 +26,15 @@ export const pull = (userId: string): Promise<{ fingerprint: string }> =>
 export const pullLocked = (userId: string): Promise<{ fingerprint: string }> =>
   withUserLock(userId, () => pull(userId));
 
-/** Mirror the user's local cache up to the canonical store. */
-export const push = (userId: string): Promise<void> =>
-  pushFromLocal(getObjectStore(), userId);
+/**
+ * Mirror the user's local cache up to the canonical store, then rebuild any
+ * shared debt pages from the journal just saved. A failed upload throws before
+ * the rebuild, so a share never shows a save that didn't land.
+ */
+export const push = async (userId: string): Promise<void> => {
+  await pushFromLocal(getObjectStore(), userId);
+  await refreshDebtShares(userId);
+};
 
 /** Delete every canonical object for the user (used before a full import). */
 export const clearRemote = (userId: string): Promise<void> =>
