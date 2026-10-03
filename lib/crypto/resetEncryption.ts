@@ -27,8 +27,8 @@ export async function resetUserEncryption(
 
   await clearRemote(userId); // wipe encrypted objects in Garage
   await removeLocalJournal(userId); // wipe local working dir
+  await new DebtShareRepository(db).deleteByUser(userId); // keys derived from the old DEK; unrebuildable; first so a later failure leaves none behind
   await new UserCryptoRepository(db).delete(userId); // remove crypto metadata → status 'unset'
-  await new DebtShareRepository(db).deleteByUser(userId); // keys derived from the old DEK; unrebuildable
   dropSessionDek(userId); // clear any in-RAM DEK
   await new JournalRepository(db).ensureLayout(userId); // recreate an empty plaintext stub
 }

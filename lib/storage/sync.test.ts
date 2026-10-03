@@ -48,4 +48,12 @@ describe('sync (memory backend via env default)', () => {
     await push(USER);
     expect(refreshDebtShares).toHaveBeenCalledWith(USER);
   });
+
+  it('skips the shared debt rebuild when asked', async () => {
+    refreshDebtShares.mockClear();
+    await pull(USER);
+    await fs.writeFile(path.join(getJournalDir(USER), 'main.ledger'), 'd');
+    await push(USER, { refreshShares: false });
+    expect(refreshDebtShares).not.toHaveBeenCalled();
+  });
 });
