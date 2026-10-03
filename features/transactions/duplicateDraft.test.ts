@@ -23,7 +23,7 @@ const loaded = {
 };
 
 describe('asDuplicate', () => {
-  it('keeps every field but dates the copy today and drops the uid', () => {
+  it('keeps the entry but dates it today, unmarks it and drops the uid', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 3, 12));
     const copy = asDuplicate(loaded);
@@ -32,6 +32,7 @@ describe('asDuplicate', () => {
     expect(copy.draft).toEqual({
       ...loaded.draft,
       date: '2026-10-03',
+      status: 'none',
       uid: undefined,
     });
     const wire = JSON.parse(
@@ -39,5 +40,48 @@ describe('asDuplicate', () => {
     );
     expect(wire.uid).toBeUndefined();
     expect(loaded.draft.uid).toBe('01HZX0000000000000000000AA');
+  });
+
+  it('drops an assertion on a posting with an amount', () => {
+    const copy = asDuplicate({
+      ...loaded,
+      draft: {
+        ...loaded.draft,
+        postings: [
+          { account: 'Expenses:Food', amount: '20', currency: 'USD' },
+          {
+            account: 'Assets:Checking',
+            amount: '-20',
+            currency: 'USD',
+            assertion: { amount: '480', currency: 'USD' },
+          },
+        ],
+      },
+    });
+    expect(copy.draft.postings[1]).toEqual({
+      account: 'Assets:Checking',
+      amount: '-20',
+      currency: 'USD',
+    });
+  });
+
+  it('keeps the assertion on an amount-less posting, where it sets the amount', () => {
+    const fixBalance = {
+      account: 'Assets:Checking',
+      amount: '',
+      currency: 'USD',
+      assertion: { amount: '480', currency: 'USD' },
+    };
+    const copy = asDuplicate({
+      ...loaded,
+      draft: {
+        ...loaded.draft,
+        postings: [
+          fixBalance,
+          { account: 'Equity:Adjustments', amount: '', currency: 'USD' },
+        ],
+      },
+    });
+    expect(copy.draft.postings[0]).toEqual(fixBalance);
   });
 });
