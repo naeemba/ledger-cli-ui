@@ -64,4 +64,10 @@ describe('DebtShareRepository', () => {
     expect(await repository.listByUser('alice')).toEqual([]);
     expect(await repository.listByUser('bob')).toHaveLength(1);
   });
+
+  it('removes a user’s shares when the user is deleted', async () => {
+    await repository.create(row('s1'));
+    await context.client.query('DELETE FROM "user" WHERE id = $1', ['alice']);
+    expect(await repository.listByUser('alice')).toEqual([]);
+  });
 });

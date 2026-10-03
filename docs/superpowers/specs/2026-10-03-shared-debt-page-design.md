@@ -188,6 +188,10 @@ showing the shared page in your base currency, and email delivery of the link.
   last week, he keeps it.
 - **Anyone with the full link can read the page.** If Bashir forwards it,
   the new reader sees the same page. Revoke is the remedy.
+- **A proxy log can show that you shared.** Request logs on a reverse proxy
+  show a write to `/debts/<person>` when you click Share, so the log can reveal
+  that you shared with that person. Opening `/debts/<person>` already reveals
+  the name.
 - **Saves get a little slower.** Each share adds two ledger runs to every save.
 
 ## Testing

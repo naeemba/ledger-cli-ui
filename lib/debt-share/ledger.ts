@@ -22,14 +22,17 @@ const personPatterns = (person: string): string[] => [
 const VIEWER_SIDE = ['--amount', '-amount'];
 
 /**
- * One person's postings, oldest first — ledger accumulates the running total in
- * output order, so `--sort -date` would total from the newest row. The caller
+ * One person's postings, sorted by date ascending. Ledger accumulates the
+ * running total in output order, so file order would give a backdated entry the
+ * wrong balance, and `--sort -date` would total from the newest row. The caller
  * reverses the parsed rows for display. `--` stops option parsing so a person
  * name can't smuggle a flag.
  */
 export const sharedRowsArgs = (person: string): string[] => [
   'register',
   ...VIEWER_SIDE,
+  '--sort',
+  'date',
   '--format',
   `${RECORD}%(format_date(date, "%Y-%m-%d"))${FIELD}%(scrub(display_amount))${FIELD}%(scrub(display_total))${FIELD}%P\n`,
   '--',

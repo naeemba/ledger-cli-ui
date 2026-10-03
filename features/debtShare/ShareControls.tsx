@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useSyncExternalStore, useTransition } from 'react';
 import { toast } from 'sonner';
 import { createDebtShareAction } from './actions/createDebtShare';
 import { revokeDebtShareAction } from './actions/revokeDebtShare';
@@ -47,6 +47,14 @@ const copyLink = async (shareId: string, key: string) => {
   }
 };
 
+const formatUpdated = (iso: string): string =>
+  new Date(iso).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+const noopSubscribe = () => () => {};
+
 /** Share, copy, or revoke the read-only link to this person's debts. */
 const ShareControls = ({ person, link, defaultOwnerName }: Props) => {
   const router = useRouter();
@@ -54,6 +62,14 @@ const ShareControls = ({ person, link, defaultOwnerName }: Props) => {
   const [open, setOpen] = useState(false);
   const [ownerName, setOwnerName] = useState(defaultOwnerName);
   const [error, setError] = useState<string | null>(null);
+  // Formatted in the browser only: the server's time zone would differ, so
+  // server render and hydration show the ISO date.
+  const updatedAt = link?.updatedAt ?? '';
+  const updatedText = useSyncExternalStore(
+    noopSubscribe,
+    () => (updatedAt ? formatUpdated(updatedAt) : ''),
+    () => updatedAt.slice(0, 10)
+  );
 
   const share = () =>
     startTransition(async () => {
@@ -79,11 +95,7 @@ const ShareControls = ({ person, link, defaultOwnerName }: Props) => {
     return (
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted-foreground">
-          Shared · updated{' '}
-          {new Date(link.updatedAt).toLocaleString(undefined, {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-          })}
+          Shared · updated {updatedText}
         </span>
         <Button
           size="sm"

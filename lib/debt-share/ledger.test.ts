@@ -95,4 +95,31 @@ describe('shared debt ledger queries', () => {
     );
     expect(net).toEqual([]);
   });
+  it('orders rows by date, not file order, so balances follow the dates', async () => {
+    const backdated = `
+2026-03-01 Lent ten
+    Assets:Receivable:Bashir      $10.00
+    Assets:Cash
+2026-01-01 Lent five, added late
+    Assets:Receivable:Bashir      $5.00
+    Assets:Cash
+`;
+    const rows = await withLedgerJournal(backdated, async (run) =>
+      parseSharedRows(await run(sharedRowsArgs('Bashir')))
+    );
+    expect(rows).toEqual([
+      {
+        date: '2026-03-01',
+        payee: 'Lent ten',
+        amount: '$-10.00',
+        balance: ['$-15.00'],
+      },
+      {
+        date: '2026-01-01',
+        payee: 'Lent five, added late',
+        amount: '$-5.00',
+        balance: ['$-5.00'],
+      },
+    ]);
+  });
 });
