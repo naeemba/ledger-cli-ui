@@ -114,6 +114,11 @@ describe('DebtShareService', () => {
     expect((await repository.findById(link.shareId))!.sealedPage).toBe(before);
   });
 
+  it('refresh does not throw when listing shares fails', async () => {
+    vi.spyOn(repository, 'listByUser').mockRejectedValue(new Error('db down'));
+    await expect(service.refresh('alice')).resolves.toBeUndefined();
+  });
+
   it('is inert while locked: refresh and sharedPeople do nothing, create throws', async () => {
     await service.create('alice', 'Bashir', 'Naeem');
     runLedger.mockClear();

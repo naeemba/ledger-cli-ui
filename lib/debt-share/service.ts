@@ -11,6 +11,7 @@ import {
   type SharedDebtPage,
 } from './payload';
 import type { DebtShareRepository } from './repository';
+import { safeErrorFields } from './safeError';
 import { deriveMetaKey, derivePageKey, newShareId, seal, unseal } from './seal';
 import type { DebtShare } from '@/db/schema';
 import { LockedError } from '@/lib/crypto/sessionKeys';
@@ -31,9 +32,10 @@ type OpenedShare = { share: DebtShare; meta: ShareMeta };
 
 /**
  * Shared debt pages: one sealed, link-readable snapshot per person, rebuilt
- * from ledger while the owner is unlocked. Callers that build a page (create,
- * refresh) must hold the user lock with the journal pulled — runLedger reads
- * the local copy.
+ * from ledger while the owner is unlocked. `create` MUST run under the
+ * per-user lock (withUserLock): the one-share-per-person check is
+ * check-then-insert with no database guard, because the person is sealed.
+ * `create` and `refresh` read the local journal, so it must be pulled first.
  */
 export class DebtShareService {
   private readonly now: () => Date;
@@ -60,7 +62,10 @@ export class DebtShareService {
         );
         return [{ share, meta }];
       } catch (err) {
-        log.warn({ err, shareId: share.id }, 'unreadable debt share meta');
+        log.warn(
+          { ...safeErrorFields(err), shareId: share.id },
+          'unreadable debt share meta'
+        );
         return [];
       }
     });
@@ -139,23 +144,30 @@ export class DebtShareService {
   async refresh(userId: string): Promise<void> {
     const dek = this.dependencies.getDek(userId);
     if (!dek) return;
-    for (const { share, meta } of await this.openAll(userId, dek)) {
-      try {
-        const sealedPage = await this.buildSealedPage(
-          userId,
-          dek,
-          share.id,
-          meta
-        );
-        await this.dependencies.repository.updatePage(
-          userId,
-          share.id,
-          sealedPage,
-          this.now()
-        );
-      } catch (err) {
-        log.error({ err, shareId: share.id }, 'debt share rebuild failed');
+    try {
+      for (const { share, meta } of await this.openAll(userId, dek)) {
+        try {
+          const sealedPage = await this.buildSealedPage(
+            userId,
+            dek,
+            share.id,
+            meta
+          );
+          await this.dependencies.repository.updatePage(
+            userId,
+            share.id,
+            sealedPage,
+            this.now()
+          );
+        } catch (err) {
+          log.error(
+            { ...safeErrorFields(err), shareId: share.id },
+            'debt share rebuild failed'
+          );
+        }
       }
+    } catch (err) {
+      log.error(safeErrorFields(err), 'debt share refresh failed');
     }
   }
 }
