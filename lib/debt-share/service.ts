@@ -16,8 +16,10 @@ import { deriveMetaKey, derivePageKey, newShareId, seal, unseal } from './seal';
 import type { DebtShare } from '@/db/schema';
 import { LockedError } from '@/lib/crypto/sessionKeys';
 import { createLogger } from '@/lib/log';
+import { mapWithConcurrency } from '@/utils/mapWithConcurrency';
 
 const log = createLogger('debt-share');
+const REFRESH_CONCURRENCY = 3;
 
 export type ShareLink = { shareId: string; key: string; updatedAt: Date };
 
@@ -71,6 +73,16 @@ export class DebtShareService {
     });
   }
 
+  private async findOpened(
+    userId: string,
+    dek: Buffer,
+    person: string
+  ): Promise<OpenedShare | undefined> {
+    return (await this.openAll(userId, dek)).find(
+      ({ meta }) => meta.person === person
+    );
+  }
+
   private async buildSealedPage(
     userId: string,
     dek: Buffer,
@@ -99,9 +111,7 @@ export class DebtShareService {
   ): Promise<ShareLink> {
     const dek = this.dependencies.getDek(userId);
     if (!dek) throw new LockedError();
-    const existing = (await this.openAll(userId, dek)).find(
-      ({ meta }) => meta.person === person
-    );
+    const existing = await this.findOpened(userId, dek, person);
     if (existing) return this.linkOf(dek, existing.share);
 
     const shareId = newShareId();
@@ -126,9 +136,7 @@ export class DebtShareService {
   async linkFor(userId: string, person: string): Promise<ShareLink | null> {
     const dek = this.dependencies.getDek(userId);
     if (!dek) return null;
-    const opened = (await this.openAll(userId, dek)).find(
-      ({ meta }) => meta.person === person
-    );
+    const opened = await this.findOpened(userId, dek, person);
     return opened ? this.linkOf(dek, opened.share) : null;
   }
 
@@ -145,27 +153,34 @@ export class DebtShareService {
     const dek = this.dependencies.getDek(userId);
     if (!dek) return;
     try {
-      for (const { share, meta } of await this.openAll(userId, dek)) {
-        try {
-          const sealedPage = await this.buildSealedPage(
-            userId,
-            dek,
-            share.id,
-            meta
-          );
-          await this.dependencies.repository.updatePage(
-            userId,
-            share.id,
-            sealedPage,
-            this.now()
-          );
-        } catch (err) {
-          log.error(
-            { ...safeErrorFields(err), shareId: share.id },
-            'debt share rebuild failed'
-          );
+      const opened = await this.openAll(userId, dek);
+      // Each share is two ledger runs; a few at a time keeps a save with many
+      // shares from waiting on them one by one.
+      await mapWithConcurrency(
+        opened,
+        REFRESH_CONCURRENCY,
+        async ({ share, meta }) => {
+          try {
+            const sealedPage = await this.buildSealedPage(
+              userId,
+              dek,
+              share.id,
+              meta
+            );
+            await this.dependencies.repository.updatePage(
+              userId,
+              share.id,
+              sealedPage,
+              this.now()
+            );
+          } catch (err) {
+            log.error(
+              { ...safeErrorFields(err), shareId: share.id },
+              'debt share rebuild failed'
+            );
+          }
         }
-      }
+      );
     } catch (err) {
       log.error(safeErrorFields(err), 'debt share refresh failed');
     }

@@ -20,15 +20,15 @@ const log = createLogger('debts');
  */
 const PersonDebts = async ({ person }: { person: string }) => {
   if (!isSafeLedgerArg(person)) notFound();
-  const base = await getBaseCurrency();
-  const user = await requireUser();
-  const shareLink = await loadShareLink(user.id, person);
+  const [base, user] = await Promise.all([getBaseCurrency(), requireUser()]);
 
-  let views, net;
+  let views, net, shareLink;
   try {
-    [views, net] = await Promise.all([
+    // loadShareLink never fails the page: it falls back to "not shared".
+    [views, net, shareLink] = await Promise.all([
       personRegister(base, person),
       netForPerson(base, person),
+      loadShareLink(user.id, person),
     ]);
   } catch (e) {
     // redirect() and the prerender bailout signal by throwing; re-throw those

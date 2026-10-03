@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatUpdated } from './lib/formatUpdated';
 import { openSharedPage } from './lib/openSharedPage';
 import { TableScroll } from '@/components/ui/table';
 import type { SharedDebtPage } from '@/lib/debt-share/payload';
@@ -11,12 +12,6 @@ type ViewState =
   | { status: 'opening' }
   | { status: 'closed' }
   | { status: 'open'; page: SharedDebtPage };
-
-const formatUpdated = (iso: string): string =>
-  new Date(iso).toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
 
 /**
  * The page a person sees through a shared debt link. The key never leaves the

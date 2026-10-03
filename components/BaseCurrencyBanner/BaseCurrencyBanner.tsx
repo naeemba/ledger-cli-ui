@@ -1,11 +1,9 @@
 import { Info } from 'lucide-react';
-import { isPublicRequest } from '@/components/AppShell/isPublicRequest';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getOptionalUser } from '@/lib/auth/require-user';
 import { getBaseCurrency, getMissingRateCommodities } from '@/lib/settings';
 
 const BaseCurrencyBanner = async () => {
-  if (await isPublicRequest()) return null;
   const user = await getOptionalUser();
   if (!user) return null;
 

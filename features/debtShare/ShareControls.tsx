@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore, useTransition } from 'react';
 import { toast } from 'sonner';
 import { createDebtShareAction } from './actions/createDebtShare';
 import { revokeDebtShareAction } from './actions/revokeDebtShare';
+import { formatUpdated } from './lib/formatUpdated';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,12 +47,6 @@ const copyLink = async (shareId: string, key: string) => {
     toast.error('Could not copy. Use Copy link.');
   }
 };
-
-const formatUpdated = (iso: string): string =>
-  new Date(iso).toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
 
 const noopSubscribe = () => () => {};
 
