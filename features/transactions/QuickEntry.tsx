@@ -2,11 +2,11 @@
 
 import { ChevronDownIcon, PlusIcon, RepeatIcon } from 'lucide-react';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
 import { QuickTypeForm } from './QuickTypeForm';
-import { createTransactionAction, undoTransactionAction } from './actions';
+import { createTransactionAction } from './actions';
 import { serializeDraftJson, type DraftState } from './entry/draftReducer';
 import { QUICK_ENTRY_SPECS, todayLocal } from './quickEntrySpecs';
+import { saveNewTransaction } from './saveNewTransaction';
 import { useDiscardGuard } from './useDiscardGuard';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,36 +31,6 @@ type Props = {
   defaultCurrency: string;
   templates?: Template[];
 };
-
-/**
- * Confirm a save with a toast that carries an Undo. The toast outlives the
- * dialog (Toaster is mounted in the app shell), so Undo runs after the form is
- * gone — it only needs the new uid and a way to refresh the current view.
- */
-function notifySaved(
-  label: string,
-  payee: string,
-  uid: string | undefined,
-  refresh: () => void
-) {
-  toast.success(`${label} saved`, {
-    description: payee,
-    action: uid
-      ? {
-          label: 'Undo',
-          onClick: async () => {
-            const result = await undoTransactionAction(uid);
-            if (result.ok) {
-              toast.success('Entry removed');
-              refresh();
-            } else {
-              toast.error(result.message);
-            }
-          },
-        }
-      : undefined,
-  });
-}
 
 /**
  * One-click repeat of a saved template with today's date — so a daily recurring
@@ -143,18 +113,8 @@ export default function QuickEntry({
   const [primary, ...rest] = QUICK_ENTRY_SPECS;
   const spec = QUICK_ENTRY_SPECS.find((entry) => entry.kind === active) ?? null;
 
-  const onSave = async (draft: DraftState) => {
-    const formData = new FormData();
-    formData.set('draft', serializeDraftJson(draft, 'create'));
-    const result = await createTransactionAction(null, formData);
-    if (result.ok) {
-      router.refresh();
-      notifySaved(spec?.label ?? '', draft.payee, result.uid, () =>
-        router.refresh()
-      );
-    }
-    return result;
-  };
+  const onSave = (draft: DraftState) =>
+    saveNewTransaction(draft, spec?.label ?? '', () => router.refresh());
 
   return (
     <>

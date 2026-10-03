@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   openEditTransaction,
+  openDuplicateTransaction,
   closeEditTransaction,
   editTransactionStore,
 } from './editTransactionStore';
@@ -14,7 +15,10 @@ describe('editTransactionStore', () => {
     expect(editTransactionStore.getSnapshot()).toBeNull();
 
     openEditTransaction('uid-1');
-    expect(editTransactionStore.getSnapshot()).toBe('uid-1');
+    expect(editTransactionStore.getSnapshot()).toEqual({
+      uid: 'uid-1',
+      mode: 'edit',
+    });
     expect(notified).toBe(1);
 
     closeEditTransaction();
@@ -22,5 +26,14 @@ describe('editTransactionStore', () => {
     expect(notified).toBe(2);
 
     unsubscribe();
+  });
+
+  it('opens the same transaction as a duplicate', () => {
+    openDuplicateTransaction('uid-1');
+    expect(editTransactionStore.getSnapshot()).toEqual({
+      uid: 'uid-1',
+      mode: 'duplicate',
+    });
+    closeEditTransaction();
   });
 });
