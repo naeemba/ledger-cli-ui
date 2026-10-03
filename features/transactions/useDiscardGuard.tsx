@@ -5,12 +5,6 @@ import { useCallback, useRef, useState } from 'react';
 import { shouldAskBeforeClosing } from './shouldAskBeforeClosing';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
-/**
- * Guards an entry dialog against an accidental dismiss. The form reports
- * whether its fields changed via `setDirty`; while they have, Escape and an
- * outside click open a "Discard?" prompt instead of closing. Both the
- * quick-entry and the edit dialog use it, so the two cannot drift apart.
- */
 type DiscardPrompt = { title: string; description: string };
 
 const NEW_ENTRY_PROMPT: DiscardPrompt = {
@@ -18,6 +12,12 @@ const NEW_ENTRY_PROMPT: DiscardPrompt = {
   description: 'What you typed will be lost.',
 };
 
+/**
+ * Guards an entry dialog against an accidental dismiss. The form reports
+ * whether its fields changed via `setDirty`; while they have, Escape and an
+ * outside click open a "Discard?" prompt instead of closing. Both the
+ * quick-entry and the edit dialog use it, so the two cannot drift apart.
+ */
 export function useDiscardGuard(
   onClose: () => void,
   prompt: DiscardPrompt = NEW_ENTRY_PROMPT

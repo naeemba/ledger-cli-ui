@@ -1,6 +1,6 @@
 import type { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 
-export type CloseReason = DialogPrimitive.Root.ChangeEventReason;
+type CloseReason = DialogPrimitive.Root.ChangeEventReason;
 
 // Escape and a stray click outside are easy to hit by accident, so with
 // anything typed they ask first. The X and Close buttons still close at once.
