@@ -5,7 +5,6 @@ import { useEffect, useReducer, useState, useTransition } from 'react';
 import { QuickTypeForm } from './QuickTypeForm';
 import {
   loadTransactionForEditAction,
-  updateTransactionAction,
   type LoadedTransaction,
 } from './actions';
 import { asDuplicate } from './duplicateDraft';
@@ -16,13 +15,8 @@ import {
   type EditTransactionTarget,
 } from './editTransactionStore';
 import { RawLens } from './entry/RawLens';
-import {
-  draftReducer,
-  initDraft,
-  serializeDraftJson,
-  type DraftState,
-} from './entry/draftReducer';
-import { saveNewTransaction } from './saveNewTransaction';
+import { draftReducer, initDraft, type DraftState } from './entry/draftReducer';
+import { saveDialogDraft } from './saveDialogDraft';
 import { useDiscardGuard } from './useDiscardGuard';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,8 +27,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
-
-type Loaded = LoadedTransaction;
 
 // Every place the dialog reads differently for a copy, in one spot.
 const WORDING: Record<
@@ -73,11 +65,16 @@ const WORDING: Record<
  */
 export default function TransactionEditDialog() {
   const target = useEditTransactionTarget();
-  const wording = WORDING[target?.mode ?? 'edit'];
+  // The target turns null as soon as the dialog starts closing. Keep the last
+  // mode so the wording does not flip back to "edit" during the fade-out.
+  const [lastMode, setLastMode] =
+    useState<EditTransactionTarget['mode']>('edit');
+  if (target && target.mode !== lastMode) setLastMode(target.mode);
+  const wording = WORDING[target?.mode ?? lastMode];
   const formKey = target ? `${target.mode}:${target.uid}` : '';
   const guard = useDiscardGuard(closeEditTransaction, wording.discard);
   const router = useRouter();
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [loaded, setLoaded] = useState<LoadedTransaction | null>(null);
   const [surface, setSurface] = useState<EditSurface | null>(null);
   const [notFound, setNotFound] = useState(false);
 
@@ -109,15 +106,7 @@ export default function TransactionEditDialog() {
 
   const onSave = async (draft: DraftState) => {
     if (!loaded || !target) return { ok: false as const };
-    if (target.mode === 'duplicate')
-      return saveNewTransaction(draft, 'Copy', () => router.refresh());
-    const formData = new FormData();
-    formData.set('draft', serializeDraftJson(draft, 'edit'));
-    formData.set('uid', target.uid);
-    formData.set('expectedFingerprint', loaded.fingerprint);
-    const result = await updateTransactionAction(null, formData);
-    if (result.ok) router.refresh();
-    return result;
+    return saveDialogDraft(target, loaded, draft, () => router.refresh());
   };
 
   return (
@@ -146,6 +135,7 @@ export default function TransactionEditDialog() {
           <QuickTypeForm
             key={formKey}
             title={wording.typeTitle?.(surface.spec.label)}
+            saveLabel={wording.saveLabel}
             spec={surface.spec}
             accounts={loaded.accounts}
             defaultCurrency={loaded.defaultCurrency}
@@ -190,7 +180,7 @@ function RawEditBody({
 }: {
   title: string;
   saveLabel: string;
-  loaded: Loaded;
+  loaded: LoadedTransaction;
   seed?: DraftState;
   seedDirty: boolean;
   onSave: (draft: DraftState) => Promise<{ ok: boolean; formError?: string }>;

@@ -20,6 +20,8 @@ export type QuickTypeFormProps = {
   spec: QuickEntrySpec<HeaderFields>;
   // Replaces the spec's icon and label in the header (duplicate uses it).
   title?: string;
+  // Replaces the Save button's text (the edit dialog says what it saves).
+  saveLabel?: string;
   accounts: string[];
   defaultCurrency: string;
   // Edit seeds from detectType; create leaves it undefined and uses makeEmpty.
@@ -44,6 +46,7 @@ const firstFieldError = (state: TransactionActionState): string | undefined =>
 export function QuickTypeForm({
   spec,
   title,
+  saveLabel = 'Save',
   accounts,
   defaultCurrency,
   initialFields,
@@ -134,7 +137,7 @@ export function QuickTypeForm({
           </Button>
         )}
         <Button onClick={save} disabled={pending}>
-          {pending ? 'Saving…' : 'Save'}
+          {pending ? 'Saving…' : saveLabel}
         </Button>
       </DialogFooter>
     </DialogContent>
