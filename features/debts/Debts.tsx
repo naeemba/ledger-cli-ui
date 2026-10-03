@@ -5,6 +5,8 @@ import Help from '@/components/Help';
 import LedgerErrorCard from '@/components/LedgerErrorCard';
 import PageContainer from '@/components/PageContainer';
 import { TableScroll } from '@/components/ui/table';
+import { loadSharedPeople } from '@/features/debtShare';
+import { requireUser } from '@/lib/auth/require-user';
 import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
 import Link from 'next/link';
@@ -14,6 +16,7 @@ const log = createLogger('debts');
 
 const Debts = async () => {
   const base = await getBaseCurrency();
+  const shared = await loadSharedPeople((await requireUser()).id);
   let debts;
   try {
     debts = await getPersonDebts(base);
@@ -78,6 +81,11 @@ const Debts = async () => {
                       >
                         {debt.direction === 'owes-you' ? 'owes you' : 'you owe'}
                       </span>
+                      {shared.has(debt.person) && (
+                        <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                          Shared
+                        </span>
+                      )}
                     </td>
                     <td
                       className={`whitespace-nowrap text-right tabular-nums ${directionClass(debt.direction)}`}

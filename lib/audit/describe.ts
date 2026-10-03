@@ -40,6 +40,11 @@ const COPY: Record<string, [string, string]> = {
     'Failed to rotate recovery code',
   ],
   'crypto.reset': ['Reset encryption', 'Failed to reset encryption'],
+  'debtShare.create': ['Shared a debt page', 'Failed to share a debt page'],
+  'debtShare.revoke': [
+    'Revoked a debt page link',
+    'Failed to revoke a debt page link',
+  ],
   'price.map': ['Mapped a commodity', 'Failed to map a commodity'],
   'commodity.create': ['Created a commodity', 'Failed to create a commodity'],
   'commodity.update': ['Updated a commodity', 'Failed to update a commodity'],
