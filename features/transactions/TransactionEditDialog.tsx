@@ -40,7 +40,10 @@ type Loaded = Extract<LoadTransactionForEditResult, { ok: true }>;
  */
 export default function TransactionEditDialog() {
   const uid = useEditTransactionUid();
-  const guard = useDiscardGuard(closeEditTransaction);
+  const guard = useDiscardGuard(closeEditTransaction, {
+    title: 'Discard your changes?',
+    description: 'The saved transaction stays as it was.',
+  });
   const router = useRouter();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [surface, setSurface] = useState<EditSurface | null>(null);
@@ -112,7 +115,9 @@ export default function TransactionEditDialog() {
             defaultCurrency={loaded.defaultCurrency}
             initialFields={surface.fields}
             onSave={onSave}
-            onSwitchToRaw={(draft) => setSurface({ kind: 'raw', seed: draft })}
+            onSwitchToRaw={(draft, dirty) =>
+              setSurface({ kind: 'raw', seed: draft, seedDirty: dirty })
+            }
             onDone={guard.close}
             onDirtyChange={guard.setDirty}
           />
@@ -122,7 +127,8 @@ export default function TransactionEditDialog() {
           <RawEditBody
             key={uid ?? ''}
             loaded={loaded}
-            seed={'seed' in surface ? surface.seed : undefined}
+            seed={surface.seed}
+            seedDirty={surface.seedDirty ?? false}
             onSave={onSave}
             onDone={guard.close}
             onDirtyChange={guard.setDirty}
@@ -137,12 +143,14 @@ export default function TransactionEditDialog() {
 function RawEditBody({
   loaded,
   seed,
+  seedDirty,
   onSave,
   onDone,
   onDirtyChange,
 }: {
   loaded: Loaded;
   seed?: DraftState;
+  seedDirty: boolean;
   onSave: (draft: DraftState) => Promise<{ ok: boolean; formError?: string }>;
   onDone: () => void;
   onDirtyChange: (dirty: boolean) => void;
@@ -151,9 +159,10 @@ function RawEditBody({
     () => seed ?? initDraft(loaded.draft, loaded.defaultCurrency)
   );
   const [draft, dispatch] = useReducer(draftReducer, start);
-  // A seed means the type form handed over its fields, which may already hold
-  // edits; otherwise any change to the raw text counts.
-  const dirty = seed !== undefined || draft !== start;
+  // Dirty when the type form handed over edits, or the raw text changed at
+  // all, even while it does not parse yet.
+  const [textEdited, setTextEdited] = useState(false);
+  const dirty = seedDirty || textEdited;
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
   const [rawError, setRawError] = useState<string | null>(null);
   const [error, setError] = useState<string>();
@@ -175,6 +184,7 @@ function RawEditBody({
         draft={draft}
         dispatch={dispatch}
         onError={setRawError}
+        onEditedChange={setTextEdited}
         accounts={loaded.accounts}
         payees={loaded.payees}
         commodities={loaded.currencies}

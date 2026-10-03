@@ -1,10 +1,8 @@
 'use client';
 
+import type { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { useCallback, useRef, useState } from 'react';
-import {
-  shouldAskBeforeClosing,
-  type CloseReason,
-} from './shouldAskBeforeClosing';
+import { shouldAskBeforeClosing } from './shouldAskBeforeClosing';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 /**
@@ -13,7 +11,17 @@ import ConfirmDialog from '@/components/ConfirmDialog';
  * outside click open a "Discard?" prompt instead of closing. Both the
  * quick-entry and the edit dialog use it, so the two cannot drift apart.
  */
-export function useDiscardGuard(onClose: () => void) {
+type DiscardPrompt = { title: string; description: string };
+
+const NEW_ENTRY_PROMPT: DiscardPrompt = {
+  title: 'Discard this entry?',
+  description: 'What you typed will be lost.',
+};
+
+export function useDiscardGuard(
+  onClose: () => void,
+  prompt: DiscardPrompt = NEW_ENTRY_PROMPT
+) {
   const dirty = useRef(false);
   const setDirty = useCallback((next: boolean) => {
     dirty.current = next;
@@ -28,7 +36,7 @@ export function useDiscardGuard(onClose: () => void) {
 
   const onOpenChange = (
     next: boolean,
-    details: { reason: CloseReason; cancel: () => void }
+    details: DialogPrimitive.Root.ChangeEventDetails
   ) => {
     if (next) return;
     if (shouldAskBeforeClosing(dirty.current, details.reason)) {
@@ -41,8 +49,8 @@ export function useDiscardGuard(onClose: () => void) {
     <ConfirmDialog
       open={confirming}
       onOpenChange={setConfirming}
-      title="Discard this entry?"
-      description="What you typed will be lost."
+      title={prompt.title}
+      description={prompt.description}
       confirmLabel="Discard"
       cancelLabel="Keep editing"
       onConfirm={close}

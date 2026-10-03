@@ -24,7 +24,7 @@ export type QuickTypeFormProps = {
   initialFields?: HeaderFields;
   onSave: (draft: DraftState) => Promise<TransactionActionState>;
   // Edit only: hands the compiled draft to the Raw fallback.
-  onSwitchToRaw?: (draft: DraftState) => void;
+  onSwitchToRaw?: (draft: DraftState, dirty: boolean) => void;
   onDone: () => void;
   // Told whenever the fields start or stop differing from how they opened, so
   // the dialog can ask before an accidental dismiss throws the entry away.
@@ -127,7 +127,7 @@ export function QuickTypeForm({
             type="button"
             variant="ghost"
             className="mr-auto"
-            onClick={() => onSwitchToRaw(compile())}
+            onClick={() => onSwitchToRaw(compile(), dirty)}
           >
             Edit as raw
           </Button>
