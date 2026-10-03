@@ -122,4 +122,12 @@ describe('shared debt ledger queries', () => {
       },
     ]);
   });
+
+  it('drops a quantity that is not a number instead of guessing its direction', () => {
+    const stdout =
+      'EUR\n\x1e-200\x1fEUR\x1f200.00 EUR\n$\n\x1eoops\x1f$\x1f$30.00\n';
+    expect(parseSharedNet(stdout)).toEqual([
+      { amount: '200.00 EUR', direction: 'viewer-owes' },
+    ]);
+  });
 });

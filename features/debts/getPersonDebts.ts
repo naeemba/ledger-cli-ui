@@ -5,7 +5,7 @@ import {
   type PersonDebt,
   parseNet,
   peopleFromBalance,
-  personAccountPatterns,
+  personPatterns,
 } from './parse';
 import { isSafeLedgerArg } from '@/features/transactions/entry/typeForms/fixBalancePreview';
 import { registerViews } from '@/features/transactions/row/registerViews';
@@ -17,12 +17,6 @@ import runLedger from '@/utils/runLedger';
 // magnitude so the view can show "owes you $30" rather than "$-30".
 export const NET_FORMAT =
   '%(quantity(scrub(display_total)))|%(commodity(scrub(display_total)))|%(scrub(abs(display_total)))\n';
-
-// Both sides of one person's ledger: what they owe and what you owe them.
-const personPatterns = (person: string): string[] => [
-  ...personAccountPatterns(RECEIVABLE_ROOT, person),
-  ...personAccountPatterns(PAYABLE_ROOT, person),
-];
 
 /**
  * Every transaction touching a person's two accounts, newest first, converted

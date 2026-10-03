@@ -39,6 +39,10 @@ describe('openSharedPage', () => {
     expect(await openSharedPage('share-a', sealed, '')).toBeNull();
   });
 
+  it('returns null for an unknown or revoked id, same as a bad key', async () => {
+    expect(await openSharedPage('share-a', null, keyText)).toBeNull();
+  });
+
   it('returns null when the decrypted body is not a page', async () => {
     const sealed = seal(key, 'share-a', JSON.stringify({ version: 2 }));
     expect(await openSharedPage('share-a', sealed, keyText)).toBeNull();

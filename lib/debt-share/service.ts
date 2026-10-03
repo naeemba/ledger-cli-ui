@@ -22,6 +22,7 @@ const log = createLogger('debt-share');
 const REFRESH_CONCURRENCY = 3;
 
 export type ShareLink = { shareId: string; key: string; updatedAt: Date };
+export type PersonShareLink = ShareLink & { person: string };
 
 export type DebtShareDependencies = {
   repository: DebtShareRepository;
@@ -63,9 +64,9 @@ export class DebtShareService {
           JSON.parse(unseal(metaKey, share.id, share.sealedMeta))
         );
         return [{ share, meta }];
-      } catch (err) {
+      } catch (error) {
         log.warn(
-          { ...safeErrorFields(err), shareId: share.id },
+          { ...safeErrorFields(error), shareId: share.id },
           'unreadable debt share meta'
         );
         return [];
@@ -140,12 +141,20 @@ export class DebtShareService {
     return opened ? this.linkOf(dek, opened.share) : null;
   }
 
-  async sharedPeople(userId: string): Promise<Set<string>> {
+  /**
+   * Every share the owner holds, by person name, including people who are
+   * settled or no longer in the journal: those drop off the debts list, and
+   * this is the only place their link can still be found and revoked.
+   */
+  async sharedLinks(userId: string): Promise<PersonShareLink[]> {
     const dek = this.dependencies.getDek(userId);
-    if (!dek) return new Set();
-    return new Set(
-      (await this.openAll(userId, dek)).map(({ meta }) => meta.person)
-    );
+    if (!dek) return [];
+    return (await this.openAll(userId, dek))
+      .map(({ share, meta }) => ({
+        person: meta.person,
+        ...this.linkOf(dek, share),
+      }))
+      .sort((left, right) => left.person.localeCompare(right.person));
   }
 
   /** Rebuild every share. A failing share keeps its previous page. */
@@ -173,16 +182,16 @@ export class DebtShareService {
               sealedPage,
               this.now()
             );
-          } catch (err) {
+          } catch (error) {
             log.error(
-              { ...safeErrorFields(err), shareId: share.id },
+              { ...safeErrorFields(error), shareId: share.id },
               'debt share rebuild failed'
             );
           }
         }
       );
-    } catch (err) {
-      log.error(safeErrorFields(err), 'debt share refresh failed');
+    } catch (error) {
+      log.error(safeErrorFields(error), 'debt share refresh failed');
     }
   }
 }

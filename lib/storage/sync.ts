@@ -27,9 +27,10 @@ export const pullLocked = (userId: string): Promise<{ fingerprint: string }> =>
   withUserLock(userId, () => pull(userId));
 
 /**
- * Mirror the user's local cache up to the canonical store, then rebuild any
- * shared debt pages from the journal just saved. A failed upload throws before
- * the rebuild, so a share never shows a save that didn't land. Pass
+ * Mirror the user's local cache up to the canonical store, then queue a
+ * rebuild of any shared debt pages for after the response. A failed upload
+ * throws before the rebuild is queued, so a share never shows a save that
+ * didn't land. Pass
  * `refreshShares: false` when the local copy is not readable by ledger (the
  * moment encryption is being turned on).
  */
@@ -38,7 +39,7 @@ export const push = async (
   { refreshShares = true }: { refreshShares?: boolean } = {}
 ): Promise<void> => {
   await pushFromLocal(getObjectStore(), userId);
-  if (refreshShares) await refreshDebtShares(userId);
+  if (refreshShares) refreshDebtShares(userId);
 };
 
 /** Delete every canonical object for the user (used before a full import). */

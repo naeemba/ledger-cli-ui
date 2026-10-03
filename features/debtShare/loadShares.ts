@@ -1,5 +1,5 @@
 import { debtShareService } from '@/lib/debt-share';
-import type { ShareLink } from '@/lib/debt-share';
+import type { PersonShareLink, ShareLink } from '@/lib/debt-share';
 import { safeErrorFields } from '@/lib/debt-share/safeError';
 import { createLogger } from '@/lib/log';
 import { unstable_rethrow } from 'next/navigation';
@@ -20,15 +20,15 @@ export const loadShareLink = async (
   }
 };
 
-/** Everyone currently shared with, or an empty set if the lookup fails. */
-export const loadSharedPeople = async (
+/** Every share the owner holds, or none if the lookup fails. */
+export const loadSharedLinks = async (
   userId: string
-): Promise<Set<string>> => {
+): Promise<PersonShareLink[]> => {
   try {
-    return await debtShareService.sharedPeople(userId);
+    return await debtShareService.sharedLinks(userId);
   } catch (error) {
     unstable_rethrow(error);
-    log.error({ ...safeErrorFields(error) }, 'failed to load shared people');
-    return new Set();
+    log.error({ ...safeErrorFields(error) }, 'failed to load shared links');
+    return [];
   }
 };

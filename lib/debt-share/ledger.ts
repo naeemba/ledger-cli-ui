@@ -1,9 +1,5 @@
 import type { SharedDebtNet, SharedDebtRow } from './payload';
-import {
-  PAYABLE_ROOT,
-  RECEIVABLE_ROOT,
-  personAccountPatterns,
-} from '@/features/debts/parse';
+import { personPatterns } from '@/features/debts/parse';
 
 // Framing that can't occur in ledger's rendered amounts or (realistically) a
 // payee: a record separator before each row and a unit separator between
@@ -11,11 +7,6 @@ import {
 // be split on newlines.
 const RECORD = '\x1e';
 const FIELD = '\x1f';
-
-const personPatterns = (person: string): string[] => [
-  ...personAccountPatterns(RECEIVABLE_ROOT, person),
-  ...personAccountPatterns(PAYABLE_ROOT, person),
-];
 
 // `--amount -amount` makes ledger negate every posting, so the figures read
 // from the viewer's side. No `-X`: each amount stays in its own commodity.

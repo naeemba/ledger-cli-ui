@@ -3,7 +3,11 @@ import { PAYABLE_ROOT, RECEIVABLE_ROOT, directionClass } from './parse';
 import Help from '@/components/Help';
 import LedgerErrorCard from '@/components/LedgerErrorCard';
 import PageContainer from '@/components/PageContainer';
-import { ShareControls, loadShareLink } from '@/features/debtShare';
+import {
+  ShareControls,
+  loadShareLink,
+  toSharedLink,
+} from '@/features/debtShare';
 import { isSafeLedgerArg } from '@/features/transactions/entry/typeForms/fixBalancePreview';
 import RegisterList from '@/features/transactions/row/RegisterList';
 import { requireUser } from '@/lib/auth/require-user';
@@ -70,13 +74,7 @@ const PersonDebts = async ({ person }: { person: string }) => {
             <ShareControls
               person={person}
               defaultOwnerName={user.name ?? ''}
-              link={
-                shareLink && {
-                  shareId: shareLink.shareId,
-                  key: shareLink.key,
-                  updatedAt: shareLink.updatedAt.toISOString(),
-                }
-              }
+              link={shareLink && toSharedLink(shareLink)}
             />
           </div>
         </div>

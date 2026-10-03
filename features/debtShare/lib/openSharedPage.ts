@@ -24,15 +24,17 @@ const base64UrlToBytes = (text: string): Uint8Array<ArrayBuffer> => {
 
 /**
  * Decrypt a shared debt page in the visitor's browser with the key from the
- * link's fragment. Any failure (wrong key, revoked link, tampered blob, a
- * body that isn't a page) is null, so the caller shows one "no longer active"
+ * link's fragment. Any failure (no page stored for the id because it is
+ * unknown or revoked, wrong key, tampered blob, a body that isn't a page) is
+ * null, so the caller shows one "no longer active"
  * screen and never half a page.
  */
 export const openSharedPage = async (
   shareId: string,
-  sealed: string,
+  sealed: string | null,
   keyText: string
 ): Promise<SharedDebtPage | null> => {
+  if (!sealed || !keyText) return null;
   try {
     const keyBytes = base64UrlToBytes(keyText);
     if (keyBytes.length !== KEY_LENGTH) return null;

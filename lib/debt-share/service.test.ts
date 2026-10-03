@@ -83,16 +83,33 @@ describe('DebtShareService', () => {
     expect(await repository.listByUser('alice')).toHaveLength(1);
   });
 
-  it('linkFor and sharedPeople find the share; revoke removes it for good', async () => {
+  it('linkFor and sharedLinks find the share; revoke removes it for good', async () => {
     const link = await service.create('alice', 'Bashir', 'Naeem');
     expect((await service.linkFor('alice', 'Bashir'))?.shareId).toBe(
       link.shareId
     );
     expect(await service.linkFor('alice', 'Bob')).toBeNull();
-    expect([...(await service.sharedPeople('alice'))]).toEqual(['Bashir']);
+    expect(await service.sharedLinks('alice')).toEqual([
+      { person: 'Bashir', ...link },
+    ]);
     expect(await service.revoke('alice', link.shareId)).toBe(true);
     expect(await service.linkFor('alice', 'Bashir')).toBeNull();
     expect(await repository.findById(link.shareId)).toBeNull();
+  });
+
+  it('skips a share whose meta will not open and still loads the others', async () => {
+    const good = await service.create('alice', 'Bashir', 'Naeem');
+    await repository.create({
+      id: 'broken-share-id-000000',
+      userId: 'alice',
+      sealedMeta: 'not a sealed blob',
+      sealedPage: 'not a sealed blob',
+      createdAt: now,
+      updatedAt: now,
+    });
+    expect(await service.sharedLinks('alice')).toEqual([
+      { person: 'Bashir', ...good },
+    ]);
   });
 
   it('refresh rebuilds each page with the latest ledger output', async () => {
@@ -119,13 +136,13 @@ describe('DebtShareService', () => {
     await expect(service.refresh('alice')).resolves.toBeUndefined();
   });
 
-  it('is inert while locked: refresh and sharedPeople do nothing, create throws', async () => {
+  it('is inert while locked: refresh and sharedLinks do nothing, create throws', async () => {
     await service.create('alice', 'Bashir', 'Naeem');
     runLedger.mockClear();
     dek = undefined;
     await service.refresh('alice');
     expect(runLedger).not.toHaveBeenCalled();
-    expect((await service.sharedPeople('alice')).size).toBe(0);
+    expect(await service.sharedLinks('alice')).toEqual([]);
     await expect(
       service.create('alice', 'Bob', 'Naeem')
     ).rejects.toBeInstanceOf(LockedError);

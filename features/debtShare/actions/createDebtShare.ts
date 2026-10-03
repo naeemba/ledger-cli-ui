@@ -56,8 +56,8 @@ export async function createDebtShareAction(
     });
     revalidatePath('/debts', 'layout');
     return { ok: true, shareId: link.shareId, key: link.key };
-  } catch (err) {
-    log.error({ ...safeErrorFields(err) }, 'failed to create debt share');
+  } catch (error) {
+    log.error({ ...safeErrorFields(error) }, 'failed to create debt share');
     await auditService.record(user.id, {
       action: 'debtShare.create',
       result: 'failure',

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import AppShell from '@/components/AppShell';
+import ChromeRefresh from '@/components/AppShell/ChromeRefresh';
 import { isPublicRequest } from '@/components/AppShell/isPublicRequest';
 import BaseCurrencyBanner from '@/components/BaseCurrencyBanner';
 import { BaseCurrencyPickerSlot } from '@/components/BaseCurrencyPicker';
@@ -57,6 +58,7 @@ export default async function RootLayout({
     <html lang="en" className={cn('font-sans', geist.variable)}>
       <body>
         <CryptoGate />
+        <ChromeRefresh renderedPublic={isPublic} />
         <AppShell
           headerSlot={
             isPublic ? null : (

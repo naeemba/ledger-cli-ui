@@ -1,21 +1,9 @@
 'use client';
 
-import { useState, useSyncExternalStore, useTransition } from 'react';
-import { toast } from 'sonner';
+import { useState, useTransition } from 'react';
+import SharedLinkControls, { type SharedLink } from './SharedLinkControls';
 import { createDebtShareAction } from './actions/createDebtShare';
-import { revokeDebtShareAction } from './actions/revokeDebtShare';
-import { formatUpdated } from './lib/formatUpdated';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import { copyShareLink } from './lib/copyShareLink';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -31,24 +19,9 @@ import { useRouter } from 'next/navigation';
 
 type Props = {
   person: string;
-  link: { shareId: string; key: string; updatedAt: string } | null;
+  link: SharedLink | null;
   defaultOwnerName: string;
 };
-
-const linkUrl = (shareId: string, key: string): string =>
-  `${window.location.origin}/s/${shareId}#${key}`;
-
-const copyLink = async (shareId: string, key: string) => {
-  try {
-    await navigator.clipboard.writeText(linkUrl(shareId, key));
-    toast.success('Link copied.');
-  } catch {
-    // Safari refuses a copy that follows a server round trip.
-    toast.error('Could not copy. Use Copy link.');
-  }
-};
-
-const noopSubscribe = () => () => {};
 
 /** Share, copy, or revoke the read-only link to this person's debts. */
 const ShareControls = ({ person, link, defaultOwnerName }: Props) => {
@@ -57,14 +30,6 @@ const ShareControls = ({ person, link, defaultOwnerName }: Props) => {
   const [open, setOpen] = useState(false);
   const [ownerName, setOwnerName] = useState(defaultOwnerName);
   const [error, setError] = useState<string | null>(null);
-  // Formatted in the browser only: the server's time zone would differ, so
-  // server render and hydration show the ISO date.
-  const updatedAt = link?.updatedAt ?? '';
-  const updatedText = useSyncExternalStore(
-    noopSubscribe,
-    () => (updatedAt ? formatUpdated(updatedAt) : ''),
-    () => updatedAt.slice(0, 10)
-  );
 
   const share = () =>
     startTransition(async () => {
@@ -75,55 +40,10 @@ const ShareControls = ({ person, link, defaultOwnerName }: Props) => {
       }
       setOpen(false);
       router.refresh();
-      await copyLink(result.shareId, result.key);
+      await copyShareLink(result.shareId, result.key);
     });
 
-  const revoke = (shareId: string) =>
-    startTransition(async () => {
-      const result = await revokeDebtShareAction(shareId);
-      if (result.ok) toast.success('Link revoked. It no longer works.');
-      else toast.error(result.error ?? 'Could not revoke the link.');
-      router.refresh();
-    });
-
-  if (link) {
-    return (
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-muted-foreground">
-          Shared · updated {updatedText}
-        </span>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => copyLink(link.shareId, link.key)}
-        >
-          Copy link
-        </Button>
-        <AlertDialog>
-          <AlertDialogTrigger
-            render={<Button size="sm" variant="outline" disabled={pending} />}
-          >
-            Revoke
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Revoke this link?</AlertDialogTitle>
-              <AlertDialogDescription>
-                {person} will see “This link is no longer active”. The link
-                can’t be brought back; sharing again makes a new one.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => revoke(link.shareId)}>
-                Revoke
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-    );
-  }
+  if (link) return <SharedLinkControls person={person} link={link} />;
 
   return (
     <Dialog

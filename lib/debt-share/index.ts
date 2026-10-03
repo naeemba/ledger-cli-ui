@@ -16,4 +16,4 @@ export const debtShareService = new DebtShareService({
   getDek: getSessionDek,
 });
 
-export type { ShareLink } from './service';
+export type { PersonShareLink, ShareLink } from './service';

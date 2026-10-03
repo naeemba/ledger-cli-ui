@@ -25,11 +25,7 @@ const SharedDebtView = ({ shareId, sealedPage }: Props) => {
   useEffect(() => {
     const key = window.location.hash.slice(1);
     let live = true;
-    const opened =
-      sealedPage && key
-        ? openSharedPage(shareId, sealedPage, key)
-        : Promise.resolve(null);
-    opened.then((page) => {
+    openSharedPage(shareId, sealedPage, key).then((page) => {
       if (live) {
         setState(page ? { status: 'open', page } : { status: 'closed' });
       }

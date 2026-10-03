@@ -12,9 +12,11 @@ const log = createLogger('debt-share');
 const SHARE_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 const ALREADY_REVOKED = 'That link was already revoked.';
 
+export type RevokeDebtShareResult = { ok: true } | { ok: false; error: string };
+
 export async function revokeDebtShareAction(
   shareId: string
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<RevokeDebtShareResult> {
   const user = await requireUser();
   if (!rateLimit(WRITE, user.id).allowed) {
     return { ok: false, error: RATE_LIMIT_MESSAGE };
@@ -32,8 +34,8 @@ export async function revokeDebtShareAction(
     });
     revalidatePath('/debts', 'layout');
     return removed ? { ok: true } : { ok: false, error: ALREADY_REVOKED };
-  } catch (err) {
-    log.error({ ...safeErrorFields(err) }, 'failed to revoke debt share');
+  } catch (error) {
+    log.error({ ...safeErrorFields(error) }, 'failed to revoke debt share');
     await auditService
       .record(user.id, {
         action: 'debtShare.revoke',

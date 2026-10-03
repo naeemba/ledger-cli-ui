@@ -5,7 +5,7 @@ import Help from '@/components/Help';
 import LedgerErrorCard from '@/components/LedgerErrorCard';
 import PageContainer from '@/components/PageContainer';
 import { TableScroll } from '@/components/ui/table';
-import { loadSharedPeople } from '@/features/debtShare';
+import { SharedLinksList, loadSharedLinks } from '@/features/debtShare';
 import { requireUser } from '@/lib/auth/require-user';
 import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
@@ -16,19 +16,20 @@ const log = createLogger('debts');
 
 const Debts = async () => {
   const base = await getBaseCurrency();
-  let debts, shared;
+  let debts, sharedLinks;
   try {
-    [debts, shared] = await Promise.all([
+    [debts, sharedLinks] = await Promise.all([
       getPersonDebts(base),
-      requireUser().then((user) => loadSharedPeople(user.id)),
+      requireUser().then((user) => loadSharedLinks(user.id)),
     ]);
-  } catch (e) {
+  } catch (error) {
     // redirect() and the prerender bailout signal by throwing; re-throw those
     // so a signed-out user reaches /sign-in instead of a "ledger broke" card.
-    unstable_rethrow(e);
-    log.error({ err: e }, 'failed to load debts');
+    unstable_rethrow(error);
+    log.error({ err: error }, 'failed to load debts');
     return <LedgerErrorCard what="debts" />;
   }
+  const shared = new Set(sharedLinks.map((link) => link.person));
 
   return (
     <PageContainer>
@@ -38,7 +39,8 @@ const Debts = async () => {
           <Help label="About debts">
             Net balance per person across <code>Assets:Receivable</code> (money
             owed to you) and <code>Liabilities:Payable</code> (money you owe).
-            People whose balances cancel out are hidden.
+            People whose balances cancel out are hidden; any link you shared
+            with them stays listed under Shared links.
           </Help>
           <ExportButton href="/api/debts/export" />
         </div>
@@ -101,6 +103,8 @@ const Debts = async () => {
           </table>
         </TableScroll>
       </div>
+
+      <SharedLinksList links={sharedLinks} />
     </PageContainer>
   );
 };

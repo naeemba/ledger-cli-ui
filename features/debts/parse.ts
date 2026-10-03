@@ -44,6 +44,12 @@ export const personAccountPatterns = (
   return [`${name}$`, `${name}:`];
 };
 
+/** Both sides of one person's ledger: what they owe and what you owe them. */
+export const personPatterns = (person: string): string[] => [
+  ...personAccountPatterns(RECEIVABLE_ROOT, person),
+  ...personAccountPatterns(PAYABLE_ROOT, person),
+];
+
 /** Distinct person names holding any receivable/payable account. */
 export const peopleFromBalance = (rows: BalanceRow[]): string[] => {
   const people = new Set<string>();
