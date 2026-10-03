@@ -1,12 +1,13 @@
 'use client';
 
 import { ChevronDownIcon, PlusIcon, RepeatIcon } from 'lucide-react';
-import { useState, useTransition } from 'react';
+import { useCallback, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { QuickTypeForm } from './QuickTypeForm';
 import { createTransactionAction, undoTransactionAction } from './actions';
 import { serializeDraftJson, type DraftState } from './entry/draftReducer';
 import { QUICK_ENTRY_SPECS, todayLocal } from './quickEntrySpecs';
+import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,6 +25,10 @@ import {
 import type { Template } from '@/db/schema/template';
 import { Transaction } from '@/lib/transactions/model';
 import { useRouter } from 'next/navigation';
+
+// Escape and a stray click outside are easy to hit by accident, so with
+// anything typed they ask first. The X and Close buttons still close at once.
+const ACCIDENTAL_CLOSE_REASONS = new Set(['escape-key', 'outside-press']);
 
 type Props = {
   accounts: string[];
@@ -138,8 +143,18 @@ export default function QuickEntry({
   const router = useRouter();
   const [active, setActive] = useState<string | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const dirty = useRef(false);
+  const setDirty = useCallback((next: boolean) => {
+    dirty.current = next;
+  }, []);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [primary, ...rest] = QUICK_ENTRY_SPECS;
   const spec = QUICK_ENTRY_SPECS.find((entry) => entry.kind === active) ?? null;
+
+  const close = () => {
+    setActive(null);
+    setConfirmingDiscard(false);
+  };
 
   const onSave = async (draft: DraftState) => {
     const formData = new FormData();
@@ -204,8 +219,12 @@ export default function QuickEntry({
 
       <Dialog
         open={spec !== null}
-        onOpenChange={(next) => {
-          if (!next) setActive(null);
+        onOpenChange={(next, details) => {
+          if (next) return;
+          if (dirty.current && ACCIDENTAL_CLOSE_REASONS.has(details.reason)) {
+            details.cancel();
+            setConfirmingDiscard(true);
+          } else close();
         }}
       >
         {spec && (
@@ -215,10 +234,21 @@ export default function QuickEntry({
             accounts={accounts}
             defaultCurrency={defaultCurrency}
             onSave={onSave}
-            onDone={() => setActive(null)}
+            onDone={close}
+            onDirtyChange={setDirty}
           />
         )}
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmingDiscard}
+        onOpenChange={setConfirmingDiscard}
+        title="Discard this entry?"
+        description="What you typed will be lost."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        onConfirm={close}
+      />
 
       <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
         {templateOpen && (
