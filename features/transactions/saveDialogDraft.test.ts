@@ -28,7 +28,12 @@ const loaded = {
   defaultCurrency: 'USD',
   currencies: ['USD'],
 };
-const draft = initDraft(loaded.draft, loaded.defaultCurrency);
+// A real loaded entry carries its uid, so the duplicate test can prove the
+// copy drops it.
+const draft = initDraft(
+  { ...loaded.draft, uid: 'original-uid' },
+  loaded.defaultCurrency
+);
 
 describe('saveDialogDraft', () => {
   beforeEach(() => vi.clearAllMocks());

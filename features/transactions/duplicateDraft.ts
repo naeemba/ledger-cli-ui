@@ -7,20 +7,25 @@ import { todayLocal } from './quickEntrySpecs';
  * original's uid out of the form.
  *
  * A balance assertion described the balance on the original's date, so a copy
- * drops it. The exception is a posting with no amount (a Fix balance entry),
- * where the assertion is what sets the amount.
+ * drops it. The exception is a Fix balance entry, where no posting has an
+ * amount and the assertion is what sets one. When any posting has an amount,
+ * an empty line just takes the rest, and an assertion left on it would set it
+ * to zero on the copy's date and leave the entry unbalanced.
  */
-export const asDuplicate = (loaded: LoadedTransaction): LoadedTransaction => ({
-  ...loaded,
-  draft: {
-    ...loaded.draft,
-    date: todayLocal(),
-    status: 'none',
-    uid: undefined,
-    postings: loaded.draft.postings.map(({ assertion, ...posting }) =>
-      assertion && posting.amount.trim() === ''
-        ? { ...posting, assertion }
-        : posting
-    ),
-  },
-});
+export const asDuplicate = (loaded: LoadedTransaction): LoadedTransaction => {
+  const isFixBalance = loaded.draft.postings.every(
+    (posting) => posting.amount.trim() === ''
+  );
+  return {
+    ...loaded,
+    draft: {
+      ...loaded.draft,
+      date: todayLocal(),
+      status: 'none',
+      uid: undefined,
+      postings: loaded.draft.postings.map(({ assertion, ...posting }) =>
+        isFixBalance && assertion ? { ...posting, assertion } : posting
+      ),
+    },
+  };
+};

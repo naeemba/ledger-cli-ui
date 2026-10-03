@@ -84,4 +84,27 @@ describe('asDuplicate', () => {
     });
     expect(copy.draft.postings[0]).toEqual(fixBalance);
   });
+
+  it('drops the assertion on an amount-less posting when another posting has an amount', () => {
+    const copy = asDuplicate({
+      ...loaded,
+      draft: {
+        ...loaded.draft,
+        postings: [
+          { account: 'Expenses:Food', amount: '20', currency: 'USD' },
+          {
+            account: 'Assets:Checking',
+            amount: '',
+            currency: 'USD',
+            assertion: { amount: '480', currency: 'USD' },
+          },
+        ],
+      },
+    });
+    expect(copy.draft.postings[1]).toEqual({
+      account: 'Assets:Checking',
+      amount: '',
+      currency: 'USD',
+    });
+  });
 });
