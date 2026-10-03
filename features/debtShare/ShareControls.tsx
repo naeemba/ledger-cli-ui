@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import SharedLinkControls, { type SharedLink } from './SharedLinkControls';
+import SharedLinkControls from './SharedLinkControls';
 import { createDebtShareAction } from './actions/createDebtShare';
 import { copyShareLink } from './lib/copyShareLink';
+import type { SharedLink } from './lib/toSharedLink';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

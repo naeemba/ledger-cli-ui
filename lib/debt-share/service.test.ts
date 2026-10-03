@@ -97,6 +97,15 @@ describe('DebtShareService', () => {
     expect(await repository.findById(link.shareId)).toBeNull();
   });
 
+  it('sharedLinks lists people by name, whatever order they were shared in', async () => {
+    await service.create('alice', 'Zoe', 'Naeem');
+    await service.create('alice', 'Ali', 'Naeem');
+    const people = (await service.sharedLinks('alice')).map(
+      (link) => link.person
+    );
+    expect(people).toEqual(['Ali', 'Zoe']);
+  });
+
   it('skips a share whose meta will not open and still loads the others', async () => {
     const good = await service.create('alice', 'Bashir', 'Naeem');
     await repository.create({

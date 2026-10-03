@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { revokeDebtShareAction } from './actions/revokeDebtShare';
 import { copyShareLink } from './lib/copyShareLink';
 import { formatUpdated } from './lib/formatUpdated';
+import type { SharedLink } from './lib/toSharedLink';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,8 +19,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-
-export type SharedLink = { shareId: string; key: string; updatedAt: string };
 
 type Props = { person: string; link: SharedLink };
 

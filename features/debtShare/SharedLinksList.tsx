@@ -1,5 +1,6 @@
 import SharedLinkControls from './SharedLinkControls';
 import { toSharedLink } from './lib/toSharedLink';
+import { personDebtsPath } from '@/features/debts/personDebtsPath';
 import type { PersonShareLink } from '@/lib/debt-share';
 import Link from 'next/link';
 
@@ -22,7 +23,7 @@ const SharedLinksList = ({ links }: Props) => {
             className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
           >
             <Link
-              href={`/debts/${encodeURIComponent(link.person)}`}
+              href={personDebtsPath(link.person)}
               className="min-w-0 break-all text-fg hover:underline"
             >
               {link.person}

@@ -1,5 +1,6 @@
 import { getPersonDebts } from './getPersonDebts';
 import { directionClass } from './parse';
+import { personDebtsPath } from './personDebtsPath';
 import ExportButton from '@/components/ExportButton';
 import Help from '@/components/Help';
 import LedgerErrorCard from '@/components/LedgerErrorCard';
@@ -75,7 +76,7 @@ const Debts = async () => {
                   <tr key={debt.person}>
                     <td>
                       <Link
-                        href={`/debts/${encodeURIComponent(debt.person)}`}
+                        href={personDebtsPath(debt.person)}
                         className="text-fg hover:underline"
                       >
                         {debt.person}

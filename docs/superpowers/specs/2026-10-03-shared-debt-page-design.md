@@ -121,20 +121,28 @@ the real binary in the plan. Tests use `withLedgerJournal`.
 ### Rebuilding after a save
 
 Every journal write ends with `push(userId)` while it holds the per-user lock.
-After a successful push, `refreshDebtShares(userId)` runs, still inside the lock
-and awaited:
+After a successful push, `refreshDebtShares(userId)` queues a rebuild with
+Next's `after()`. The save returns at once; the rebuild runs once the response
+is sent:
 
-1. No DEK in the session: return. This covers background jobs that run while
-   the owner is locked.
-2. Load the owner's shares. For each one: unseal the meta, ask ledger for the
+1. No DEK in the session: nothing is queued. This covers background jobs that
+   run while the owner is locked.
+2. When its turn comes, the rebuild takes the per-user lock itself and pulls
+   the journal again, since another write may have landed in between. If a
+   newer save has queued its own rebuild meanwhile, this one does nothing and
+   leaves the work to the newer one.
+3. Load the owner's shares. For each one: unseal the meta, ask ledger for the
    rows and the net, build the payload, seal it under the page key, and write
    `sealedPage` and `updatedAt`.
-3. A failure on one share is logged, and that share keeps its previous page.
+4. A failure on one share is logged, and that share keeps its previous page.
    The save itself always succeeds. A failed rebuild never rolls back your
    journal.
 
-Cost: two ledger runs per share on every save. With a handful of shares, that
-is a small delay on each save.
+Cost: two ledger runs per share after every save, though quick saves in a row
+collapse into one rebuild. The save itself does not wait for them. The rebuild
+holds the per-user lock while it runs, so the next page you open waits for it.
+A shared page can therefore lag a save by a moment: it is fresh once the
+rebuild finishes, not when the save returns.
 
 ### Bashir's page: `/s/[shareId]`
 
@@ -163,7 +171,11 @@ On `/debts/[person]`:
 - **Shared:** "Shared · updated 14:02", **Copy link**, and **Revoke**. Revoke
   asks for confirmation, because the old link cannot come back.
 
-On `/debts`: a small "Shared" marker next to each person who has a share.
+On `/debts`: a small "Shared" marker next to each person who has a share, and
+a **Shared links** list of every live link, sorted by name, each with **Copy
+link** and **Revoke**. The list includes people who are settled or gone from
+the journal: they drop off the debts table, and this is the only place their
+link can still be revoked.
 
 Server actions, one file each: `createDebtShare(person, ownerName)` and
 `revokeDebtShare(shareId)`. The link for **Copy link** is rendered into your

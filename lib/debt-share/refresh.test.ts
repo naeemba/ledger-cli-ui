@@ -42,6 +42,16 @@ describe('refreshDebtShares', () => {
     );
   });
 
+  it('three quick saves rebuild once, with the newest journal', async () => {
+    hasSessionDek.mockReturnValue(true);
+    refreshDebtShares('alice');
+    refreshDebtShares('alice');
+    refreshDebtShares('alice');
+    await Promise.all(after.mock.calls.map(([task]) => task()));
+    expect(pull).toHaveBeenCalledOnce();
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
   it('starts the rebuild at once outside a request', async () => {
     hasSessionDek.mockReturnValue(true);
     after.mockImplementation(() => {

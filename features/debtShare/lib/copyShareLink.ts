@@ -10,6 +10,6 @@ export const copyShareLink = async (shareId: string, key: string) => {
     toast.success('Link copied.');
   } catch {
     // Safari refuses a copy that follows a server round trip.
-    toast.error('Could not copy. Use Copy link.');
+    toast.error('Could not copy the link.');
   }
 };
