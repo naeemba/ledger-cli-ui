@@ -10,6 +10,7 @@ export {
   type CryptoPasskeyWrap,
   type NewCryptoPasskeyWrap,
 } from './cryptoPasskeyWrap';
+export { debtShare, type DebtShare, type NewDebtShare } from './debtShare';
 export {
   encryptionResetChallenge,
   type EncryptionResetChallenge,

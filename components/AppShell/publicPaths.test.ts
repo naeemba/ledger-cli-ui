@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { bouncesSignedInToDashboard, isPublicPath } from './publicPaths';
+import {
+  bouncesSignedInToDashboard,
+  isPublicPath,
+  isSharedPagePath,
+} from './publicPaths';
 
 describe('isPublicPath', () => {
   it('treats the marketing landing as a public, bare-chrome page', () => {
@@ -34,5 +38,18 @@ describe('bouncesSignedInToDashboard', () => {
   it('does not bounce non-public paths', () => {
     expect(bouncesSignedInToDashboard('/dashboard')).toBe(false);
     expect(bouncesSignedInToDashboard('/reports')).toBe(false);
+  });
+});
+
+describe('isSharedPagePath', () => {
+  it('treats /s/<id> as a public shared page', () => {
+    expect(isSharedPagePath('/s/abc')).toBe(true);
+    expect(isPublicPath('/s/abc')).toBe(true);
+  });
+
+  it('does not open up look-alike paths', () => {
+    expect(isSharedPagePath('/s')).toBe(false);
+    expect(isSharedPagePath('/settings')).toBe(false);
+    expect(isPublicPath('/settings')).toBe(false);
   });
 });

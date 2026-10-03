@@ -21,5 +21,6 @@ export default defineConfig({
     'encryptionResetChallenge',
     'manual_price',
     'commodity_mapping',
+    'debtShare',
   ],
 });

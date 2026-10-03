@@ -2,6 +2,7 @@ import { getObjectStore } from './client';
 import { pullToLocal } from './download';
 import { userPrefix } from './manifest';
 import { pushFromLocal } from './save';
+import { refreshDebtShares } from '@/lib/debt-share/refresh';
 import { withUserLock } from '@/lib/journal/mutex';
 
 /**
@@ -25,9 +26,21 @@ export const pull = (userId: string): Promise<{ fingerprint: string }> =>
 export const pullLocked = (userId: string): Promise<{ fingerprint: string }> =>
   withUserLock(userId, () => pull(userId));
 
-/** Mirror the user's local cache up to the canonical store. */
-export const push = (userId: string): Promise<void> =>
-  pushFromLocal(getObjectStore(), userId);
+/**
+ * Mirror the user's local cache up to the canonical store, then queue a
+ * rebuild of any shared debt pages for after the response. A failed upload
+ * throws before the rebuild is queued, so a share never shows a save that
+ * didn't land. Pass
+ * `refreshShares: false` when the local copy is not readable by ledger (the
+ * moment encryption is being turned on).
+ */
+export const push = async (
+  userId: string,
+  { refreshShares = true }: { refreshShares?: boolean } = {}
+): Promise<void> => {
+  await pushFromLocal(getObjectStore(), userId);
+  if (refreshShares) refreshDebtShares(userId);
+};
 
 /** Delete every canonical object for the user (used before a full import). */
 export const clearRemote = (userId: string): Promise<void> =>

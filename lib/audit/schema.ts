@@ -23,6 +23,8 @@ export const AUDIT_ACTIONS = [
   'commodity.create',
   'commodity.update',
   'commodity.delete',
+  'debtShare.create',
+  'debtShare.revoke',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

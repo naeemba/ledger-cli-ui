@@ -1,10 +1,11 @@
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
+import { inject } from 'vitest';
+import { createMigratedDatabase } from './migrations';
 import * as schema from '@/db/schema';
 import type { DbInstance } from '@/lib/db/connection';
 import { PGlite } from '@electric-sql/pglite';
-import { resolveMigrationsFolder } from '@naeemba/next-starter/db';
 import { drizzle } from 'drizzle-orm/pglite';
 
 export type TestDbContext = {
@@ -14,22 +15,23 @@ export type TestDbContext = {
   tmpDir: string;
 };
 
-// Apply every `.sql` file in a drizzle migrations folder to the PGlite client,
-// in filename order, splitting on drizzle's statement-breakpoint markers.
-const applyMigrations = async (
-  client: PGlite,
-  folder: string
-): Promise<void> => {
-  const files = (await fs.readdir(folder))
-    .filter((f) => f.endsWith('.sql'))
-    .sort();
-  for (const file of files) {
-    const sql = await fs.readFile(path.join(folder, file), 'utf-8');
-    for (const statement of sql.split('--> statement-breakpoint')) {
-      const trimmed = statement.trim();
-      if (trimmed) await client.exec(trimmed);
-    }
-  }
+// The migrated database snapshot the global setup built, read once per test
+// worker. Absent when a test runs without that setup; then each database is
+// migrated from scratch.
+let templateBlob: Promise<Blob> | null = null;
+const migratedTemplate = (): Promise<Blob> | null => {
+  const templatePath = inject('migratedDatabaseTemplate');
+  if (!templatePath) return null;
+  templateBlob ??= fs.readFile(templatePath).then((bytes) => new Blob([bytes]));
+  return templateBlob;
+};
+
+const openMigratedDatabase = async (): Promise<PGlite> => {
+  const template = migratedTemplate();
+  if (!template) return createMigratedDatabase();
+  const client = new PGlite({ loadDataDir: await template });
+  await client.waitReady;
+  return client;
 };
 
 export const setupTestDb = async (
@@ -38,12 +40,8 @@ export const setupTestDb = async (
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
   process.env.DATA_DIR = tmpDir;
 
-  const client = new PGlite();
-  // Run the REAL migrations so tests exercise the same schema that ships: the
-  // package-owned auth track first (creates `user`, which app FKs reference),
-  // then the app's own drizzle-kit migrations. No hand-written DDL to drift.
-  await applyMigrations(client, resolveMigrationsFolder());
-  await applyMigrations(client, path.join(process.cwd(), 'db/migrations'));
+  // The real migrations, applied once per run (see createMigratedDatabase).
+  const client = await openMigratedDatabase();
   const db = drizzle(client, { schema }) as unknown as DbInstance;
 
   process.env.BETTER_AUTH_SECRET = 'x'.repeat(32);

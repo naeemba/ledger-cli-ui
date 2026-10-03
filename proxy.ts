@@ -2,6 +2,7 @@ import { isAuthPath } from '@/components/AppShell/authPaths';
 import {
   bouncesSignedInToDashboard,
   isPublicPath,
+  isSharedPagePath,
 } from '@/components/AppShell/publicPaths';
 import { buildSecurityHeaders } from '@/lib/security/headers';
 import { getSessionCookie } from '@naeemba/next-starter/proxy';
@@ -74,7 +75,16 @@ export function proxy(req: NextRequest) {
       target.search = '';
       return redirectWithSecurityHeaders(target);
     }
-    return withSecurityHeaders(req);
+    const response = withSecurityHeaders(req);
+    if (isSharedPagePath(req.nextUrl.pathname)) {
+      // A shared page's whole secret is its URL fragment, and its content is
+      // someone's debts: send no referrer, keep it out of search engines and
+      // out of any cache.
+      response.headers.set('Referrer-Policy', 'no-referrer');
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+      response.headers.set('Cache-Control', 'no-store');
+    }
+    return response;
   }
 
   if (!getSessionCookie(req)) {

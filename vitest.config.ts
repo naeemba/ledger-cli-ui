@@ -14,6 +14,7 @@ export default defineConfig({
     include: ['**/*.test.ts', '**/*.test.tsx'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', '.claude/**'],
     setupFiles: ['./vitest-setup.ts'],
+    globalSetup: ['./lib/test-utils/databaseTemplate.globalSetup.ts'],
     server: {
       deps: {
         // @naeemba/next-starter/server is ESM and imports 'next/headers' without

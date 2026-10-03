@@ -997,7 +997,9 @@ export class JournalService {
         await fs.writeFile(abs, encryptFile(dek, rel, body));
         encrypted++;
       }
-      await push(userId); // re-encrypts on the seam too (DEK present) — uploads ciphertext
+      // The local copy is ciphertext right now, so ledger could not read it
+      // and a rebuild would overwrite shared pages with empty ones.
+      await push(userId, { refreshShares: false }); // re-encrypts on the seam too (DEK present) — uploads ciphertext
       return { encrypted, alreadyCiphertext };
     });
   }

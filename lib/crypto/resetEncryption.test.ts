@@ -10,6 +10,7 @@ import {
   __resetSessionKeysForTest,
 } from './sessionKeys';
 import { UserCryptoRepository } from './userCryptoRepository';
+import { DebtShareRepository } from '@/lib/debt-share/repository';
 import {
   setupTestDb,
   teardownTestDb,
@@ -135,5 +136,20 @@ describe('resetUserEncryption', () => {
     const { eq } = await import('drizzle-orm');
     const rows = await ctx.db.select().from(user).where(eq(user.id, 'alice'));
     expect(rows).toHaveLength(1);
+  });
+
+  it('deletes the user’s debt shares, whose keys came from the old DEK', async () => {
+    const shares = new DebtShareRepository(ctx.db);
+    await shares.create({
+      id: 's1',
+      userId: 'alice',
+      sealedMeta: 'm',
+      sealedPage: 'p',
+    });
+    await resetUserEncryption('alice', ctx.db, {
+      clearRemote: vi.fn().mockResolvedValue(undefined),
+      removeLocalJournal: vi.fn().mockResolvedValue(undefined),
+    });
+    expect(await shares.listByUser('alice')).toEqual([]);
   });
 });

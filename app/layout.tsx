@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import AppShell from '@/components/AppShell';
+import ChromeRefresh from '@/components/AppShell/ChromeRefresh';
+import { isPublicRequest } from '@/components/AppShell/isPublicRequest';
 import BaseCurrencyBanner from '@/components/BaseCurrencyBanner';
 import { BaseCurrencyPickerSlot } from '@/components/BaseCurrencyPicker';
 import { CryptoGate } from '@/components/crypto/CryptoGate';
@@ -44,23 +46,29 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Public pages render without chrome, so their slots are never built: no
+  // per-user ledger runs or database reads for a visitor of a public page.
+  const isPublic = await isPublicRequest();
   return (
     <html lang="en" className={cn('font-sans', geist.variable)}>
       <body>
         <CryptoGate />
+        <ChromeRefresh renderedPublic={isPublic} />
         <AppShell
           headerSlot={
-            <>
-              <QuickEntrySlot />
-              <BaseCurrencyPickerSlot />
-            </>
+            isPublic ? null : (
+              <>
+                <QuickEntrySlot />
+                <BaseCurrencyPickerSlot />
+              </>
+            )
           }
-          bannerSlot={<BaseCurrencyBanner />}
+          bannerSlot={isPublic ? null : <BaseCurrencyBanner />}
         >
           {children}
         </AppShell>

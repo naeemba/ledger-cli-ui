@@ -3,8 +3,14 @@ import { PAYABLE_ROOT, RECEIVABLE_ROOT, directionClass } from './parse';
 import Help from '@/components/Help';
 import LedgerErrorCard from '@/components/LedgerErrorCard';
 import PageContainer from '@/components/PageContainer';
+import {
+  ShareControls,
+  loadShareLink,
+  toSharedLink,
+} from '@/features/debtShare';
 import { isSafeLedgerArg } from '@/features/transactions/entry/typeForms/fixBalancePreview';
 import RegisterList from '@/features/transactions/row/RegisterList';
+import { requireUser } from '@/lib/auth/require-user';
 import { createLogger } from '@/lib/log';
 import { getBaseCurrency } from '@/lib/settings';
 import { notFound, unstable_rethrow } from 'next/navigation';
@@ -18,13 +24,15 @@ const log = createLogger('debts');
  */
 const PersonDebts = async ({ person }: { person: string }) => {
   if (!isSafeLedgerArg(person)) notFound();
-  const base = await getBaseCurrency();
+  const [base, user] = await Promise.all([getBaseCurrency(), requireUser()]);
 
-  let views, net;
+  let views, net, shareLink;
   try {
-    [views, net] = await Promise.all([
+    // loadShareLink never fails the page: it falls back to "not shared".
+    [views, net, shareLink] = await Promise.all([
       personRegister(base, person),
       netForPerson(base, person),
+      loadShareLink(user.id, person),
     ]);
   } catch (e) {
     // redirect() and the prerender bailout signal by throwing; re-throw those
@@ -62,6 +70,13 @@ const PersonDebts = async ({ person }: { person: string }) => {
           <h1 className="mt-1 text-2xl font-semibold tracking-tight break-all">
             {person}
           </h1>
+          <div className="mt-2">
+            <ShareControls
+              person={person}
+              defaultOwnerName={user.name ?? ''}
+              link={shareLink && toSharedLink(shareLink)}
+            />
+          </div>
         </div>
         <div className="text-right">
           <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">

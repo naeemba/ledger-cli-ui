@@ -59,8 +59,15 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      # Same ledger as production: nixpacks.toml pins this nixpkgs commit,
+      # which packages ledger 3.4.1. Ubuntu's apt ships 3.3.2, which crashes
+      # on some commands 3.4.1 runs fine (e.g. register --group-by commodity).
+      - uses: cachix/install-nix-action@v31
       - name: Install ledger
-        run: sudo apt-get update && sudo apt-get install -y ledger
+        run: |
+          nix profile install github:NixOS/nixpkgs/e73de5be04e0eff4190a1432b946d469c794e7b4#ledger
+          echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
+      - run: ledger --version
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
