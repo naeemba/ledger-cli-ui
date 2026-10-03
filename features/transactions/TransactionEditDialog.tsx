@@ -70,7 +70,7 @@ export default function TransactionEditDialog() {
   const [lastMode, setLastMode] =
     useState<EditTransactionTarget['mode']>('edit');
   if (target && target.mode !== lastMode) setLastMode(target.mode);
-  const wording = WORDING[target?.mode ?? lastMode];
+  const wording = WORDING[lastMode];
   const formKey = target ? `${target.mode}:${target.uid}` : '';
   const guard = useDiscardGuard(closeEditTransaction, wording.discard);
   const router = useRouter();
