@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import type { TransactionActionState } from './actions';
 import type { DraftState } from './entry/draftReducer';
 import { Field } from './entry/typeForms/fields';
@@ -24,8 +24,11 @@ export type QuickTypeFormProps = {
   initialFields?: HeaderFields;
   onSave: (draft: DraftState) => Promise<TransactionActionState>;
   // Edit only: hands the compiled draft to the Raw fallback.
-  onSwitchToRaw?: (draft: DraftState) => void;
+  onSwitchToRaw?: (draft: DraftState, dirty: boolean) => void;
   onDone: () => void;
+  // Told whenever the fields start or stop differing from how they opened, so
+  // the dialog can ask before an accidental dismiss throws the entry away.
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 const firstFieldError = (state: TransactionActionState): string | undefined =>
@@ -44,10 +47,14 @@ export function QuickTypeForm({
   onSave,
   onSwitchToRaw,
   onDone,
+  onDirtyChange,
 }: QuickTypeFormProps) {
-  const [fields, setFields] = useState<HeaderFields>(
+  const [initial] = useState<HeaderFields>(
     () => initialFields ?? spec.makeEmpty({ accounts, defaultCurrency })
   );
+  const [fields, setFields] = useState<HeaderFields>(initial);
+  const dirty = JSON.stringify(fields) !== JSON.stringify(initial);
+  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
 
@@ -120,7 +127,7 @@ export function QuickTypeForm({
             type="button"
             variant="ghost"
             className="mr-auto"
-            onClick={() => onSwitchToRaw(compile())}
+            onClick={() => onSwitchToRaw(compile(), dirty)}
           >
             Edit as raw
           </Button>

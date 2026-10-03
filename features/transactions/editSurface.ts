@@ -7,7 +7,7 @@ import type { Posting } from '@/lib/transactions/posting';
 
 export type EditSurface =
   | { kind: 'type'; spec: QuickEntrySpec<HeaderFields>; fields: HeaderFields }
-  | { kind: 'raw'; seed?: DraftState };
+  | { kind: 'raw'; seed?: DraftState; seedDirty?: boolean };
 
 const annotationsMatch = (a: Posting['cost'], b: Posting['cost']): boolean =>
   (a?.amount ?? '') === (b?.amount ?? '') &&

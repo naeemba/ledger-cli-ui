@@ -20,6 +20,7 @@ import {
   serializeDraftJson,
   type DraftState,
 } from './entry/draftReducer';
+import { useDiscardGuard } from './useDiscardGuard';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -39,6 +40,10 @@ type Loaded = Extract<LoadTransactionForEditResult, { ok: true }>;
  */
 export default function TransactionEditDialog() {
   const uid = useEditTransactionUid();
+  const guard = useDiscardGuard(closeEditTransaction, {
+    title: 'Discard your changes?',
+    description: 'The saved transaction stays as it was.',
+  });
   const router = useRouter();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [surface, setSurface] = useState<EditSurface | null>(null);
@@ -81,73 +86,84 @@ export default function TransactionEditDialog() {
   };
 
   return (
-    <Dialog
-      open={uid !== null}
-      onOpenChange={(next) => {
-        if (!next) closeEditTransaction();
-      }}
-    >
-      {uid && !loaded && !notFound && (
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Loading…</DialogTitle>
-          </DialogHeader>
-        </DialogContent>
-      )}
+    <>
+      <Dialog open={uid !== null} onOpenChange={guard.onOpenChange}>
+        {uid && !loaded && !notFound && (
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Loading…</DialogTitle>
+            </DialogHeader>
+          </DialogContent>
+        )}
 
-      {notFound && (
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Transaction not found</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            It may have been deleted or re-imported. Reload the list.
-          </p>
-        </DialogContent>
-      )}
+        {notFound && (
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Transaction not found</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              It may have been deleted or re-imported. Reload the list.
+            </p>
+          </DialogContent>
+        )}
 
-      {loaded && surface?.kind === 'type' && (
-        <QuickTypeForm
-          key={uid ?? ''}
-          spec={surface.spec}
-          accounts={loaded.accounts}
-          defaultCurrency={loaded.defaultCurrency}
-          initialFields={surface.fields}
-          onSave={onSave}
-          onSwitchToRaw={(draft) => setSurface({ kind: 'raw', seed: draft })}
-          onDone={closeEditTransaction}
-        />
-      )}
+        {loaded && surface?.kind === 'type' && (
+          <QuickTypeForm
+            key={uid ?? ''}
+            spec={surface.spec}
+            accounts={loaded.accounts}
+            defaultCurrency={loaded.defaultCurrency}
+            initialFields={surface.fields}
+            onSave={onSave}
+            onSwitchToRaw={(draft, dirty) =>
+              setSurface({ kind: 'raw', seed: draft, seedDirty: dirty })
+            }
+            onDone={guard.close}
+            onDirtyChange={guard.setDirty}
+          />
+        )}
 
-      {loaded && surface?.kind === 'raw' && (
-        <RawEditBody
-          key={uid ?? ''}
-          loaded={loaded}
-          seed={'seed' in surface ? surface.seed : undefined}
-          onSave={onSave}
-          onDone={closeEditTransaction}
-        />
-      )}
-    </Dialog>
+        {loaded && surface?.kind === 'raw' && (
+          <RawEditBody
+            key={uid ?? ''}
+            loaded={loaded}
+            seed={surface.seed}
+            seedDirty={surface.seedDirty ?? false}
+            onSave={onSave}
+            onDone={guard.close}
+            onDirtyChange={guard.setDirty}
+          />
+        )}
+      </Dialog>
+      {guard.confirmDialog}
+    </>
   );
 }
 
 function RawEditBody({
   loaded,
   seed,
+  seedDirty,
   onSave,
   onDone,
+  onDirtyChange,
 }: {
   loaded: Loaded;
   seed?: DraftState;
+  seedDirty: boolean;
   onSave: (draft: DraftState) => Promise<{ ok: boolean; formError?: string }>;
   onDone: () => void;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
-  const [draft, dispatch] = useReducer(
-    draftReducer,
-    undefined,
+  const [start] = useState(
     () => seed ?? initDraft(loaded.draft, loaded.defaultCurrency)
   );
+  const [draft, dispatch] = useReducer(draftReducer, start);
+  // Dirty when the type form handed over edits, or the raw text changed at
+  // all, even while it does not parse yet.
+  const [textEdited, setTextEdited] = useState(false);
+  const dirty = seedDirty || textEdited;
+  useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
   const [rawError, setRawError] = useState<string | null>(null);
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
@@ -168,6 +184,7 @@ function RawEditBody({
         draft={draft}
         dispatch={dispatch}
         onError={setRawError}
+        onEditedChange={setTextEdited}
         accounts={loaded.accounts}
         payees={loaded.payees}
         commodities={loaded.currencies}

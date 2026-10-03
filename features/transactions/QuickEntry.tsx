@@ -7,6 +7,7 @@ import { QuickTypeForm } from './QuickTypeForm';
 import { createTransactionAction, undoTransactionAction } from './actions';
 import { serializeDraftJson, type DraftState } from './entry/draftReducer';
 import { QUICK_ENTRY_SPECS, todayLocal } from './quickEntrySpecs';
+import { useDiscardGuard } from './useDiscardGuard';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -138,6 +139,7 @@ export default function QuickEntry({
   const router = useRouter();
   const [active, setActive] = useState<string | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const guard = useDiscardGuard(() => setActive(null));
   const [primary, ...rest] = QUICK_ENTRY_SPECS;
   const spec = QUICK_ENTRY_SPECS.find((entry) => entry.kind === active) ?? null;
 
@@ -202,12 +204,7 @@ export default function QuickEntry({
         </DropdownMenu>
       </div>
 
-      <Dialog
-        open={spec !== null}
-        onOpenChange={(next) => {
-          if (!next) setActive(null);
-        }}
-      >
+      <Dialog open={spec !== null} onOpenChange={guard.onOpenChange}>
         {spec && (
           <QuickTypeForm
             key={spec.kind}
@@ -215,10 +212,13 @@ export default function QuickEntry({
             accounts={accounts}
             defaultCurrency={defaultCurrency}
             onSave={onSave}
-            onDone={() => setActive(null)}
+            onDone={guard.close}
+            onDirtyChange={guard.setDirty}
           />
         )}
       </Dialog>
+
+      {guard.confirmDialog}
 
       <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
         {templateOpen && (

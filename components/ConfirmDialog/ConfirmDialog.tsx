@@ -14,7 +14,10 @@ import {
 } from '@/components/ui/alert-dialog';
 
 type Props = {
-  children: React.ReactElement;
+  // The trigger. Leave it out and drive the dialog with open/onOpenChange.
+  children?: React.ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   title: string;
   description?: React.ReactNode;
   confirmLabel?: string;
@@ -31,9 +34,11 @@ const ConfirmDialog = ({
   cancelLabel = 'Cancel',
   variant = 'destructive',
   onConfirm,
+  open,
+  onOpenChange,
 }: Props) => (
-  <AlertDialog>
-    <AlertDialogTrigger render={children} />
+  <AlertDialog open={open} onOpenChange={onOpenChange}>
+    {children && <AlertDialogTrigger render={children} />}
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>{title}</AlertDialogTitle>

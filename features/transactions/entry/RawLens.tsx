@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { LedgerEditor } from './LedgerEditor';
 import type { DraftState, DraftAction } from './draftReducer';
-import { applyRawText } from './rawLensLogic';
+import { applyRawText, isRawTextEdited } from './rawLensLogic';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatTransaction } from '@/lib/transactions/schema';
 
@@ -11,6 +11,7 @@ export function RawLens({
   draft,
   dispatch,
   onError,
+  onEditedChange,
   accounts = [],
   payees = [],
   commodities = [],
@@ -18,13 +19,16 @@ export function RawLens({
   draft: DraftState;
   dispatch: (action: DraftAction) => void;
   onError?: (error: string | null) => void;
+  // Told whether the text differs from how it opened, parsed or not.
+  onEditedChange?: (edited: boolean) => void;
   accounts?: string[];
   payees?: string[];
   commodities?: string[];
 }) {
-  const [text, setText] = useState(() =>
+  const [openedText] = useState(() =>
     formatTransaction({ ...draft, postings: [...draft.postings] })
   );
+  const [text, setText] = useState(openedText);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,6 +38,7 @@ export function RawLens({
 
   const onChange = (value: string) => {
     setText(value);
+    onEditedChange?.(isRawTextEdited(openedText, value));
     const { error: nextError, action } = applyRawText(value, draft);
     setError(nextError);
     onError?.(nextError);

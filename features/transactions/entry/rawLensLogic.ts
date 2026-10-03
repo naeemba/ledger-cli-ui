@@ -1,5 +1,6 @@
 import type { DraftState, DraftAction } from './draftReducer';
 import { parseBlock } from '@/lib/journal/parser';
+import { formatLedgerText } from '@/lib/ledger/format';
 import { Transaction } from '@/lib/transactions/model';
 
 export const PARSE_ERROR =
@@ -35,3 +36,10 @@ export const applyRawText = (
     },
   };
 };
+
+/** Whether the raw text differs from how the editor opened. Compares the text
+ *  itself, not the parsed draft, so a half-typed line that does not parse yet
+ *  still counts. Both sides go through the formatter, so the re-align the
+ *  editor applies on blur does not count as an edit. */
+export const isRawTextEdited = (openedText: string, currentText: string) =>
+  formatLedgerText(currentText) !== formatLedgerText(openedText);
