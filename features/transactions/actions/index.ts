@@ -10,5 +10,6 @@ export { loadTransactionPageAction } from './loadTransactionPage';
 export {
   loadTransactionForEditAction,
   type LoadTransactionForEditResult,
+  type LoadedTransaction,
 } from './loadTransactionForEdit';
 export { undoTransactionAction } from './undoTransaction';

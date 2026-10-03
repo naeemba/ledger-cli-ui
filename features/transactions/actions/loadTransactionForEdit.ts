@@ -21,6 +21,11 @@ export type LoadTransactionForEditResult =
     }
   | { ok: false };
 
+export type LoadedTransaction = Extract<
+  LoadTransactionForEditResult,
+  { ok: true }
+>;
+
 export async function loadTransactionForEditAction(
   uid: string
 ): Promise<LoadTransactionForEditResult> {
