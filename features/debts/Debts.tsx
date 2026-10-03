@@ -16,10 +16,12 @@ const log = createLogger('debts');
 
 const Debts = async () => {
   const base = await getBaseCurrency();
-  const shared = await loadSharedPeople((await requireUser()).id);
-  let debts;
+  let debts, shared;
   try {
-    debts = await getPersonDebts(base);
+    [debts, shared] = await Promise.all([
+      getPersonDebts(base),
+      requireUser().then((user) => loadSharedPeople(user.id)),
+    ]);
   } catch (e) {
     // redirect() and the prerender bailout signal by throwing; re-throw those
     // so a signed-out user reaches /sign-in instead of a "ledger broke" card.

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { create, hasSessionDek, pull } = vi.hoisted(() => ({
+const { create, hasSessionDek, pull, order } = vi.hoisted(() => ({
   create: vi.fn(),
   hasSessionDek: vi.fn(),
   pull: vi.fn(async () => ({ fingerprint: 'f' })),
+  order: [] as string[],
 }));
 vi.mock('@/lib/debt-share', () => ({ debtShareService: { create } }));
 vi.mock('@/lib/auth/require-user', () => ({
@@ -12,7 +13,14 @@ vi.mock('@/lib/auth/require-user', () => ({
 vi.mock('@/lib/crypto/sessionKeys', () => ({ hasSessionDek }));
 vi.mock('@/lib/storage/sync', () => ({ pull }));
 vi.mock('@/lib/journal/mutex', () => ({
-  withUserLock: async (_userId: string, work: () => Promise<unknown>) => work(),
+  withUserLock: async (_userId: string, work: () => Promise<unknown>) => {
+    order.push('lock');
+    try {
+      return await work();
+    } finally {
+      order.push('unlock');
+    }
+  },
 }));
 vi.mock('@/lib/audit', () => ({
   auditService: { record: vi.fn() },
@@ -30,21 +38,26 @@ const { createDebtShareAction } = await import('./createDebtShare');
 describe('createDebtShareAction', () => {
   beforeEach(() => {
     create.mockReset();
+    order.length = 0;
+    pull.mockImplementation(async () => {
+      order.push('pull');
+      return { fingerprint: 'f' };
+    });
+    create.mockImplementation(async () => {
+      order.push('create');
+      return { shareId: 's1', key: 'k', updatedAt: new Date() };
+    });
     pull.mockClear();
     hasSessionDek.mockReturnValue(true);
   });
 
   it('pulls the journal, then creates the share', async () => {
-    create.mockResolvedValue({
-      shareId: 's1',
-      key: 'k',
-      updatedAt: new Date(),
-    });
     expect(await createDebtShareAction('Bashir', ' Naeem ')).toEqual({
       ok: true,
       shareId: 's1',
       key: 'k',
     });
+    expect(order).toEqual(['lock', 'pull', 'create', 'unlock']);
     expect(pull).toHaveBeenCalledWith('alice');
     expect(create).toHaveBeenCalledWith('alice', 'Bashir', 'Naeem');
   });

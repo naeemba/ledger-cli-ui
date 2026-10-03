@@ -38,8 +38,13 @@ const linkUrl = (shareId: string, key: string): string =>
   `${window.location.origin}/s/${shareId}#${key}`;
 
 const copyLink = async (shareId: string, key: string) => {
-  await navigator.clipboard.writeText(linkUrl(shareId, key));
-  toast.success('Link copied.');
+  try {
+    await navigator.clipboard.writeText(linkUrl(shareId, key));
+    toast.success('Link copied.');
+  } catch {
+    // Safari refuses a copy that follows a server round trip.
+    toast.error('Could not copy. Use Copy link.');
+  }
 };
 
 /** Share, copy, or revoke the read-only link to this person's debts. */
@@ -58,8 +63,8 @@ const ShareControls = ({ person, link, defaultOwnerName }: Props) => {
         return;
       }
       setOpen(false);
-      await copyLink(result.shareId, result.key);
       router.refresh();
+      await copyLink(result.shareId, result.key);
     });
 
   const revoke = (shareId: string) =>
@@ -114,7 +119,13 @@ const ShareControls = ({ person, link, defaultOwnerName }: Props) => {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) setError(null);
+      }}
+    >
       <DialogTrigger render={<Button size="sm" variant="outline" />}>
         Share
       </DialogTrigger>
@@ -133,7 +144,10 @@ const ShareControls = ({ person, link, defaultOwnerName }: Props) => {
             id="share-owner-name"
             value={ownerName}
             maxLength={60}
-            onChange={(event) => setOwnerName(event.target.value)}
+            onChange={(event) => {
+              setOwnerName(event.target.value);
+              setError(null);
+            }}
           />
           {error && <p className="text-sm text-negative">{error}</p>}
         </div>
