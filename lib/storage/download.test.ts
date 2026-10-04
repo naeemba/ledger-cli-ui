@@ -94,6 +94,7 @@ describe('pullToLocal', () => {
         throw new Error('garage down');
       },
       get: store.get.bind(store),
+      getHead: store.getHead.bind(store),
       put: store.put.bind(store),
       delete: store.delete.bind(store),
       deletePrefix: store.deletePrefix.bind(store),
@@ -109,6 +110,9 @@ describe('pullToLocal', () => {
         throw new Error('garage down');
       },
       get: async () => {
+        throw new Error('n/a');
+      },
+      getHead: async () => {
         throw new Error('n/a');
       },
       put: async () => ({ etag: '' }),

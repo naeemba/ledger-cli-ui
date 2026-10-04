@@ -1,5 +1,5 @@
 export { pull, pullLocked, push, clearRemote } from './sync';
 export { getObjectStore, resetObjectStore } from './client';
-export { StorageConflictError } from './save';
+export { StorageConflictError, storageFailureMessage } from './save';
 export type { ObjectStore, ObjectMeta, GetResult } from './objectStore';
 export { manifestRelName } from './manifest';

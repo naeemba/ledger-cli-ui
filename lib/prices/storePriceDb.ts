@@ -14,12 +14,12 @@ const log = createLogger('prices');
  *
  * The upload only happens when it is safe. A locked encrypted journal (the
  * background price job, or a user who clicked Lock) is written locally only:
- * with no key in memory the upload would be refused anyway, since it would send
- * the decrypted local files over the ciphertext in storage. A failed pull is written locally only too, so one
- * user's storage error never stops the rebuild. The pull keeps the local-only
- * price file, and the next successful rebuild uploads it. A failed upload is
- * logged, not thrown — the prices are already saved in the database and the
- * local file works.
+ * with no key in memory the upload would be refused anyway, since it would
+ * send the decrypted local files over the ciphertext in storage. A failed pull
+ * is written locally only too, so one user's storage error never stops the
+ * rebuild. The pull keeps the local-only price file, and the next successful
+ * rebuild uploads it. A failed upload is logged, not thrown — the prices are
+ * already saved in the database and the local file works.
  */
 const writeAndUpload = async (
   userId: string,

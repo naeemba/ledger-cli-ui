@@ -10,7 +10,7 @@ import {
   type Manifest,
 } from './manifest';
 import type { ObjectMeta, ObjectStore } from './objectStore';
-import { isCiphertext } from '@/lib/crypto/fileCrypto';
+import { MAGIC } from '@/lib/crypto/fileCrypto';
 import { encryptForUpload } from '@/lib/crypto/journalCipher';
 import { getSessionDek, LockedError } from '@/lib/crypto/sessionKeys';
 import { getJournalDir } from '@/lib/journal/layout';
@@ -26,17 +26,30 @@ export class StorageConflictError extends Error {
 /**
  * Throws LockedError if any stored object is ciphertext. Called only when no
  * key is in memory: uploading then would replace an encrypted journal with
- * plaintext. Stops at the first ciphertext file, so an encrypted user pays one
- * read; a plaintext user reads each stored file once.
+ * plaintext. Reads just the first few bytes of each file (the ciphertext
+ * marker), so a plaintext user with a large journal does not download it all.
+ * A file shorter than the marker cannot be ciphertext and is skipped.
  */
 const refuseIfStoredEncrypted = async (
   store: ObjectStore,
   remote: readonly ObjectMeta[]
 ): Promise<void> => {
-  for (const { key } of remote) {
-    const { body } = await store.get(key);
-    if (isCiphertext(body)) throw new LockedError();
+  for (const { key, size } of remote) {
+    if (size < MAGIC.length) continue;
+    const head = await store.getHead(key, MAGIC.length);
+    if (head.equals(MAGIC)) throw new LockedError();
   }
+};
+
+/**
+ * The message a user sees when a save to storage fails. A conflict or a
+ * locked journal says what to do; anything else gets the generic text.
+ */
+export const storageFailureMessage = (error: unknown): string => {
+  if (error instanceof StorageConflictError) return error.message;
+  if (error instanceof LockedError)
+    return 'Your journal is locked. Unlock it and try again.';
+  return 'Failed to save journal to storage.';
 };
 
 /**

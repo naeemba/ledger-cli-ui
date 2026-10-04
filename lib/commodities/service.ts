@@ -16,7 +16,7 @@ import { withUserLock } from '@/lib/journal/mutex';
 import type { JournalRepository } from '@/lib/journal/repository';
 import { verifyJournalParseable } from '@/lib/journal/verify';
 import { DEFINITIONS_BANNER } from '@/lib/prices/formatter';
-import { pull, push, StorageConflictError } from '@/lib/storage';
+import { pull, push, storageFailureMessage } from '@/lib/storage';
 
 export type CommodityRow = CommodityBlock & {
   file: string;
@@ -253,10 +253,7 @@ export class CommodityDefinitionService {
         await this.repo.writeFileAtomic(layout.mainPath, mainOriginal);
         return {
           ok: false,
-          message:
-            error instanceof StorageConflictError
-              ? error.message
-              : 'Failed to save journal to storage.',
+          message: storageFailureMessage(error),
         };
       }
       return { ok: true };
