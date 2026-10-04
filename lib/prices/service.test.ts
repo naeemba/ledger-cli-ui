@@ -21,6 +21,10 @@ import {
   type TestDbContext,
 } from '@/lib/test-utils/db';
 
+// The real gate reads the crypto row through the app-wide database, which the
+// test database does not share. These users have no encryption.
+vi.mock('@/lib/crypto/gate', () => ({ cryptoStatus: async () => 'unset' }));
+
 const seedUser = async (
   ctx: TestDbContext,
   id: string,
