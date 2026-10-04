@@ -3,8 +3,9 @@ import { getSessionDek, LockedError } from './sessionKeys';
 
 /**
  * Encrypt a journal file for upload with `dek`, the key the caller read once
- * for the whole upload. No key → the user is not encryption-enabled → upload
- * plaintext unchanged. Taking the key rather than looking it up per file means
+ * for the whole upload. No key → upload plaintext unchanged. That is safe only
+ * because the upload refuses to run keyless over an encrypted journal (see
+ * pushFromLocal). Taking the key rather than looking it up per file means
  * a Lock halfway through an upload cannot send the remaining files in plaintext.
  */
 export const encryptForUpload = (

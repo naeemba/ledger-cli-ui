@@ -9,6 +9,7 @@ import {
   PriceFetchRunRepository,
 } from './repository';
 import { PriceService } from './service';
+import { storePriceDb } from './storePriceDb';
 import { isCiphertext } from '@/lib/crypto/fileCrypto';
 import {
   __resetSessionKeysForTest,
@@ -121,6 +122,25 @@ describe('the generated price database survives a journal sync', () => {
     const { body } = await getObjectStore().get('journals/alice/main.ledger');
     expect(isCiphertext(body)).toBe(true);
     expect(await priceFileExists('alice')).toBe(true);
+  });
+
+  it('skips the upload when the user locks during the rebuild', async () => {
+    encrypted = true;
+    setSessionDek('alice', randomBytes(32));
+    await push('alice');
+    let listAfterLock: ReturnType<typeof vi.spyOn> | undefined;
+
+    await storePriceDb('alice', async () => {
+      const dir = getJournalDir('alice');
+      await fs.writeFile(path.join(dir, GENERATED_PRICE_DB_NAME), 'P', 'utf-8');
+      // The user clicks Lock after the price file is written.
+      dropSessionDek('alice');
+      listAfterLock = vi.spyOn(getObjectStore(), 'list');
+    });
+
+    expect(listAfterLock).not.toHaveBeenCalled();
+    const { body } = await getObjectStore().get('journals/alice/main.ledger');
+    expect(isCiphertext(body)).toBe(true);
   });
 
   it('still saves the price when the journal pull fails', async () => {

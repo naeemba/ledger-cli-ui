@@ -85,6 +85,25 @@ describe('storage seam encryption', () => {
     }
   });
 
+  it('refuses to push with no key over an encrypted journal', async () => {
+    // Unlock, sync, then Lock: the decrypted file stays on disk with the
+    // manifest. A save from a stale tab must not upload it in plaintext.
+    const store = new MemoryObjectStore();
+    const userId = 'erin';
+    setSessionDek(userId, randomBytes(32));
+    await writeLocal(userId, 'main.ledger', 'secret one');
+    await pushFromLocal(store, userId);
+    await pullToLocal(store, userId);
+    dropSessionDek(userId);
+    await writeLocal(userId, 'main.ledger', 'secret one and two');
+
+    await expect(pushFromLocal(store, userId)).rejects.toBeInstanceOf(
+      LockedError
+    );
+    const remote = await store.get(keyFor(userId, 'main.ledger'));
+    expect(isCiphertext(remote.body)).toBe(true);
+  });
+
   it('not-enabled user: push stores plaintext (no behaviour change)', async () => {
     const store = new MemoryObjectStore();
     const userId = 'bob'; // no session DEK

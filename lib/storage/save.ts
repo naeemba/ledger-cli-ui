@@ -9,9 +9,10 @@ import {
   writeManifest,
   type Manifest,
 } from './manifest';
-import type { ObjectStore } from './objectStore';
+import type { ObjectMeta, ObjectStore } from './objectStore';
+import { isCiphertext } from '@/lib/crypto/fileCrypto';
 import { encryptForUpload } from '@/lib/crypto/journalCipher';
-import { getSessionDek } from '@/lib/crypto/sessionKeys';
+import { getSessionDek, LockedError } from '@/lib/crypto/sessionKeys';
 import { getJournalDir } from '@/lib/journal/layout';
 
 /** Thrown when the remote changed between pull and push (lost-update guard). */
@@ -23,6 +24,22 @@ export class StorageConflictError extends Error {
 }
 
 /**
+ * Throws LockedError if any stored object is ciphertext. Called only when no
+ * key is in memory: uploading then would replace an encrypted journal with
+ * plaintext. Stops at the first ciphertext file, so an encrypted user pays one
+ * read; a plaintext user reads each stored file once.
+ */
+const refuseIfStoredEncrypted = async (
+  store: ObjectStore,
+  remote: readonly ObjectMeta[]
+): Promise<void> => {
+  for (const { key } of remote) {
+    const { body } = await store.get(key);
+    if (isCiphertext(body)) throw new LockedError();
+  }
+};
+
+/**
  * Mirrors the local journal dir up to the remote prefix. First confirms the
  * remote still matches the manifest we pulled (else throws StorageConflictError
  * — never blindly overwrite a concurrent change). Then uploads every local
@@ -32,6 +49,12 @@ export class StorageConflictError extends Error {
  * The session key is read once, before anything else, and every file is
  * encrypted with that same key. A Lock that lands mid-upload therefore cannot
  * send the files after it in plaintext over the ciphertext already stored.
+ *
+ * With no key at the start, the upload is refused (LockedError) if any stored
+ * file is ciphertext. Example: the user clicks Lock in one tab, the decrypted
+ * files stay on disk, and a save from a stale tab would otherwise push them in
+ * plaintext over the encrypted journal. The check reads storage, not the
+ * crypto row, so it holds whatever the database says.
  */
 export const pushFromLocal = async (
   store: ObjectStore,
@@ -53,6 +76,8 @@ export const pushFromLocal = async (
       throw new StorageConflictError();
     }
   }
+
+  if (!dek) await refuseIfStoredEncrypted(store, remote);
 
   // Upload every local file; collect new etags.
   const localRels = await listLocalRelPaths(dir);
