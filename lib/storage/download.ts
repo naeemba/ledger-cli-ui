@@ -11,7 +11,7 @@ import {
 } from './manifest';
 import type { ObjectStore } from './objectStore';
 import { decryptFromDownload } from '@/lib/crypto/journalCipher';
-import { getJournalDir } from '@/lib/journal/layout';
+import { GENERATED_PRICE_DB_NAME, getJournalDir } from '@/lib/journal/layout';
 import { createLogger } from '@/lib/log';
 
 const log = createLogger('storage');
@@ -79,9 +79,12 @@ export const pullToLocal = async (
     await fs.writeFile(localAbs, plaintext);
   }
 
-  // Delete local files that are no longer in the remote set.
+  // Delete local files that are no longer in the remote set. The generated
+  // price DB is kept: the server builds it from the database, and a rebuild
+  // for a locked encrypted journal cannot be uploaded, so it may exist only
+  // here. Deleting it would leave ledger with no prices.
   for (const rel of await listLocalRelPaths(dir)) {
-    if (!remoteRelSet.has(rel)) {
+    if (rel !== GENERATED_PRICE_DB_NAME && !remoteRelSet.has(rel)) {
       await fs.rm(path.join(dir, rel), { force: true });
     }
   }

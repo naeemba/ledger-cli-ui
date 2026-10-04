@@ -14,6 +14,7 @@ import { normalizeCommoditySymbol } from './symbols';
 import { getJournalDir } from '@/lib/journal/layout';
 import { JournalRepository } from '@/lib/journal/repository';
 import { UserSettingRepository } from '@/lib/settings/repository';
+import { push, resetObjectStore } from '@/lib/storage';
 import {
   setupTestDb,
   teardownTestDb,
@@ -31,6 +32,8 @@ const seedUser = async (
   const dir = getJournalDir(id);
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(path.join(dir, 'main.ledger'), postings, 'utf-8');
+  // A rebuild pulls the canonical journal first; one only on disk is wiped.
+  await push(id);
 };
 
 const seedMapping = async (
@@ -55,6 +58,7 @@ describe('PriceService.refreshAll', () => {
   let service: PriceService;
 
   beforeEach(async () => {
+    resetObjectStore();
     __resetPriceLockForTests();
     ctx = await setupTestDb('prices-svc-');
 
@@ -212,6 +216,7 @@ describe('PriceService.refreshAll', () => {
       existing,
       'utf-8'
     );
+    await push('alice');
 
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('boom'));
 
@@ -240,6 +245,7 @@ describe('PriceService.refreshAll', () => {
       'P 2026/01/01 12:00:00 BTC 50000 USD\n',
       'utf-8'
     );
+    await push('alice');
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
@@ -415,6 +421,7 @@ describe('PriceService manual prices', () => {
     });
 
   beforeEach(async () => {
+    resetObjectStore();
     __resetPriceLockForTests();
     ctx = await setupTestDb('prices-manual-svc-');
     service = make();
@@ -536,6 +543,7 @@ describe('PriceService known-price reads', () => {
   let service: PriceService;
 
   beforeEach(async () => {
+    resetObjectStore();
     ctx = await setupTestDb('prices-known-');
     service = new PriceService({
       db: ctx.db,
@@ -614,6 +622,7 @@ describe('PriceService.listKnownPrices', () => {
   let service: PriceService;
 
   beforeEach(async () => {
+    resetObjectStore();
     ctx = await setupTestDb('prices-list-');
     service = new PriceService({
       db: ctx.db,
@@ -800,6 +809,7 @@ describe('PriceService.listKnownPricesInBase', () => {
   let service: PriceService;
 
   beforeEach(async () => {
+    resetObjectStore();
     ctx = await setupTestDb('prices-base-');
     service = new PriceService({
       db: ctx.db,
