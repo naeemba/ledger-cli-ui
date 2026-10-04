@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ManualPriceRepository } from './manualRepository';
 import { CommodityMappingRepository } from './mappingRepository';
 import {
@@ -17,6 +17,10 @@ import {
   teardownTestDb,
   type TestDbContext,
 } from '@/lib/test-utils/db';
+
+// The real gate reads the crypto row through the app-wide database, which the
+// test database does not share. These users have no encryption.
+vi.mock('@/lib/crypto/gate', () => ({ cryptoStatus: async () => 'unset' }));
 
 describe('PriceService.regenerateUserPriceDb', () => {
   let ctx: TestDbContext;

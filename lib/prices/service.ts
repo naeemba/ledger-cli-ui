@@ -36,6 +36,7 @@ import {
   type CommodityPriceRepository,
   type PriceFetchRunRepository,
 } from './repository';
+import { storePriceDb } from './storePriceDb';
 import { normalizeCommoditySymbol } from './symbols';
 import type {
   CommodityMapping,
@@ -47,21 +48,17 @@ import {
   DEFINITIONS_NAME,
   GENERATED_PRICE_DB_NAME,
   PRICE_DB_NAME,
-  getJournalCacheTag,
 } from '@/lib/journal/layout';
 import { resolveIncludes } from '@/lib/journal/loader';
-import { withUserLock } from '@/lib/journal/mutex';
 import type {
   JournalLayout,
   JournalRepository,
 } from '@/lib/journal/repository';
 import { verifyJournalParseable } from '@/lib/journal/verify';
 import { createLogger } from '@/lib/log';
-import { pull, push } from '@/lib/storage';
 import { mapWithConcurrency } from '@/utils/mapWithConcurrency';
 import { runLedgerForUser } from '@/utils/runLedgerForUser';
 import { user as userTable } from '@naeemba/next-starter/schema';
-import { revalidateTag } from 'next/cache';
 
 const log = createLogger('prices');
 
@@ -138,7 +135,11 @@ export class PriceService {
     return this.deps.runRepo.latest();
   }
 
-  async regenerateUserPriceDb(userId: string): Promise<void> {
+  regenerateUserPriceDb(userId: string): Promise<void> {
+    return storePriceDb(userId, () => this.writeUserPriceDb(userId));
+  }
+
+  private async writeUserPriceDb(userId: string): Promise<void> {
     const layout = await this.deps.journalRepo.ensureLayout(userId);
     const base = await this.resolveBaseCurrency(userId);
     const all = await this.deps.commodityRepo.listForQuote(base);
@@ -234,12 +235,6 @@ export class PriceService {
     const body = renderPriceDb(canonicalized);
     const target = path.join(layout.dir, GENERATED_PRICE_DB_NAME);
     await this.deps.journalRepo.writeFileAtomic(target, body);
-    try {
-      revalidateTag(getJournalCacheTag(userId), 'max');
-    } catch {
-      // revalidateTag throws outside a Next.js request context (cron, tests).
-      // Acceptable — the cache invalidates on the next request.
-    }
   }
 
   /**

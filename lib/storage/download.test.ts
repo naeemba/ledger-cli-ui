@@ -5,7 +5,7 @@ import { pullToLocal } from './download';
 import { keyFor, readManifest } from './manifest';
 import { MemoryObjectStore } from './memoryObjectStore';
 import type { ObjectStore } from './objectStore';
-import { getJournalDir } from '@/lib/journal/layout';
+import { GENERATED_PRICE_DB_NAME, getJournalDir } from '@/lib/journal/layout';
 
 const USER = 'pull-user';
 const dir = () => getJournalDir(USER);
@@ -48,6 +48,18 @@ describe('pullToLocal', () => {
     expect(await read('main.ledger')).toBe('a');
   });
 
+  it('keeps a server-built price database the store does not have', async () => {
+    // The background price job cannot upload for a locked encrypted journal,
+    // so its rebuild lives on disk only. Deleting it would leave ledger with no
+    // prices at all.
+    const store = new MemoryObjectStore();
+    await seed(store, { 'main.ledger': 'a' });
+    await pullToLocal(store, USER);
+    await fs.writeFile(path.join(dir(), GENERATED_PRICE_DB_NAME), 'P');
+    await pullToLocal(store, USER);
+    expect(await read(GENERATED_PRICE_DB_NAME)).toBe('P');
+  });
+
   it('changes the fingerprint when remote content changes', async () => {
     const store = new MemoryObjectStore();
     await seed(store, { 'main.ledger': 'a' });
@@ -82,6 +94,7 @@ describe('pullToLocal', () => {
         throw new Error('garage down');
       },
       get: store.get.bind(store),
+      getHead: store.getHead.bind(store),
       put: store.put.bind(store),
       delete: store.delete.bind(store),
       deletePrefix: store.deletePrefix.bind(store),
@@ -97,6 +110,9 @@ describe('pullToLocal', () => {
         throw new Error('garage down');
       },
       get: async () => {
+        throw new Error('n/a');
+      },
+      getHead: async () => {
         throw new Error('n/a');
       },
       put: async () => ({ etag: '' }),

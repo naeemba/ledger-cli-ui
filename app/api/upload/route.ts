@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/auth/require-user';
 import { journalService } from '@/lib/journal';
 import { journalQuotaMb, getJournalDirSize } from '@/lib/journal/quota';
 import { createLogger } from '@/lib/log';
+import { priceService } from '@/lib/prices';
 import { rateLimit, UPLOAD } from '@/lib/rate-limit';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -12,6 +13,17 @@ const log = createLogger('upload');
 const ALLOWED_SINGLE_EXTS = new Set(['.ledger', '.dat', '.journal', '.txt']);
 const ZIP_EXT = '.zip';
 const MAX_BYTES = 25 * 1024 * 1024;
+
+/**
+ * An import wipes the journal folder, the generated price file with it, and the
+ * push that follows deletes the stored copy. Rebuild it from the saved prices
+ * so a USD view still converts. A failed rebuild is logged, not thrown: the
+ * import itself worked, and the nightly job rebuilds the file anyway.
+ */
+const rebuildPriceDb = (userId: string): Promise<void> =>
+  priceService.regenerateUserPriceDb(userId).catch((error: unknown) => {
+    log.error({ err: error }, 'price database rebuild after import failed');
+  });
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const user = await requireUser();
@@ -65,6 +77,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           { status: 413 }
         );
       }
+      await rebuildPriceDb(user.id);
       const bytesAfter = await getJournalDirSize(user.id);
       await auditService.record(user.id, {
         action: 'journal.import',
@@ -109,6 +122,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           { status: 413 }
         );
       }
+      await rebuildPriceDb(user.id);
       const bytesAfter = await getJournalDirSize(user.id);
       await auditService.record(user.id, {
         action: 'journal.import',

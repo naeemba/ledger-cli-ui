@@ -49,6 +49,17 @@ export class S3ObjectStore implements ObjectStore {
     return { body, etag: stripQuotes(res.ETag) };
   }
 
+  async getHead(key: string, length: number): Promise<Buffer> {
+    const res = await this.client.send(
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Range: `bytes=0-${length - 1}`,
+      })
+    );
+    return Buffer.from(await res.Body!.transformToByteArray());
+  }
+
   async put(key: string, body: Buffer): Promise<{ etag: string }> {
     const res = await this.client.send(
       new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body })

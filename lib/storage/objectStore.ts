@@ -15,6 +15,11 @@ export interface ObjectStore {
   list(prefix: string): Promise<ObjectMeta[]>;
   /** Fetches one object. Rejects if the key does not exist. */
   get(key: string): Promise<GetResult>;
+  /**
+   * Fetches only the first `length` bytes of one object (fewer if it is
+   * shorter). Rejects if the key does not exist or the object is empty.
+   */
+  getHead(key: string, length: number): Promise<Buffer>;
   /** Writes one object, returning its new ETag. */
   put(key: string, body: Buffer): Promise<{ etag: string }>;
   /** Deletes one object. No-op if it does not exist. */

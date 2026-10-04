@@ -2,14 +2,19 @@ import { randomBytes } from 'crypto';
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pullToLocal } from './download';
 import { keyFor, userPrefix } from './manifest';
 import { MemoryObjectStore } from './memoryObjectStore';
-import { pushFromLocal } from './save';
+import {
+  pushFromLocal,
+  storageFailureMessage,
+  StorageConflictError,
+} from './save';
 import { isCiphertext } from '@/lib/crypto/fileCrypto';
 import {
   __resetSessionKeysForTest,
+  dropSessionDek,
   LockedError,
   setSessionDek,
 } from '@/lib/crypto/sessionKeys';
@@ -62,6 +67,67 @@ describe('storage seam encryption', () => {
     expect(restored).toBe(plaintext);
   });
 
+  it('a Lock halfway through a push still uploads every file encrypted', async () => {
+    const store = new MemoryObjectStore();
+    const userId = 'dave';
+    setSessionDek(userId, randomBytes(32));
+    await writeLocal(userId, 'a.ledger', 'first secret');
+    await writeLocal(userId, 'b.ledger', 'second secret');
+    // The user clicks Lock right after the first file is uploaded.
+    const put = store.put.bind(store);
+    store.put = async (key, body) => {
+      const result = await put(key, body);
+      dropSessionDek(userId);
+      return result;
+    };
+
+    await pushFromLocal(store, userId);
+
+    for (const rel of ['a.ledger', 'b.ledger']) {
+      const remote = await store.get(keyFor(userId, rel));
+      expect(isCiphertext(remote.body)).toBe(true);
+    }
+  });
+
+  it('refuses to push with no key over an encrypted journal', async () => {
+    // Unlock, sync, then Lock: the decrypted file stays on disk with the
+    // manifest. A save from a stale tab must not upload it in plaintext.
+    const store = new MemoryObjectStore();
+    const userId = 'erin';
+    setSessionDek(userId, randomBytes(32));
+    await writeLocal(userId, 'main.ledger', 'secret one');
+    await pushFromLocal(store, userId);
+    await pullToLocal(store, userId);
+    dropSessionDek(userId);
+    await writeLocal(userId, 'main.ledger', 'secret one and two');
+
+    await expect(pushFromLocal(store, userId)).rejects.toBeInstanceOf(
+      LockedError
+    );
+    const remote = await store.get(keyFor(userId, 'main.ledger'));
+    expect(isCiphertext(remote.body)).toBe(true);
+  });
+
+  it('a plaintext save checks only the start of each stored file', async () => {
+    const store = new MemoryObjectStore();
+    const userId = 'frank'; // no session DEK
+    await writeLocal(userId, 'main.ledger', 'hello');
+    await writeLocal(userId, 'empty.ledger', '');
+    await pushFromLocal(store, userId);
+    await pullToLocal(store, userId);
+    await writeLocal(userId, 'main.ledger', 'hello again');
+    const fullReads = vi.spyOn(store, 'get');
+    const headReads = vi.spyOn(store, 'getHead');
+
+    await pushFromLocal(store, userId);
+
+    expect(fullReads).not.toHaveBeenCalled();
+    // The empty file is skipped: it is too short to be ciphertext.
+    expect(headReads).toHaveBeenCalledTimes(1);
+    const remote = await store.get(keyFor(userId, 'main.ledger'));
+    expect(remote.body.toString()).toBe('hello again');
+  });
+
   it('not-enabled user: push stores plaintext (no behaviour change)', async () => {
     const store = new MemoryObjectStore();
     const userId = 'bob'; // no session DEK
@@ -85,6 +151,22 @@ describe('storage seam encryption', () => {
 
     await expect(pullToLocal(store, userId)).rejects.toBeInstanceOf(
       LockedError
+    );
+  });
+});
+
+describe('storageFailureMessage', () => {
+  it('tells the user to unlock when the journal is locked', () => {
+    expect(storageFailureMessage(new LockedError())).toBe(
+      'Your journal is locked. Unlock it and try again.'
+    );
+  });
+
+  it('passes a conflict message through and hides anything else', () => {
+    const conflict = new StorageConflictError();
+    expect(storageFailureMessage(conflict)).toBe(conflict.message);
+    expect(storageFailureMessage(new Error('socket hang up'))).toBe(
+      'Failed to save journal to storage.'
     );
   });
 });

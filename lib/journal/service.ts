@@ -32,7 +32,7 @@ import { detectFirstPostingIndent, findUidInBlock, generateUid } from './uid';
 import { verifyJournalParseable } from './verify';
 import { encryptFile, isCiphertext } from '@/lib/crypto/fileCrypto';
 import { getSessionDek, LockedError } from '@/lib/crypto/sessionKeys';
-import { pull, pullLocked, push, StorageConflictError } from '@/lib/storage';
+import { pull, pullLocked, push, storageFailureMessage } from '@/lib/storage';
 import { listLocalRelPaths } from '@/lib/storage/manifest';
 import type { ParsedTransaction } from '@/lib/transactions/model';
 import {
@@ -219,10 +219,7 @@ export class JournalService {
       } catch (e) {
         // Local is ahead of canonical — roll back so we never diverge.
         await this.repo.writeFileAtomic(mainPath, snapshot);
-        const formError =
-          e instanceof StorageConflictError
-            ? e.message
-            : 'Failed to save journal to storage.';
+        const formError = storageFailureMessage(e);
         return { ok: false, reason: 'stale', fieldErrors: {}, formError };
       }
       invalidateCache(userId);
@@ -307,10 +304,7 @@ export class JournalService {
         await push(userId);
       } catch (e) {
         await this.repo.writeFileAtomic(mainPath, snapshot);
-        const formError =
-          e instanceof StorageConflictError
-            ? e.message
-            : 'Failed to save journal to storage.';
+        const formError = storageFailureMessage(e);
         return { ok: false, reason: 'stale', fieldErrors: {}, formError };
       }
       invalidateCache(userId);
@@ -467,10 +461,7 @@ export class JournalService {
         return {
           ok: false,
           reason: 'stale',
-          message:
-            e instanceof StorageConflictError
-              ? e.message
-              : 'Failed to save journal to storage.',
+          message: storageFailureMessage(e),
         };
       }
       invalidateCache(userId);
@@ -649,10 +640,7 @@ export class JournalService {
         return {
           ok: false,
           reason: 'stale',
-          message:
-            e instanceof StorageConflictError
-              ? e.message
-              : 'Failed to save journal to storage.',
+          message: storageFailureMessage(e),
         };
       }
       invalidateCache(userId);
@@ -705,10 +693,7 @@ export class JournalService {
       } catch (e) {
         return {
           uidsAdded: backfill.uidsAdded,
-          parseFailure:
-            e instanceof StorageConflictError
-              ? e.message
-              : 'Failed to save journal to storage.',
+          parseFailure: storageFailureMessage(e),
         };
       }
       return {
@@ -791,10 +776,7 @@ export class JournalService {
           mainFile,
           fileCount: entries.length,
           uidsAdded: backfill.uidsAdded,
-          parseFailure:
-            e instanceof StorageConflictError
-              ? e.message
-              : 'Failed to save journal to storage.',
+          parseFailure: storageFailureMessage(e),
         };
       }
       return {
@@ -891,10 +873,7 @@ export class JournalService {
       return {
         ok: false,
         reason: 'stale',
-        message:
-          e instanceof StorageConflictError
-            ? e.message
-            : 'Failed to save journal to storage.',
+        message: storageFailureMessage(e),
       };
     }
     invalidateCache(userId);
@@ -967,10 +946,7 @@ export class JournalService {
       return {
         ok: false,
         reason: 'stale',
-        message:
-          e instanceof StorageConflictError
-            ? e.message
-            : 'Failed to save journal to storage.',
+        message: storageFailureMessage(e),
       };
     }
     invalidateCache(userId);

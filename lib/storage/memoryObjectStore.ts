@@ -24,6 +24,12 @@ export class MemoryObjectStore implements ObjectStore {
     return { body, etag: sha256(body) };
   }
 
+  async getHead(key: string, length: number): Promise<Buffer> {
+    const body = this.objects.get(key);
+    if (!body?.length) throw new Error(`MemoryObjectStore: no bytes at ${key}`);
+    return Buffer.from(body.subarray(0, length));
+  }
+
   async put(key: string, body: Buffer): Promise<{ etag: string }> {
     this.objects.set(key, Buffer.from(body));
     return { etag: sha256(body) };
