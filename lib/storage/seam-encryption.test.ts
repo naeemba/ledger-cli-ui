@@ -10,6 +10,7 @@ import { pushFromLocal } from './save';
 import { isCiphertext } from '@/lib/crypto/fileCrypto';
 import {
   __resetSessionKeysForTest,
+  dropSessionDek,
   LockedError,
   setSessionDek,
 } from '@/lib/crypto/sessionKeys';
@@ -60,6 +61,28 @@ describe('storage seam encryption', () => {
       'utf8'
     );
     expect(restored).toBe(plaintext);
+  });
+
+  it('a Lock halfway through a push still uploads every file encrypted', async () => {
+    const store = new MemoryObjectStore();
+    const userId = 'dave';
+    setSessionDek(userId, randomBytes(32));
+    await writeLocal(userId, 'a.ledger', 'first secret');
+    await writeLocal(userId, 'b.ledger', 'second secret');
+    // The user clicks Lock right after the first file is uploaded.
+    const put = store.put.bind(store);
+    store.put = async (key, body) => {
+      const result = await put(key, body);
+      dropSessionDek(userId);
+      return result;
+    };
+
+    await pushFromLocal(store, userId);
+
+    for (const rel of ['a.ledger', 'b.ledger']) {
+      const remote = await store.get(keyFor(userId, rel));
+      expect(isCiphertext(remote.body)).toBe(true);
+    }
   });
 
   it('not-enabled user: push stores plaintext (no behaviour change)', async () => {

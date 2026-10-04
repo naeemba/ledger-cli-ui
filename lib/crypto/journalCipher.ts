@@ -2,16 +2,17 @@ import { decryptFile, encryptFile, isCiphertext } from './fileCrypto';
 import { getSessionDek, LockedError } from './sessionKeys';
 
 /**
- * Encrypt a journal file for upload IFF the user's session holds a DEK.
- * No DEK → the user is not encryption-enabled → upload plaintext unchanged.
+ * Encrypt a journal file for upload with `dek`, the key the caller read once
+ * for the whole upload. No key → the user is not encryption-enabled → upload
+ * plaintext unchanged. Taking the key rather than looking it up per file means
+ * a Lock halfway through an upload cannot send the remaining files in plaintext.
  */
 export const encryptForUpload = (
-  userId: string,
+  dek: Buffer | undefined,
   relPath: string,
   plaintext: Buffer
 ): Buffer => {
   if (isCiphertext(plaintext)) return plaintext; // never double-wrap already-ciphertext
-  const dek = getSessionDek(userId);
   return dek ? encryptFile(dek, relPath, plaintext) : plaintext;
 };
 

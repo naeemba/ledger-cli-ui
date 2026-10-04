@@ -11,6 +11,7 @@ import {
 } from './manifest';
 import type { ObjectStore } from './objectStore';
 import { encryptForUpload } from '@/lib/crypto/journalCipher';
+import { getSessionDek } from '@/lib/crypto/sessionKeys';
 import { getJournalDir } from '@/lib/journal/layout';
 
 /** Thrown when the remote changed between pull and push (lost-update guard). */
@@ -27,11 +28,16 @@ export class StorageConflictError extends Error {
  * — never blindly overwrite a concurrent change). Then uploads every local
  * file, deletes remote objects with no local counterpart, and rewrites the
  * manifest with the freshly-returned ETags.
+ *
+ * The session key is read once, before anything else, and every file is
+ * encrypted with that same key. A Lock that lands mid-upload therefore cannot
+ * send the files after it in plaintext over the ciphertext already stored.
  */
 export const pushFromLocal = async (
   store: ObjectStore,
   userId: string
 ): Promise<void> => {
+  const dek = getSessionDek(userId);
   const dir = getJournalDir(userId);
   const prefix = userPrefix(userId);
   const manifest = await readManifest(userId);
@@ -53,7 +59,7 @@ export const pushFromLocal = async (
   const next: Manifest = {};
   for (const rel of localRels) {
     const body = await fs.readFile(path.join(dir, rel));
-    const payload = encryptForUpload(userId, rel, body);
+    const payload = encryptForUpload(dek, rel, body);
     const { etag } = await store.put(keyFor(userId, rel), payload);
     next[rel] = etag;
   }

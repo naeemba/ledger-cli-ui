@@ -12,14 +12,19 @@ afterEach(() => __resetSessionKeysForTest());
 
 describe('journalCipher', () => {
   it('encryptForUpload encrypts when the session holds a DEK', () => {
-    setSessionDek('alice', randomBytes(32));
-    const out = encryptForUpload('alice', 'main.ledger', Buffer.from('plain'));
+    const out = encryptForUpload(
+      randomBytes(32),
+      'main.ledger',
+      Buffer.from('plain')
+    );
     expect(isCiphertext(out)).toBe(true);
   });
 
   it('encryptForUpload passes through plaintext when no DEK (not enabled)', () => {
     const pt = Buffer.from('plain');
-    expect(encryptForUpload('bob', 'main.ledger', pt).equals(pt)).toBe(true);
+    expect(encryptForUpload(undefined, 'main.ledger', pt).equals(pt)).toBe(
+      true
+    );
   });
 
   it('decryptFromDownload decrypts ciphertext when the DEK is present', () => {
@@ -49,11 +54,10 @@ describe('journalCipher', () => {
 
   it('encryptForUpload does not re-wrap already-ciphertext bytes', () => {
     const dek = randomBytes(32);
-    setSessionDek('alice', dek);
     const plaintext = Buffer.from('2026/01/01 Payee\n');
     const ct = encryptFile(dek, 'main.ledger', plaintext);
     // Passing already-ciphertext through encryptForUpload must return it unchanged
-    const out = encryptForUpload('alice', 'main.ledger', ct);
+    const out = encryptForUpload(dek, 'main.ledger', ct);
     expect(out.equals(ct)).toBe(true);
   });
 });
