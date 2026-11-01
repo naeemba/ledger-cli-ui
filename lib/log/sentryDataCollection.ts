@@ -3,6 +3,8 @@
 // encryption material and shared-page keys, so every Sentry.init passes this
 // baseline, which is what Sentry 10 collected by default with sendDefaultPii
 // unset. Taken from the Sentry 10 -> 11 migration guide.
+import type * as Sentry from '@sentry/nextjs';
+
 const deny = ['forwarded', '-ip', 'remote-', 'via', '-user'];
 
 export const sentryDataCollection = {
@@ -15,4 +17,4 @@ export const sentryDataCollection = {
   databaseQueryData: false,
   queues: false,
   graphQL: { document: false, variables: false },
-};
+} satisfies NonNullable<Sentry.BrowserOptions['dataCollection']>;
