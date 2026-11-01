@@ -138,10 +138,6 @@ function CryptoBrandPanel() {
   );
 }
 
-function resolveCallback(): string {
-  return resolveCallbackUrl('callbackUrl', '/dashboard');
-}
-
 function UnlockForm() {
   const [mode, setMode] = useState<'passphrase' | 'recovery'>('passphrase');
   const [value, setValue] = useState('');
@@ -161,7 +157,7 @@ function UnlockForm() {
     try {
       await unlockWithPasskey();
       await finalizeEncryption().catch(() => {});
-      window.location.assign(resolveCallback());
+      window.location.assign(resolveCallbackUrl('callbackUrl', '/dashboard'));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : CRYPTO_COPY.errors.unlockFailed
@@ -189,7 +185,7 @@ function UnlockForm() {
       // not block entry, since the DEK is now in-session and the data layer
       // re-encrypts on the next mutating push regardless.
       await finalizeEncryption().catch(() => {});
-      window.location.assign(resolveCallback());
+      window.location.assign(resolveCallbackUrl('callbackUrl', '/dashboard'));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : CRYPTO_COPY.errors.unlockFailed
