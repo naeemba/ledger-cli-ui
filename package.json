@@ -41,7 +41,7 @@
     "@naeemba/next-starter": "^0.13.0",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.2.0",
-    "@sentry/nextjs": "^10.74.0",
+    "@sentry/nextjs": "^11.10.0",
     "@tanstack/react-virtual": "^3.14.25",
     "@uiw/react-codemirror": "^4.25.12",
     "adm-zip": "^0.6.1",
