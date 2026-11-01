@@ -10,8 +10,6 @@ import { cookies } from 'next/headers';
 
 const log = createLogger('settings');
 
-export { COOKIE_NAME };
-
 export const getBaseCurrency = cache(async (): Promise<string> => {
   const jar = await cookies();
   const cookieValue = jar.get(COOKIE_NAME)?.value;
