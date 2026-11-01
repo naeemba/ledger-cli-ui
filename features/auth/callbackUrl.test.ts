@@ -21,6 +21,11 @@ describe('toSameOriginPath', () => {
     ['external scheme', 'https://evil.com'],
     ['javascript scheme', 'javascript:alert(1)'],
     ['data scheme', 'data:text/html,<script>alert(1)</script>'],
+    ['dot segment collapsing to //', '/.//evil.com'],
+    ['encoded dot segment collapsing to //', '/%2e//evil.com'],
+    ['parent segment collapsing to //', '/a/..//evil.com'],
+    ['dot segment before a backslash', '/./\\evil.com'],
+    ['same-origin url whose path starts with //', `${ORIGIN}//evil.com`],
   ])('rejects a %s callback', (_, value) => {
     expect(toSameOriginPath(value, ORIGIN)).toBeNull();
   });
