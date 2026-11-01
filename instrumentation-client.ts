@@ -1,4 +1,5 @@
 import { isSharedPagePath } from '@/components/AppShell/publicPaths';
+import { sentryDataCollection } from '@/lib/log/sentryDataCollection';
 import * as Sentry from '@sentry/nextjs';
 
 // Never start Sentry on a shared debt page: the SDK records the full page URL
@@ -11,5 +12,6 @@ if (
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
     environment: process.env.NEXT_PUBLIC_APP_ENV,
     tracesSampleRate: 0,
+    dataCollection: sentryDataCollection,
   });
 }

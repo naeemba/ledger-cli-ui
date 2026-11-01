@@ -1,18 +1,32 @@
 import { describe, it, expect } from 'vitest';
-import { isSafeSameOriginCallbackUrl } from './callbackUrl';
+import { toSameOriginPath } from './callbackUrl';
 
-describe('isSafeSameOriginCallbackUrl', () => {
-  it('accepts a same-origin absolute path', () => {
-    expect(isSafeSameOriginCallbackUrl('/dashboard')).toBe(true);
+const ORIGIN = 'https://app.test';
+
+describe('toSameOriginPath', () => {
+  it('keeps a same-origin path with its query and hash', () => {
+    expect(toSameOriginPath('/dashboard?tab=a#x', ORIGIN)).toBe(
+      '/dashboard?tab=a#x'
+    );
   });
-  it('rejects protocol-relative urls', () => {
-    expect(isSafeSameOriginCallbackUrl('//evil.com')).toBe(false);
+  it('accepts an absolute url on the same origin', () => {
+    expect(toSameOriginPath(`${ORIGIN}/accounts`, ORIGIN)).toBe('/accounts');
   });
-  it('rejects backslash bypass', () => {
-    expect(isSafeSameOriginCallbackUrl('/\\evil.com')).toBe(false);
-  });
-  it('rejects explicit external schemes', () => {
-    expect(isSafeSameOriginCallbackUrl('https://evil.com')).toBe(false);
-    expect(isSafeSameOriginCallbackUrl('javascript:alert(1)')).toBe(false);
+  it.each([
+    ['protocol-relative', '//evil.com'],
+    ['backslash', '/\\evil.com'],
+    ['double backslash', '\\\\evil.com'],
+    ['tab before the second slash', '/\t/evil.com'],
+    ['newline before the second slash', '/\n/evil.com'],
+    ['external scheme', 'https://evil.com'],
+    ['javascript scheme', 'javascript:alert(1)'],
+    ['data scheme', 'data:text/html,<script>alert(1)</script>'],
+    ['dot segment collapsing to //', '/.//evil.com'],
+    ['encoded dot segment collapsing to //', '/%2e//evil.com'],
+    ['parent segment collapsing to //', '/a/..//evil.com'],
+    ['dot segment before a backslash', '/./\\evil.com'],
+    ['same-origin url whose path starts with //', `${ORIGIN}//evil.com`],
+  ])('rejects a %s callback', (_, value) => {
+    expect(toSameOriginPath(value, ORIGIN)).toBeNull();
   });
 });

@@ -5,11 +5,9 @@ const buildEslintCommand = (filenames) =>
     .map((f) => path.relative(process.cwd(), f))
     .join(' ')}`;
 
-const typescriptTypeCheckCommand = (filenames) =>
-  `tsc --noEmit --project ${path.relative(
-    process.cwd(),
-    path.resolve(__dirname, 'tsconfig.json')
-  )}`;
+// Type-checks the whole project through the package script, so the compiler
+// path lives in one place (package.json).
+const typescriptTypeCheckCommand = () => 'pnpm type-check';
 
 const buildPrettierCommand = (filenames) =>
   `prettier --write ${filenames
