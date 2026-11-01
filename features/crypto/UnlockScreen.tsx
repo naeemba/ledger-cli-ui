@@ -3,6 +3,7 @@
 import { KeyRound, ShieldCheck } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
 import '@/features/auth/auth.css';
+import { resolveCallbackUrl } from '@/features/auth/callbackUrl';
 import { finalizeEncryption } from '@/features/crypto/actions/finalizeEncryption';
 import { CRYPTO_COPY } from '@/features/crypto/cryptoCopy';
 import { getMaterial } from '@/features/crypto/lib/cryptoMaterial';
@@ -138,14 +139,7 @@ function CryptoBrandPanel() {
 }
 
 function resolveCallback(): string {
-  if (typeof window === 'undefined') return '/dashboard';
-  const fromQuery = new URLSearchParams(window.location.search).get(
-    'callbackUrl'
-  );
-  if (fromQuery?.startsWith('/') && !fromQuery.startsWith('//')) {
-    return fromQuery;
-  }
-  return '/dashboard';
+  return resolveCallbackUrl('callbackUrl', '/dashboard');
 }
 
 function UnlockForm() {
