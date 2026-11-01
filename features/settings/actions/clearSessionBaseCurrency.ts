@@ -1,6 +1,6 @@
 'use server';
 
-import { COOKIE_NAME } from '@/lib/settings';
+import { COOKIE_NAME } from '@/lib/settings/cookieName';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 

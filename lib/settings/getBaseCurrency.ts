@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import 'server-only';
+import { COOKIE_NAME } from './cookieName';
 import { userSettingRepository } from './instances';
 import { baseCurrencySchema } from './schema';
 import { getOptionalUser } from '@/lib/auth/require-user';
@@ -9,7 +10,7 @@ import { cookies } from 'next/headers';
 
 const log = createLogger('settings');
 
-export const COOKIE_NAME = 'baseCurrency';
+export { COOKIE_NAME };
 
 export const getBaseCurrency = cache(async (): Promise<string> => {
   const jar = await cookies();
