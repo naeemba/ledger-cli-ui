@@ -6,7 +6,7 @@ const buildEslintCommand = (filenames) =>
     .join(' ')}`;
 
 const typescriptTypeCheckCommand = (filenames) =>
-  `tsc --noEmit --project ${path.relative(
+  `node node_modules/@typescript/native/bin/tsc --noEmit --project ${path.relative(
     process.cwd(),
     path.resolve(__dirname, 'tsconfig.json')
   )}`;
