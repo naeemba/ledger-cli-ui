@@ -38,7 +38,7 @@
     "@codemirror/view": "^6.43.15",
     "@heroicons/react": "^2.2.0",
     "@lezer/highlight": "^1.2.5",
-    "@naeemba/next-starter": "^0.13.1",
+    "@naeemba/next-starter": "^0.13.2",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.2.0",
     "@sentry/nextjs": "^11.10.0",
