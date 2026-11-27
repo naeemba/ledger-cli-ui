@@ -77,7 +77,13 @@ const Chart = ({
 
   const tooltip = (
     <ChartTooltip
-      cursor={{ fill: 'var(--muted)', fillOpacity: 0.3 }}
+      // recharts 3.11 strokes the bar cursor #ccc by default; keep it a
+      // fill-only band. Line/area cursors are drawn by stroke, so leave them.
+      cursor={{
+        fill: 'var(--muted)',
+        fillOpacity: 0.3,
+        ...(type === 'bar' && { stroke: 'none' }),
+      }}
       content={
         <ChartTooltipContent
           indicator={type === 'line' ? 'line' : 'dot'}
